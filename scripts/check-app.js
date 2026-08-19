@@ -368,8 +368,14 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
     /* The two prices exist in exactly one place: fee_rules, in Postgres.
        A literal here is how his screen and his WhatsApp start
        disagreeing about what a parent owes. */
+    /* Both spellings, because a human writes the second one. The guard
+       used to be \b(2500|1500)\b, which cannot see ₹2,500 — and the
+       add-student screen said "₹2,500 for piano, ₹1,500 for everything
+       else" underneath it for as long as the screen existed. The
+       lookarounds keep 21500 and 15000 from reading as a fee. */
+    const FEE = /(?<![\d.,])(?:1|2),?500(?![\d.,])/;
     const lines = both.split("\n").filter((l) =>
-      /\b(2500|1500)\b/.test(l) && !/^\s*(\/\/|\*|\/\*)/.test(l));
+      FEE.test(l) && !/^\s*(\/\/|\*|\/\*)/.test(l));
     assert(lines.length === 0,
       "a fee amount is hardcoded outside a comment:\n         " + lines[0]);
     assert(!/resolve_fee|monthly_amount\s*[*+]/.test(appSrc.replace(/\/\*[\s\S]*?\*\//g, "")),
