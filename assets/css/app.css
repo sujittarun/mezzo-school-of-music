@@ -200,7 +200,9 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
    an attendance mark, so this is where the budget for delight is spent
    — not on the register behind it, which stays plain on purpose. */
 .gate {
-  min-height: 100vh; margin: 0; max-width: none;
+  /* svh: on iOS 100vh is taller than the visible screen, which pushed
+     the Sign in button under the toolbar on an iPad. */
+  min-height: 100vh; min-height: 100svh; margin: 0; max-width: none;
   padding: 40px 20px calc(40px + env(safe-area-inset-bottom));
   display: flex; align-items: center; justify-content: center;
   text-align: center; color: #F4EFE6;
@@ -302,3 +304,37 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
   100% { transform: scaleY(1) }
 }
 @media (min-width: 720px) { .wrap { padding: 20px 16px 30px; } }
+
+/* ============================================================
+   THE iPAD
+   This is the device he actually uses — the phone is the fallback,
+   not the other way round. A form built for a 390px phone and then
+   centred on a 1024px screen is a postage stamp in a field: it is
+   not broken, but it reads as an app that was designed for
+   something else and left running here.
+
+   So on a tablet everything that he touches or reads gets bigger,
+   in proportion — not a different layout, the same one at the size
+   the screen is actually offering.
+   ============================================================ */
+@media (min-width: 760px) {
+  .ginner { max-width: 520px; }
+  .gate img { height: 152px; margin-bottom: 24px; }
+  .gate h1 { font-size: 30px; }
+  .gate p  { font-size: 17px; margin-bottom: 34px; }
+  .gate .field span { font-size: 15px; }
+  .gate .field input { font-size: 18px; min-height: 58px; }
+  /* Chunkier keys. They are not tap targets, but they are the thing
+     he watches while typing, and at 31px a white key reads as a
+     stripe rather than a key. */
+  .pf { height: 78px; border-radius: 14px; }
+  .pf input { font-size: 20px; }
+  .gate .btn { min-height: 60px; font-size: 17px; }
+
+  /* The register is a grid of dates and it is the reason he owns an
+     iPad. Give it the width. */
+  .wrap { max-width: 1040px; }
+  .reg th, .reg td { font-size: 14px; }
+  .srow { padding: 14px 2px; }
+  .tick { width: 54px; height: 54px; }
+}

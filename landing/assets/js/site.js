@@ -115,12 +115,20 @@
      Runs on load and on resize, never during a scroll. Everything a
      frame could possibly want to know is worked out here. */
   function layout() {
-    var vh = window.innerHeight, vw = window.innerWidth;
+    var vw = window.innerWidth;
+    /* Ask the STAGE how tall it is, not the window. The stages are
+       sized in svh and window.innerHeight on iOS is the visual
+       viewport, which changes as the toolbar collapses — if the script
+       and the stylesheet disagree about the height of a screen, the
+       dive is computed against one number and drawn against another. */
+    var first = document.querySelector(".stage");
+    var vh = (first && first.offsetHeight) || window.innerHeight;
 
     acts.forEach(function (a) {
       a.top = a.el.offsetTop;
       a.h   = a.el.offsetHeight;
       a.run = Math.max(1, a.h - vh);
+      a.vh  = vh;
       a.last = {};
 
       if (!a.ap || !a.inst || !a.portal) return;
@@ -132,19 +140,32 @@
          instrument with a fixed vh and hoping is what put the roster
          on top of the keyboard. So: measure where the words actually
          end, and give the instrument what remains. */
+      /* A wide, short screen — an iPad on its side — puts the words
+         and the instrument beside each other instead of above and
+         below, so the instrument gets the whole height. Matches the
+         media query in the stylesheet. */
+      var side = vw >= 900 && vh <= 900;
       var gap  = Math.max(18, vh * 0.035);
-      var copyBottom = a.copy ? (a.copy.offsetTop + a.copy.offsetHeight) : vh * 0.10;
-      /* Leave the bottom of the screen alone: the scroll cue lives down
-         there on the first act, and an instrument touching the edge
-         reads as cropped rather than standing in the room. */
-      var room = vh - copyBottom - gap - Math.max(56, vh * 0.09);
-      var want = Math.min(vh * 0.58, room);
-      var H = Math.max(120, want);
-      var W = H * a.ar;
-      if (W > vw * 0.90) { W = vw * 0.90; H = W / a.ar; }   /* keep the aspect */
-      a.inst.style.width     = W + "px";
-      a.inst.style.height    = H + "px";
-      a.inst.style.marginTop = Math.max(0, copyBottom + gap) + "px";
+      var H, W;
+
+      if (side) {
+        H = vh * 0.80;
+        W = H * a.ar;
+        if (W > vw * 0.42) { W = vw * 0.42; H = W / a.ar; }
+        a.inst.style.marginTop = Math.round((vh - H) / 2) + "px";
+      } else {
+        var copyBottom = a.copy ? (a.copy.offsetTop + a.copy.offsetHeight) : vh * 0.10;
+        /* Leave the bottom of the screen alone: the scroll cue lives
+           down there on the first act, and an instrument touching the
+           edge reads as cropped rather than standing in the room. */
+        var room = vh - copyBottom - gap - Math.max(56, vh * 0.09);
+        H = Math.max(120, Math.min(vh * 0.58, room));
+        W = H * a.ar;
+        if (W > vw * 0.90) { W = vw * 0.90; H = W / a.ar; }   /* keep the aspect */
+        a.inst.style.marginTop = Math.max(0, copyBottom + gap) + "px";
+      }
+      a.inst.style.width  = W + "px";
+      a.inst.style.height = H + "px";
 
       /* Where the aperture ACTUALLY is, in the stage's coordinates —
          the soundhole of that guitar, the port hole in that bass drum,
@@ -177,7 +198,8 @@
   var levels = [0, 0, 0, 0];
 
   function update(y) {
-    var vh = window.innerHeight;
+    var vh = (acts[0] && acts[0].vh) || window.innerHeight;
+    var vw = window.innerWidth;
     var mid = y + vh * 0.5;
 
     for (var i = 0; i < acts.length; i++) {
@@ -257,8 +279,8 @@
            doorway stops being the point. */
         var ratio = a.ap.ratio + (1 - a.ap.ratio) * outCubic(dive);
         var RY = RX * ratio;
-        var cx = a.apX + (window.innerWidth  / 2 - a.apX) * dive;
-        var cy = a.apY + (window.innerHeight / 2 - a.apY) * dive;
+        var cx = a.apX + (vw / 2 - a.apX) * dive;
+        var cy = a.apY + (a.vh / 2 - a.apY) * dive;
         set(a.portal, "clipPath",
             "ellipse(" + RX.toFixed(1) + "px " + RY.toFixed(1) + "px at " +
             cx.toFixed(1) + "px " + cy.toFixed(1) + "px)", m, "clip");

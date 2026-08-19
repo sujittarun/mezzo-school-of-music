@@ -137,6 +137,27 @@ same rule the manager app follows.
   first one the day he raises it — the same argument as the house rule,
   pointed at parents instead of at him.
 
+## The iPad is the device
+
+He uses an iPad most of the time and a phone the rest; a desktop
+browser is not really in the picture. Two things follow, and both were
+wrong until they were fixed:
+
+- **`svh`, never `vh`.** On iOS `100vh` is the height the viewport
+  *would* be with the toolbars hidden, so a stage sized in `vh` is
+  taller than the screen — and because the toolbar collapses as you
+  scroll, a `vh` layout jumps mid-dive and the pinned stage lurches.
+  `svh` is the small viewport height and it does not change while you
+  scroll. The script reads the stage's own `offsetHeight` rather than
+  `window.innerHeight` for the same reason: if the script and the
+  stylesheet disagree about how tall a screen is, the dive is computed
+  against one number and drawn against another.
+- **Landscape stands them side by side.** Stacking words above an
+  instrument on a 1194x834 screen leaves the instrument about 120px
+  wide — technically fitting, and lost. Above 900px wide and under
+  900px tall, the copy takes the left half and the instrument the
+  right, at full height. It goes from 130px to 259px.
+
 ## Reduced motion
 
 `prefers-reduced-motion` turns the page into four still rooms with the

@@ -56,14 +56,23 @@ img { display: block; max-width: 100%; }
    stays pinned for the whole four, and every layer in that stage
    is driven by one number: how far through the act you are.
    ============================================================ */
-.act { position: relative; height: 420vh; }
+/* svh, not vh.
+   On iOS Safari 100vh is the height the viewport WOULD be with the
+   toolbars hidden, so a stage sized in vh is taller than the screen
+   and the bottom of every act is cut off. Worse for this page: the
+   toolbar collapses as you scroll, vh layout jumps mid-dive, and the
+   pinned stage visibly lurches. svh is the SMALL viewport height —
+   the size with the toolbars showing — and it does not change while
+   you scroll, which is exactly what a pinned section needs. The vh
+   line stays first, as the fallback. */
+.act { position: relative; height: 420vh; height: 420svh; }
 /* Tall enough that the last screen has an entrance of its own, but
    it never dives, so it does not need four. */
-.act:last-of-type { height: 175vh; }
+.act:last-of-type { height: 175vh; height: 175svh; }
 
 .stage {
   position: sticky; top: 0;
-  height: 100vh; width: 100%;
+  height: 100vh; height: 100svh; width: 100%;
   overflow: hidden;
   display: grid; place-items: center;
 }
@@ -346,6 +355,38 @@ img { display: block; max-width: 100%; }
                   100% { transform: scaleY(1) translateY(46px); opacity: 0 } }
 
 /* ============================================================
+   A TABLET ON ITS SIDE
+   He uses an iPad, and half the time it will be landscape: wide and
+   short. Stacking words above an instrument on a 1194x834 screen
+   leaves the instrument about 120px wide — technically fitting, and
+   lost. So on a wide, short screen the two stop queueing for the same
+   vertical space and stand side by side: words on the left, the
+   instrument on the right, both full height.
+
+   The script knows about this too — it stops deriving the
+   instrument's top edge from the bottom of the copy and centres it
+   instead. Everything downstream still measures the real box, so the
+   aperture and the iris follow without being told.
+   ============================================================ */
+@media (min-width: 900px) and (max-height: 900px) {
+  .copy {
+    top: 50%; right: 52%; left: 0; margin: 0;
+    padding-left: clamp(28px, 5vw, 76px); padding-right: 8px;
+    text-align: left; max-width: none;
+  }
+  .display { font-size: clamp(34px, 4.4vw, 62px); }
+  .lede { margin-left: 0; margin-right: 0; font-size: clamp(16px, 1.5vw, 20px); }
+  .roster, .hours { justify-content: flex-start; }
+  .dive { place-items: start end; padding-right: clamp(24px, 4vw, 72px); }
+  .cue { left: auto; right: clamp(24px, 4vw, 72px); transform: none; }
+  .act:last-of-type .copy {
+    top: auto; right: auto; left: auto; text-align: center;
+    padding-left: 24px; padding-right: 24px; max-width: 780px;
+  }
+  .act:last-of-type .contact, .act:last-of-type .roster { justify-content: center; }
+}
+
+/* ============================================================
    SMALL SCREENS
    His parents are on phones. The dive still works — it is a
    transform, not a hover — but the instrument needs the width.
@@ -372,7 +413,7 @@ img { display: block; max-width: 100%; }
    words on them, and loses nothing but the dive.
    ============================================================ */
 @media (prefers-reduced-motion: reduce) {
-  .act { height: 100vh; }
+  .act { height: 100vh; height: 100svh; }
   .stage { position: relative; }
   .dive { display: none; }
   .cue u { animation: none; }
