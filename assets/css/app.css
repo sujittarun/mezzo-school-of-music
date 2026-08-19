@@ -12,22 +12,42 @@
        to get lost in
      · one accent colour, taken from the card he already hands out
    ============================================================ */
+/* ============================================================
+   THE PALETTE
+
+   This app used to be white cards on grey. It was legible and it was
+   nothing — a spreadsheet with rounded corners, sitting behind a
+   sign-in screen that looked like a concert hall. The two did not
+   belong to the same product.
+
+   So it is dark now, on a photograph of the inside of a violin so far
+   down it reads as atmosphere rather than picture. Everything he
+   touches is unchanged: same three tabs, same 48px targets, same
+   sizes. Only the surface moved.
+
+   The one rule that governs the colour: STATES ARE GREEN AND RED,
+   IDENTITY IS THE INSTRUMENT'S OWN HUE. Present and absent must never
+   be told apart by anything a colour-blind eye cannot separate, so
+   they keep a tick and a cross as well.
+   ============================================================ */
 :root {
-  --brand:   #4B3F72;
-  --brand-d: #2A2340;
-  --brand-l: #EDE9F6;
-  --ink:     #1D1B24;
-  --ink-2:   #5B5670;
-  --ink-3:   #8B8699;
-  --line:    #E6E3EE;
-  --bg:      #F7F6FA;
-  --card:    #FFFFFF;
-  --ok:      #157F4B;
-  --ok-bg:   #E8F6EE;
-  --no:      #B3261E;
-  --no-bg:   #FDECEA;
-  --warn:    #9A5B00;
-  --warn-bg: #FFF6E5;
+  --brand:   #8A76D6;        /* lifted off #4B3F72 so it reads on dark */
+  --brand-d: #4B3F72;        /* the card's own purple, for fills */
+  --brand-l: rgba(138,118,214,.18);
+  --gold:    #D8A657;
+
+  --ink:     #F4EFE6;
+  --ink-2:   #C6BCAE;
+  --ink-3:   #9990A6;
+
+  --line:    rgba(244,239,230,.14);
+  --bg:      #14101F;
+  --card:    rgba(255,255,255,.055);
+  --card-2:  rgba(255,255,255,.10);
+
+  --ok:      #45B478;  --ok-bg:   rgba(69,180,120,.17);
+  --no:      #DC6660;  --no-bg:   rgba(220,102,96,.17);
+  --warn:    #E0A54A;  --warn-bg: rgba(224,165,74,.17);
   --tap:     52px;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -38,13 +58,27 @@ body {
   padding-bottom: calc(76px + env(safe-area-inset-bottom));
   -webkit-font-smoothing: antialiased;
 }
+/* The room, behind everything. A fixed pseudo-element rather than
+   background-attachment: fixed, which iOS Safari has never handled
+   without tearing — and this is an iPad app first. */
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: -1;
+  background: url(../img/bg.jpg) center / cover no-repeat;
+  /* Low enough to be a room and not a picture. Anything brighter and
+     the card has to fight it for the eye, which a register must never
+     have to do. */
+  opacity: .32;
+}
 h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 button, input, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
 
 /* ---------- header ---------- */
+/* The header keeps the card's own purple rather than the lifted one —
+   it is a filled band, so it can be as deep as the card is. */
 .top {
-  background: var(--brand); color: #fff;
+  background: linear-gradient(140deg, #5A4B8A 0%, #4B3F72 55%, #372E57 100%);
+  color: #fff; border-bottom: 1px solid rgba(244,239,230,.12);
   padding: calc(14px + env(safe-area-inset-top)) 16px 14px;
   display: flex; align-items: center; gap: 12px;
 }
@@ -62,9 +96,13 @@ button { cursor: pointer; }
 
 /* ---------- layout ---------- */
 .wrap { max-width: 860px; margin: 0 auto; padding: 14px 12px 24px; }
+/* Glass, not paper. The room shows through just enough to say the app
+   is sitting in it. */
 .card {
   background: var(--card); border: 1px solid var(--line);
-  border-radius: 14px; padding: 14px; margin-bottom: 12px;
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-radius: 16px; padding: 15px; margin-bottom: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.28);
 }
 .muted { color: var(--ink-3); font-size: 14px; }
 .rowline { display: flex; align-items: center; gap: 10px; }
@@ -76,7 +114,7 @@ button { cursor: pointer; }
 .daybar .d span { font-size: 13px; color: var(--ink-3); }
 .daybar button {
   width: var(--tap); height: var(--tap); border-radius: 13px;
-  border: 1px solid var(--line); background: #fff; font-size: 22px; color: var(--brand);
+  border: 1px solid var(--line); background: var(--card); font-size: 22px; color: var(--ink);
 }
 .daybar button:disabled { opacity: .3; }
 
@@ -104,7 +142,7 @@ button { cursor: pointer; }
 .tick {
   position: relative; overflow: hidden;
   width: 46px; height: 46px; flex: 0 0 46px; border-radius: 50%;
-  border: 2px solid var(--hue, var(--line)); background: #fff;
+  border: 2px solid var(--hue, var(--line)); background: rgba(255,255,255,.07);
   font-size: 22px; line-height: 1; display: flex; align-items: center; justify-content: center;
   transition: background .12s, border-color .12s;
 }
@@ -158,7 +196,7 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
 .acts { display: flex; gap: 8px; }
 .acts a, .acts button {
   flex: 1; min-height: 46px; border-radius: 11px; border: 1px solid var(--line);
-  background: #fff; font-size: 15px; font-weight: 600; color: var(--ink);
+  background: var(--card); font-size: 15px; font-weight: 600; color: var(--ink);
   display: flex; align-items: center; justify-content: center; gap: 7px; text-decoration: none;
 }
 .acts .wa   { background: #128C7E; border-color: #128C7E; color: #fff; }
@@ -175,20 +213,21 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
 .field span { display: block; font-size: 13.5px; color: var(--ink-2); margin-bottom: 5px; font-weight: 600; }
 .field input, .field select {
   width: 100%; min-height: var(--tap); border: 1px solid var(--line);
-  border-radius: 11px; padding: 0 13px; background: #fff; font-size: 16px;
+  border-radius: 11px; padding: 0 13px; background: var(--card); font-size: 16px;
 }
 .field input:focus, .field select:focus { outline: 2px solid var(--brand); border-color: var(--brand); }
 .btn {
   width: 100%; min-height: var(--tap); border: 0; border-radius: 12px;
   background: var(--brand); color: #fff; font-size: 16.5px; font-weight: 700;
 }
-.btn.ghost { background: #fff; color: var(--brand); border: 1.5px solid var(--brand); }
+.btn.ghost { background: transparent; color: var(--brand); border: 1.5px solid var(--brand); }
 .btn:disabled { opacity: .5; }
 
 /* ---------- tabs: always there, never nested ---------- */
 .tabs {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-  display: flex; background: #fff; border-top: 1px solid var(--line);
+  display: flex; background: rgba(20,16,31,.82); backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px); border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom);
 }
 .tabs button {
@@ -209,11 +248,11 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
 .sub-toggle { display: flex; gap: 6px; margin-bottom: 12px; }
 .sub-toggle button {
   flex: 1; min-height: 44px; border-radius: 10px; border: 1px solid var(--line);
-  background: #fff; font-size: 15px; font-weight: 600; color: var(--ink-2);
+  background: var(--card); font-size: 15px; font-weight: 600; color: var(--ink-2);
 }
 .sub-toggle button.on { background: var(--brand-l); border-color: var(--brand); color: var(--brand); }
 .search { width: 100%; min-height: 46px; border: 1px solid var(--line);
-          border-radius: 11px; padding: 0 13px; margin-bottom: 10px; font-size: 16px; background: #fff; }
+          border-radius: 11px; padding: 0 13px; margin-bottom: 10px; font-size: 16px; background: var(--card); }
 .note { padding: 22px 10px; text-align: center; color: var(--ink-3); font-size: 15px; }
 .err  { background: var(--no-bg); color: var(--no); border-radius: 11px;
         padding: 12px 14px; font-size: 14.5px; margin-bottom: 12px; }
@@ -331,7 +370,9 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
    before it had moved anywhere, and only the first letter of an email
    ever appeared to move the string. Starting at the peak means every
    letter visibly displaces it, however fast they arrive. */
-.wire.twang path { animation: twang .55s cubic-bezier(.25,.7,.4,1); }
+/* The pluck itself is started from the script (see index.html) —
+   a class toggle plus a forced reflow does not reliably restart an
+   animation in WebKit, which is the browser he actually uses. */
 @keyframes twang {
   0%   { transform: scaleY(-9) }
   14%  { transform: scaleY(6.4) }

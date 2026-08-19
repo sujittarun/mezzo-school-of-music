@@ -2,3 +2,5 @@
 node_modules/
 .preview/
 .claude/
+
+_dev-preview.html

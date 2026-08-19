@@ -67,15 +67,20 @@
 
      PLATFORM.md is explicit that this belongs here: "A batch's colour
      satisfies none of them, and belongs in the app." */
+  /* Pitched for a DARK surface. The first set of these was mixed for
+     white cards and went muddy the moment the app turned dark — a hue
+     that reads as "violin" at 40% lightness on white is a smudge on
+     #14101F. Every one is lifted until it holds its own against the
+     background it actually sits on. */
   var INSTRUMENT = {
-    Piano:    { hue: "#5B4CC4", note: 60 },
-    Keyboard: { hue: "#0E8C8C", note: 62 },
-    Guitar:   { hue: "#C77D24", note: 64 },
-    Violin:   { hue: "#B8383B", note: 67 },
-    Ukulele:  { hue: "#D9634A", note: 69 },
-    Drums:    { hue: "#A9541C", note: 48 },
-    Vocals:   { hue: "#B23F86", note: 72 },
-    Flute:    { hue: "#6E8F5E", note: 71 }
+    Piano:    { hue: "#9C8CF5", note: 60 },
+    Keyboard: { hue: "#3ECFCF", note: 62 },
+    Guitar:   { hue: "#EFAC55", note: 64 },
+    Violin:   { hue: "#F07A7D", note: 67 },
+    Ukulele:  { hue: "#F79478", note: 69 },
+    Drums:    { hue: "#E09453", note: 48 },
+    Vocals:   { hue: "#EE7FC0", note: 72 },
+    Flute:    { hue: "#A2CB8F", note: 71 }
   };
   function inst(name) { return INSTRUMENT[name] || { hue: "#6B5CA5", note: 65 }; }
 
@@ -146,7 +151,13 @@
   var WHITE = [60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77, 79];
   var BLACK_AFTER = [0, 1, 3, 4, 5, 7, 8, 10];
   var BLACK = [61, 63, 66, 68, 70, 73, 75, 78];
-  var ORDER = WHITE.concat(BLACK).sort(function (a, b) { return a - b; });
+  /* White keys only. Running up every key including the blacks made a
+     password of eight characters land on a scatter of black and white
+     that read as noise; eight white keys in a row reads as progress,
+     and it walks up a plain major scale, which is also the nicest
+     thing to hear. The black keys are still drawn — a keyboard without
+     them is not a keyboard — they just never light. */
+  var ORDER = WHITE.slice();
 
   function keyboardHtml() {
     var w = 100 / WHITE.length, bw = w * 0.62, html = "";
@@ -241,12 +252,41 @@
     var PLUCK = [45, 47, 50, 52, 55];          /* A minor pentatonic, low */
     var em = document.getElementById("em");
     var wire = document.querySelector(".wire");
-    var lastPluck = 0;
+    var wirePath = wire && wire.querySelector("path");
+    var lastPluck = 0, twang = null;
+
+    /* RESTARTING AN ANIMATION BY TOGGLING A CLASS IS NOT RELIABLE.
+       The old way was remove the class, read offsetWidth to force a
+       reflow, add it back. That works in Chrome and does nothing in
+       WebKit — and he is on an iPad, so for him the string moved once,
+       on the first letter, and then never again however hard he typed.
+       Two reasons it was never going to hold: the animation is on the
+       <path> but the reflow was forced on its parent <svg>, and SVG
+       elements do not reliably have offsetWidth at all.
+
+       So the animation is driven directly instead. Cancel the running
+       one, start a new one — no classes, no reflow, no guessing about
+       what a browser decided to batch. */
+    var TWANG = [
+      { transform: "scaleY(-9)",  offset: 0    },
+      { transform: "scaleY(6.4)", offset: 0.14 },
+      { transform: "scaleY(-4.2)",offset: 0.29 },
+      { transform: "scaleY(2.6)", offset: 0.44 },
+      { transform: "scaleY(-1.6)",offset: 0.60 },
+      { transform: "scaleY(.9)",  offset: 0.78 },
+      { transform: "scaleY(1)",   offset: 1    }
+    ];
+    function pluckString() {
+      if (!wirePath || !wirePath.animate) {     /* very old browser: no motion, no error */
+        return;
+      }
+      if (twang) twang.cancel();
+      twang = wirePath.animate(TWANG, { duration: 550, easing: "cubic-bezier(.25,.7,.4,1)" });
+    }
+
     if (em && wire) {
       em.oninput = function () {
-        wire.classList.remove("twang");
-        void wire.offsetWidth;                 /* restart the animation */
-        wire.classList.add("twang");
+        pluckString();
         var now = +new Date();
         if (now - lastPluck > 55) {
           lastPluck = now;
