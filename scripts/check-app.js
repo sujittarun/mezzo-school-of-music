@@ -299,7 +299,7 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
   await check("dues shows what reminder_queue returns, unfiltered", async () => {
     signIn();
     nextBody = [
-      { enrollment_id: 5, member_name: "Chitra", parent_name: "Uma", phone: "9843330665",
+      { enrollment_id: 5, member_name: "Chitra", parent_name: "Uma", phone: "9000000665",
         sport: "Violin", amount: 1500, days_since: 1, due_date: "2026-08-18" },
       { enrollment_id: 6, member_name: "Deepak", phone: "9000000001",
         sport: "Piano", amount: 2500, days_since: 40, due_date: "2026-07-10" },
@@ -315,13 +315,13 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
 
   await check("the WhatsApp link carries the country code and no stray characters", async () => {
     signIn();
-    nextBody = [{ enrollment_id: 5, member_name: "Chitra", parent_name: "Uma", phone: "98433 30665",
+    nextBody = [{ enrollment_id: 5, member_name: "Chitra", parent_name: "Uma", phone: "90000 00665",
                   sport: "Violin", amount: 1500, days_since: 1, due_date: "2026-08-18" }];
     api.S.tab = "dues"; api.enter(); await tick(); await tick();
     const h = byId("root").innerHTML;
     const m = h.match(/href="(https:\/\/wa\.me\/[^"]+)"/);
     assert(m, "no WhatsApp link was rendered");
-    assert(m[1].startsWith("https://wa.me/919843330665?"),
+    assert(m[1].startsWith("https://wa.me/919000000665?"),
       "the number is not a dialable 91xxxxxxxxxx: " + m[1].slice(0, 40));
     assert(/target="_blank"/.test(h) && /rel="noopener"/.test(h), "the link is not safely external");
   });
