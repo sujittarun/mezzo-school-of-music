@@ -194,10 +194,73 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
   background: var(--brand-d); color: #fff; padding: 11px 18px; border-radius: 11px;
   font-size: 15px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.22);
 }
-/* ---------- sign in ---------- */
-.gate { max-width: 380px; margin: 0 auto; padding: 44px 20px; text-align: center; }
-.gate img { height: 118px; width: auto; margin-bottom: 16px; }
-.gate h1 { font-size: 22px; margin-bottom: 4px; }
-.gate p  { color: var(--ink-3); font-size: 14.5px; margin: 0 0 26px; }
+/* ---------- sign in ----------
+   The one theatrical screen in the app, and deliberately the only one.
+   He is here for four seconds a day and nothing on it can cost a child
+   an attendance mark, so this is where the budget for delight is spent
+   — not on the register behind it, which stays plain on purpose. */
+.gate {
+  min-height: 100vh; margin: 0; max-width: none;
+  padding: 40px 20px calc(40px + env(safe-area-inset-bottom));
+  display: flex; align-items: center; justify-content: center;
+  text-align: center; color: #F4EFE6;
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 32%, rgba(75,63,114,.55) 0%, rgba(20,16,31,0) 70%),
+    radial-gradient(ellipse 60% 40% at 50% 100%, rgba(216,166,87,.16) 0%, rgba(20,16,31,0) 70%),
+    #14101F;
+}
+.ginner { width: 100%; max-width: 380px; }
+.gate img { height: 112px; width: auto; margin-bottom: 18px; opacity: .95; }
+.gate h1 { font-size: 22px; margin-bottom: 4px; color: #F4EFE6; }
+.gate p  { color: #C9BFB0; font-size: 14.5px; margin: 0 0 26px; }
 .gate .field { text-align: left; }
+.gate .field span { color: #C9BFB0; }
+.gate .field input {
+  background: rgba(255,255,255,.05); border: 1px solid rgba(244,239,230,.18);
+  color: #F4EFE6;
+}
+.gate .field input:focus { outline: 2px solid #D8A657; border-color: #D8A657; }
+.gate .err { background: rgba(200,60,60,.16); border: 1px solid rgba(255,120,120,.35); color: #FFD6D6; }
+.gate .btn { background: #D8A657; color: #241B08; }
+
+/* ---------- the password is a keyboard ----------
+   The <input> is still a real password field — it holds the value, it
+   autofills, it announces itself to a screen reader. Only its TEXT is
+   transparent: the keys below are what you see instead of dots, and
+   the caret stays gold so the cursor is never lost. */
+.pf { position: relative; height: 58px; border-radius: 12px; overflow: hidden;
+      border: 1px solid rgba(244,239,230,.18); background: rgba(0,0,0,.3); }
+.pf:focus-within { border-color: #D8A657; box-shadow: 0 0 0 1px #D8A657; }
+.pkeys { position: absolute; inset: 0; }
+.pkeys i { position: absolute; top: 0; display: block; border-radius: 0 0 5px 5px; }
+.pkeys .kw { height: 100%; background: #E8E2D6; border-right: 1px solid rgba(20,16,31,.35);
+             transition: background .12s ease, transform .12s ease; }
+.pkeys .kb { height: 62%; background: #16121F; z-index: 2; border-radius: 0 0 4px 4px;
+             box-shadow: 0 2px 5px rgba(0,0,0,.6);
+             transition: background .12s ease, transform .12s ease; }
+/* A struck key, not a stained one: bright gold with the light on top,
+   pushed down by two pixels the way a real one goes. */
+.pkeys .kw.on {
+  background: linear-gradient(180deg, #FFE1A8 0%, #E8B45F 55%, #C9922F 100%);
+  transform: translateY(2px);
+  box-shadow: inset 0 -6px 10px rgba(120,80,10,.35);
+}
+.pkeys .kb.on {
+  background: linear-gradient(180deg, #E0AE5C 0%, #A97A22 100%);
+  transform: translateY(2px);
+}
+/* The input covers the whole keyboard so a tap anywhere on it focuses
+   the field, which is the only thing a thumb will try to do. */
+.pf input {
+  position: absolute; inset: 0; z-index: 3;
+  width: 100%; height: 100%; margin: 0; padding: 0 14px;
+  background: transparent; border: 0; border-radius: 12px;
+  /* -webkit-text-fill-color as well as color: in Blink and WebKit the
+     fill wins for text, so `color: transparent` alone still leaves the
+     password bullets faintly drawn over the keys. */
+  color: transparent; -webkit-text-fill-color: transparent;
+  caret-color: #D8A657;
+  font-size: 17px; letter-spacing: .3em;
+}
+.pf input:focus { outline: none; }
 @media (min-width: 720px) { .wrap { padding: 20px 16px 30px; } }

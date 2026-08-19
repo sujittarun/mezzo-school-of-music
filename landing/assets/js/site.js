@@ -1,30 +1,37 @@
 /* ============================================================
    MEZZO — the descent.
 
-   Each act is four screens tall with one sticky stage pinned
-   inside it, so the whole act is driven by a single number: p,
-   how far through those four screens you have come, 0 to 1.
+   Each act is four screens tall with one sticky stage pinned inside
+   it, so the whole act is driven by a single number: p, how far
+   through those four screens you have come, 0 to 1.
 
    p 0.00 – 0.52   you are standing in the room. The words are here.
    p 0.52 – 1.00   you fall through the aperture into the next one.
 
-   THE ONE TRICK WORTH UNDERSTANDING. The instrument is a solid
-   shape with a real hole cut through it (fill-rule="evenodd" in
-   the SVG). Behind that hole sits .portal — an ellipse the size of
-   the hole, holding a photograph of the NEXT room. Both are scaled
-   by exactly the same factor about exactly the same point, so the
-   hole and what is behind it stay welded together while the wood
-   flies past the camera. The photograph inside the portal is
-   counter-scaled by 1/S, which is what keeps it reading as a room
-   glimpsed through an opening rather than a thumbnail being blown
-   up. When S is large enough that the portal covers the viewport,
-   you are inside, and the next act's sticky stage takes over with
-   the same photograph already full-screen. The seam is invisible
+   THE ONE TRICK WORTH UNDERSTANDING. The instrument is a solid shape
+   with a real hole cut through it (fill-rule="evenodd" in the SVG).
+   Behind that hole sits .portal — an ellipse the size of the hole,
+   holding a photograph of the NEXT room. Both are scaled by exactly
+   the same factor about exactly the same point, so the hole and what
+   is behind it stay welded together while the wood flies past the
+   camera. The photograph inside counter-scales by 1/S, which keeps it
+   reading as a room seen through an opening rather than a thumbnail
+   being blown up. When S is large enough that the portal covers the
+   viewport you are inside, and the next act's sticky stage takes over
+   with the same photograph already full-screen. The seam is invisible
    because there isn't one.
 
-   The scale needed is MEASURED, never guessed: an aperture is a
-   different number of pixels on a phone and on a desktop, so the
-   factor is recomputed from the real element box on every resize.
+   WHY THIS FILE READS NO LAYOUT.
+   The first version asked every act for getBoundingClientRect() and
+   then wrote transforms to it, every frame — read, write, read, write,
+   five times over. Each read after a write forces the browser to
+   redo layout before it can answer, so a scroll that should cost one
+   composite cost five full layouts, and it stuttered exactly as you
+   would expect. Nothing here measures during a frame. Every geometry
+   the scroll needs is taken once in layout() and cached; a frame reads
+   one number, window.pageYOffset, and writes transforms. Writes that
+   would not change anything are skipped, because setting a style is
+   not free even when the value is identical.
    ============================================================ */
 (function () {
   "use strict";
@@ -33,19 +40,16 @@
                window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   /* ---------- letters ----------
-     Each character rises on its own, a beat after the one before,
-     the way notes in a phrase arrive. Split walks the element so
-     the <em> inside a headline survives it. */
+     Each character rises on its own, a beat after the one before, the
+     way notes in a phrase arrive. Words are wrapped before letters are:
+     an inline-block per character lets a line break anywhere, and a
+     headline reading "O / ne teacher" is worse than no animation. */
   function split(el) {
     var n = 0;
     (function walk(node) {
-      var kids = [].slice.call(node.childNodes);
-      kids.forEach(function (k) {
+      [].slice.call(node.childNodes).forEach(function (k) {
         if (k.nodeType === 3) {
           var frag = document.createDocumentFragment();
-          /* Words first, THEN letters. An inline-block per character
-             lets the line break anywhere, and a headline reading
-             "O / ne teacher" is worse than no animation at all. */
           k.nodeValue.split(/(\s+)/).forEach(function (word) {
             if (!word) return;
             if (/^\s+$/.test(word)) { frag.appendChild(document.createTextNode(" ")); return; }
@@ -55,7 +59,7 @@
               var c = document.createElement("span");
               c.className = "ch";
               c.textContent = ch;
-              c.style.transitionDelay = (n++ * 20) + "ms";
+              c.style.transitionDelay = (n++ * 18) + "ms";
               w.appendChild(c);
             });
             frag.appendChild(w);
@@ -74,6 +78,7 @@
     var raw = (el.getAttribute("data-ap") || "").split(",").map(Number);
     return {
       el: el,
+      wide:   el.hasAttribute("data-wide"),
       room:   el.querySelector(".room img"),
       copy:   el.querySelector(".copy"),
       cue:    el.querySelector(".cue"),
@@ -83,39 +88,70 @@
       pimg:   el.querySelector(".portal img"),
       ap:     raw.length === 4 && !raw.some(isNaN)
                 ? { cx: raw[0], cy: raw[1], w: raw[2], h: raw[3] } : null,
-      target: 24, offX: 0, offY: 0, shown: false
+      top: 0, run: 1, h: 0, target: 24, offX: 0, offY: 0,
+      shown: false, last: {}
     };
   });
 
   var ladder = [].slice.call(document.querySelectorAll(".ladder a"));
+  var active = -1;
+
+  /* Setting a style that already holds that value still dirties the
+     element. At five acts times six properties times sixty frames it
+     is worth one string compare. */
+  function set(el, prop, val, memo, key) {
+    if (memo[key] === val) return;
+    memo[key] = val;
+    el.style[prop] = val;
+  }
 
   /* ---------- layout ----------
-     Everything the dive needs in pixels, measured rather than
-     assumed, and measured again whenever the window changes. */
+     Runs on load and on resize, never during a scroll. Everything a
+     frame could possibly want to know is worked out here. */
   function layout() {
+    var vh = window.innerHeight, vw = window.innerWidth;
+
     acts.forEach(function (a) {
+      a.top = a.el.offsetTop;
+      a.h   = a.el.offsetHeight;
+      a.run = Math.max(1, a.h - vh);
+      a.last = {};
+
       if (!a.ap || !a.inst || !a.portal) return;
+
+      /* THE INSTRUMENT IS SIZED TO THE ROOM THAT IS LEFT.
+         The words come first and their height is not knowable in CSS —
+         a headline is two lines on a laptop and four on a phone, and
+         seven instrument chips wrap differently again. Sizing the
+         instrument with a fixed vh and hoping is what put the roster
+         on top of the keyboard. So: measure where the words actually
+         end, and give the instrument what remains. */
+      var gap  = Math.max(18, vh * 0.035);
+      var copyBottom = a.copy ? (a.copy.offsetTop + a.copy.offsetHeight) : vh * 0.10;
+      var room = vh - copyBottom - gap - 14;
+      var want = a.wide ? Math.min(vh * 0.42, vw * 0.52)
+                        : Math.min(vh * 0.62, vw * 0.72);
+      a.inst.style.height    = Math.max(104, Math.min(want, room)) + "px";
+      a.inst.style.marginTop = Math.max(0, copyBottom + gap) + "px";
+
       /* offsetWidth, NOT getBoundingClientRect. The rect includes the
-         element's own transform, so re-measuring during a dive (a
-         phone being rotated mid-fall is enough) reads the instrument
-         at scale 3 and sets an aperture three times too wide — after
-         which the growth needed to fill the screen is computed from a
-         lie and the dive stops short. offset* is the untransformed
-         box, which is the thing being asked about. */
+         element's own transform, so re-measuring during a dive — a
+         phone being rotated mid-fall is enough — reads the instrument
+         at scale 3, sets an aperture three times too wide, and then
+         computes the growth needed to fill the screen from a lie. */
       var w = a.inst.offsetWidth, h = a.inst.offsetHeight;
-      if (!w) return;
+      if (!w || !h) return;
 
       var pw = a.ap.w * w, ph = a.ap.h * h;
       a.portal.style.width  = pw + "px";
       a.portal.style.height = ph + "px";
 
-      /* Where the aperture ACTUALLY is, in the stage's own
-         coordinates. Not "the middle of the screen plus a bit": the
-         instrument is pushed down the stage to clear the words above
-         it, so anything anchored to the centre of the screen sits a
-         hundred-odd pixels off the hole it is supposed to be behind —
-         and the two drift further apart the more they are scaled. */
-      var stage = a.inst.offsetParent;                 /* .dive */
+      /* Where the aperture ACTUALLY is, in the stage's coordinates —
+         not "the middle of the screen plus a bit". The instrument sits
+         below the words, so anything anchored to the centre of the
+         screen is a hundred pixels off the hole it is meant to be
+         behind, and they drift further apart the more they scale. */
+      var stage = a.inst.offsetParent;
       var apX = a.inst.offsetLeft + w / 2 + (a.ap.cx - 0.5) * w;
       var apY = a.inst.offsetTop  + h / 2 + (a.ap.cy - 0.5) * h;
 
@@ -123,13 +159,11 @@
       a.portal.style.top  = apY + "px";
       a.inst.style.transformOrigin = (a.ap.cx * 100) + "% " + (a.ap.cy * 100) + "%";
 
-      /* How far the aperture is from the middle of the screen, so the
-         fall can bring it to the centre as it goes. */
-      a.offX = apX - (stage ? stage.offsetWidth  : window.innerWidth)  / 2;
-      a.offY = apY - (stage ? stage.offsetHeight : window.innerHeight) / 2;
+      a.offX = apX - (stage ? stage.offsetWidth  : vw) / 2;
+      a.offY = apY - (stage ? stage.offsetHeight : vh) / 2;
 
       /* How much growth actually covers this screen, both ways. */
-      a.target = Math.max(window.innerWidth / pw, window.innerHeight / ph) * 1.3;
+      a.target = Math.max(vw / pw, vh / ph) * 1.3;
     });
   }
 
@@ -137,85 +171,74 @@
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
   function span(v, a, b)  { return clamp((v - a) / (b - a), 0, 1); }
   function outCubic(t)    { return 1 - Math.pow(1 - t, 3); }
-  /* (No ease-in here on purpose — see the dive below.) */
 
-  var DIVE = 0.52;                       // where standing still becomes falling
+  var DIVE = 0.52;
   var levels = [0, 0, 0, 0];
 
-  function frame() {
+  function update(y) {
     var vh = window.innerHeight;
+    var mid = y + vh * 0.5;
 
-    acts.forEach(function (a, i) {
-      var box = a.el.getBoundingClientRect();
-      var run = a.el.offsetHeight - vh;
-      var p = run > 0 ? clamp(-box.top / run, 0, 1) : (box.top <= 0 ? 1 : 0);
+    for (var i = 0; i < acts.length; i++) {
+      var a = acts[i], m = a.last;
+      var rel = y - a.top;
 
-      /* Off screen entirely: stop touching it. */
-      if (box.bottom < -vh || box.top > vh * 2) return;
+      /* Off screen: leave it exactly as it is. */
+      if (rel < -vh || rel > a.h) continue;
 
+      var p    = clamp(rel / a.run, 0, 1);
       var hold = span(p, 0, DIVE);
       var dive = span(p, DIVE, 1);
 
-      /* The room drifts toward you while you read, then pushes past
-         as you fall. */
       if (a.room) {
-        a.room.style.transform = "scale(" + (1.14 - 0.14 * outCubic(hold) + 0.1 * dive) + ")";
+        set(a.room, "transform",
+            "scale(" + (1.14 - 0.14 * outCubic(hold) + 0.1 * dive).toFixed(4) + ")", m, "room");
       }
 
-      /* The words arrive, hold, and leave before the fall starts, so
-         nothing is ever read at speed. */
       if (a.copy) {
-        /* The first act is what the page opens on. Its words have to be
-           there before a single pixel is scrolled, or the site loads
-           looking empty. Every other act fades its words in. */
+        /* The first act is what the page opens on: its words are there
+           before a pixel is scrolled. The last act has no aperture
+           because there is nowhere left to fall to — it is the
+           destination, so its words arrive and STAY. Running them
+           through the fade that clears the way for a dive is what left
+           the address and the phone number invisible at the bottom. */
         var inN  = i === 0 ? 1 : span(p, 0.03, 0.24);
-        /* The last act has no aperture because there is nowhere left to
-           fall to — it is the destination. Its words arrive and STAY;
-           running them through the same fade-out that clears the way
-           for a dive leaves the address and the phone number invisible
-           at the bottom of the page, which is the one screen that has
-           to work. */
         var outN = a.ap ? span(p, 0.40, DIVE) : 0;
-        var o = outCubic(inN) * (1 - outN);
-        a.copy.style.opacity = o;
-        if (a.cue) a.cue.style.opacity = o;
-        a.copy.style.transform = "translateY(" + ((1 - outCubic(inN)) * 34 - outN * 60) + "px)";
+        var o    = outCubic(inN) * (1 - outN);
+        var ty   = (1 - outCubic(inN)) * 34 - outN * 60;
+
+        set(a.copy, "opacity",   o.toFixed(3), m, "co");
+        set(a.copy, "transform", "translateY(" + ty.toFixed(2) + "px)", m, "ct");
+        if (a.cue) set(a.cue, "opacity", o.toFixed(3), m, "cue");
 
         if (inN > 0.02 && !a.shown) {
           a.shown = true;
-          a.chars.forEach(function (c) { c.style.opacity = 1; c.style.transform = "none"; });
-        } else if (inN <= 0.02 && a.shown && p < 0.03) {
-          a.shown = false;
-          a.chars.forEach(function (c) { c.style.opacity = 0; c.style.transform = "translateY(.5em) rotateX(-40deg)"; });
+          for (var c = 0; c < a.chars.length; c++) {
+            a.chars[c].style.opacity = 1; a.chars[c].style.transform = "none";
+          }
         }
       }
 
-      /* The fall. One factor, applied to the instrument and to what
-         is behind its hole, about the same point. */
       if (a.inst && a.portal) {
         /* Scale GEOMETRICALLY, not linearly. Flying toward something at
            a steady speed multiplies its apparent size by a constant
-           factor per unit of distance — so the honest curve is
-           target^t, not a straight ramp and certainly not an ease-in.
-           A linear ramp spends the first half of the dive looking
-           motionless and the last tenth looking like a jump cut;
-           this one feels like a steady fall the whole way down. */
-        var t = dive;
-        var S = Math.pow(a.target, t);
-        var breathe = 1 + Math.sin(hold * Math.PI) * 0.03;
-        var panX = -a.offX * t, panY = -a.offY * t;
+           factor per unit of distance, so the honest curve is target^t.
+           A linear ramp looks motionless for half the dive and then
+           jump-cuts; this feels like a steady fall the whole way. */
+        var S    = Math.pow(a.target, dive);
+        var panX = -a.offX * dive, panY = -a.offY * dive;
+        var br   = dive > 0 ? 1 : 1 + Math.sin(hold * Math.PI) * 0.03;
 
-        a.inst.style.transform =
-          "translate(" + panX + "px," + panY + "px) scale(" + (S * (dive > 0 ? 1 : breathe)) + ")";
-        a.portal.style.transform =
-          "translate(calc(-50% + " + panX + "px), calc(-50% + " + panY + "px)) scale(" + S + ")";
-        if (a.pimg) a.pimg.style.transform = "scale(" + (1 / S) + ")";
+        set(a.inst, "transform",
+            "translate(" + panX.toFixed(1) + "px," + panY.toFixed(1) + "px) scale(" +
+            (S * br).toFixed(4) + ")", m, "it");
+        set(a.portal, "transform",
+            "translate(calc(-50% + " + panX.toFixed(1) + "px), calc(-50% + " +
+            panY.toFixed(1) + "px)) scale(" + S.toFixed(4) + ")", m, "pt");
+        if (a.pimg) set(a.pimg, "transform", "scale(" + (1 / S).toFixed(6) + ")", m, "pi");
 
-        /* Once the portal has swallowed the screen there is nothing
-           left to see of the instrument, and holding it at scale 30
-           costs a repaint for no picture. */
-        a.dive_done = dive > 0.995;
-        a.inst.style.opacity = dive > 0.9 ? (1 - span(dive, 0.9, 1)) : 1;
+        set(a.inst, "opacity",
+            (dive > 0.9 ? 1 - span(dive, 0.9, 1) : 1).toFixed(3), m, "io");
       }
 
       /* Which instruments are playing. Entering an act brings its own
@@ -225,13 +248,20 @@
         for (var v = 0; v < 4; v++) levels[v] = clamp(depth - v + 1, 0, 1);
       }
 
-      /* The ladder follows the middle of the screen. */
-      if (box.top <= vh * 0.5 && box.bottom > vh * 0.5) {
-        ladder.forEach(function (l, li) { l.classList.toggle("on", li === i); });
+      if (mid >= a.top && mid < a.top + a.h && active !== i) {
+        active = i;
+        for (var l = 0; l < ladder.length; l++) ladder[l].classList.toggle("on", l === i);
       }
-    });
+    }
 
     if (window.MZSound) window.MZSound.levels(levels);
+  }
+
+  /* One number in, transforms out. Nothing is measured here. */
+  var lastY = -1, dirty = true;
+  function frame() {
+    var y = window.pageYOffset;
+    if (y !== lastY || dirty) { lastY = y; dirty = false; update(y); }
     requestAnimationFrame(frame);
   }
 
@@ -247,9 +277,9 @@
   }
 
   /* ---------- every press ----------
-     A ring goes out from the point of contact, the way a struck
-     drum head does, and the note it plays is taken from the chord
-     that is sounding, so a click is always in key. */
+     A ring goes out from the point of contact, the way a struck drum
+     head does, and the note it plays is taken from the chord that is
+     sounding, so a click is always in key. */
   document.addEventListener("pointerdown", function (e) {
     var t = e.target.closest && e.target.closest(".btn, .roster span, .ladder a, .sound");
     if (!t) return;
@@ -262,7 +292,7 @@
     if (getComputedStyle(t).position === "static") t.style.position = "relative";
     t.appendChild(ring);
     setTimeout(function () { ring.remove(); }, 620);
-    if (window.MZSound) window.MZSound.press(t.classList.contains("roster") || t.tagName === "SPAN");
+    if (window.MZSound) window.MZSound.press(t.tagName === "SPAN");
   }, true);
 
   /* ---------- go ---------- */
@@ -270,12 +300,12 @@
     if (reduce) {
       [].forEach.call(document.querySelectorAll(".ch"),
         function (c) { c.style.opacity = 1; c.style.transform = "none"; });
-      return;                       // the page is four still rooms, and complete
+      return;                       /* four still rooms, and complete */
     }
     [].forEach.call(document.querySelectorAll(".ch"), function (c) {
       c.style.opacity = 0;
-      c.style.transform = "translateY(.5em) rotateX(-40deg)";
-      c.style.transition = "opacity .7s cubic-bezier(.22,.61,.36,1), transform .7s cubic-bezier(.22,.61,.36,1)";
+      c.style.transform = "translateY(.5em)";
+      c.style.transition = "opacity .6s cubic-bezier(.22,.61,.36,1), transform .6s cubic-bezier(.22,.61,.36,1)";
     });
     layout();
     requestAnimationFrame(frame);
@@ -283,13 +313,25 @@
        waiting for a scroll that may never come. */
     setTimeout(function () {
       var a = acts[0];
-      if (a) { a.shown = true;
-        a.chars.forEach(function (c) { c.style.opacity = 1; c.style.transform = "none"; }); }
+      if (!a) return;
+      a.shown = true;
+      a.chars.forEach(function (c) { c.style.opacity = 1; c.style.transform = "none"; });
     }, 120);
   }
 
-  window.addEventListener("resize", layout);
-  window.addEventListener("orientationchange", function () { setTimeout(layout, 250); });
-  window.addEventListener("load", layout);
+  var rt = null;
+  window.addEventListener("resize", function () {
+    clearTimeout(rt);
+    rt = setTimeout(function () { layout(); dirty = true; }, 120);
+  });
+  window.addEventListener("orientationchange", function () {
+    setTimeout(function () { layout(); dirty = true; }, 260);
+  });
+  window.addEventListener("load", function () { layout(); dirty = true; });
+  /* Web fonts land after first paint and change how tall the words
+     are, which changes how much room the instrument gets. */
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function () { layout(); dirty = true; });
+  }
   boot();
 })();

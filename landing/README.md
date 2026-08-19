@@ -68,6 +68,28 @@ Three things that were wrong before they were right, and would be again:
    constant factor per unit of distance. A linear ramp looks motionless
    for half the dive and then jump-cuts.
 
+## The three that were wrong on screen
+
+1. **A missing letter.** "Every instrument" rendered as "E ery" — the
+   `v` was in the DOM at opacity 1, width 17.7px, transform none, and
+   painted nowhere. Cause: `will-change: transform` on every `.ch`.
+   Five headlines of ~30 characters asked the compositor for ~150
+   layers; it answered by silently dropping some. These animate once
+   and are smooth without the hint. **Never put `will-change` on a
+   per-character split.**
+2. **The instrument is sized by the script, not by CSS.** A headline is
+   two lines on a laptop and four on a phone, and seven chips wrap
+   differently again, so no fixed `vh` clears the words on every screen
+   — which is how the roster ended up on top of the keyboard. `layout()`
+   measures where the copy actually ends and gives the instrument what
+   is left.
+3. **Nothing blurs on anything that scales.** A `box-shadow` with a
+   120px blur on an element scaled 25x is a 3000px blur, recomputed
+   every frame of the dive. The aperture's glow is two strokes now, and
+   `update()` reads no layout at all — the first version called
+   `getBoundingClientRect()` on five acts and then wrote transforms to
+   them, forcing a full layout per act per frame.
+
 ## Running it
 
 ```bash
