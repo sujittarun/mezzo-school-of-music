@@ -41,6 +41,33 @@ they could not be crossfaded by scroll position the way these can.
 
 Muted until the switch in the corner is pressed.
 
+## Why the instruments are photographs
+
+They were hand-drawn SVGs first, and the piano was redrawn three times
+before the real problem became obvious: **the rooms are 4K photographs
+and the instruments were flat vector shapes.** A drawing pasted on a
+photograph looks like a drawing pasted on a photograph, and no amount
+of redrawing the piano was going to close that gap.
+
+So every instrument is now a cut-out photograph with real alpha, and
+the mechanic changed to suit:
+
+- `.portal` is the next room at **full screen size, never scaled**. An
+  iris — `clip-path: circle()` — opens on it.
+- The iris starts at **exactly the radius of the real hole** in the
+  photograph in front of it: that guitar's soundhole, the port hole in
+  that bass drum, the opening under that piano lid. Those apertures are
+  measured off the cut-outs and stored as `data-ap="cx,cy,r"`.
+- **The hole and the iris grow at exactly the same rate.** If the iris
+  outruns the instrument, the next room spills over the soundboard and
+  it reads as a circle wipe; if it lags, you are staring at a hole with
+  a postage stamp in it.
+
+That last point is affordable only because these are bitmaps now.
+Scaling a photograph is a GPU texture operation; scaling the SVGs this
+replaced meant re-rasterising vector art at twenty-five times the size
+of the screen every frame. Same arithmetic, completely different cost.
+
 ## How the dive actually works
 
 The instrument is a solid SVG shape with a real hole cut through it

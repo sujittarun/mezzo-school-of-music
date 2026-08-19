@@ -85,79 +85,52 @@ img { display: block; max-width: 100%; }
     linear-gradient(180deg, rgba(10,8,16,.72) 0%, rgba(10,8,16,.18) 30%, rgba(10,8,16,.28) 70%, rgba(10,8,16,.8) 100%);
 }
 
-/* --- layer 2: the aperture you are about to fall through ---
-   .portal holds the NEXT room. It is an ellipse the size of the
-   instrument's opening, and it scales at exactly the same rate as
-   the instrument does, so the opening and what is behind it stay
-   locked together. The image inside counter-scales, which is what
-   keeps it looking like a room seen through a hole rather than a
-   thumbnail being blown up. */
+/* --- layer 2: the way through ---
+   THE DIVE, SECOND VERSION. The first one drew each instrument as an
+   SVG and scaled it twenty-five times while a matching circle of the
+   next room scaled behind its hole. It worked, and it looked like a
+   diagram pasted on a photograph — because that is what it was. The
+   rooms are 4K photographs and the instruments were flat vector
+   shapes, and no amount of redrawing the piano was going to close
+   that gap.
+
+   So the instruments are photographs now too, cut out with real
+   alpha, and the mechanic changed to suit them:
+
+     · .portal is the next room at FULL SCREEN SIZE, never scaled. An
+       iris — clip-path: circle() — opens on it, starting exactly the
+       size of the aperture in the instrument in front of it and
+       growing past the corners of the screen.
+     · .instrument flies toward the camera, but only to about six
+       times, not twenty-five. A photograph at 25x is mush, and a
+       layer 25x the size of the screen is what made this stutter.
+
+   Nothing here is scaled more than it can bear, and nothing blurs. */
 .dive {
   position: absolute; inset: 0; z-index: 3;
-  /* start, not centre: the script sets the instrument's margin-top to
-     exactly where the words end, so its top edge must land there
-     rather than being re-centred afterwards. */
   display: grid; place-items: start center;
   pointer-events: none;
 }
-.portal {
-  position: absolute;
-  border-radius: 50%;
-  overflow: hidden;
-  will-change: transform;
-  /* NO box-shadow. A 120px blur on an element that gets scaled 25x is
-     a 3000px blur, recomputed every frame of the dive — it was the
-     single biggest cost on the page. The glow around the aperture is
-     drawn once, in the SVG, by the .glow stroke instead. */
-}
+/* Above the instrument, not behind it: the iris is a window cut
+   through what you are looking at, and as it opens it swallows it. */
+.portal { position: absolute; inset: 0; z-index: 5; will-change: clip-path; }
 .portal img {
-  position: absolute; left: 50%; top: 50%;
-  /* The reset above caps images at their container, and this one's
-     container is the 67px aperture — which quietly shrank the room
-     behind the hole to 67px and made the whole dive render black. */
-  max-width: none;
-  width: 100vw; height: 100vh;
-  margin-left: -50vw; margin-top: -50vh;
+  position: absolute; inset: 0;
+  max-width: none; width: 100%; height: 100%;
   object-fit: cover;
-  will-change: transform;
 }
-/* Flying between two black keys is a slot, not a hole. */
-.act[data-shape="slot"] .portal { border-radius: 44% / 12%; }
 
-/* Sized by HEIGHT, not width — a guitar and a keyboard have nothing
-   in common horizontally, and the stage is what is short. */
-/* Height and margin-top are SET BY THE SCRIPT, from the height the
-   words actually took. These are only the pre-layout fallback. */
 .instrument {
   position: relative; z-index: 4;
+  display: block; width: auto; max-width: none;
   height: min(52vh, 62vw);
   margin-top: 34vh;
-  will-change: transform;
+  will-change: transform, opacity;
+  /* A cut-out sitting in a lit room needs to be grounded in it. One
+     static shadow, no filter — it never re-blurs because it never
+     changes. */
+  filter: drop-shadow(0 24px 40px rgba(0,0,0,.55));
 }
-/* No filter here either, for the same reason: any blur on the
-   instrument is a blur on a layer twenty-five times the size of the
-   screen. The gold edge stroke and the veil behind it give the shape
-   all the separation it needs, and cost nothing to scale. */
-.instrument svg { height: 100%; width: auto; display: block; overflow: visible; }
-/* The grand piano and the drum are wide, and would otherwise run off
-   the sides of a phone. */
-.act[data-wide] .instrument { height: min(34vh, 44vw); }
-
-/* The instrument bodies are solid so the aperture reads as the only
-   way through. The line work on top is the same hairline language
-   as the logo on his card. */
-.body      { fill: #171220; }
-.body-edge { fill: none; stroke: var(--gold); stroke-width: 2.2; opacity: .55; }
-.line      { fill: none; stroke: var(--cream-2); stroke-width: 1.6; opacity: .38; stroke-linecap: round; }
-.string    { fill: none; stroke: var(--gold-2); stroke-width: 1.5; opacity: .5; }
-/* The lit rim of the aperture. Painted as two strokes rather than one
-   stroke plus a blur: this element is scaled up to twenty-five times,
-   and a 14px drop-shadow at that scale is a 350px blur being recomputed
-   every frame. Two strokes cost nothing to scale and read the same. */
-.glow      { fill: none; stroke: var(--gold); stroke-width: 3; opacity: .95; }
-.glow-soft { fill: none; stroke: var(--gold-2); stroke-width: 12; opacity: .22; }
-.key-w     { fill: #E8E2D6; }
-.key-b     { fill: #120E1A; }
 
 /* ============================================================
    COPY
@@ -165,7 +138,7 @@ img { display: block; max-width: 100%; }
 /* The words sit in the top third and the instrument fills the rest,
    so a headline is never read across a lit aperture. */
 .copy {
-  position: absolute; z-index: 5;
+  position: absolute; z-index: 6;
   top: 9vh; left: 0; right: 0; margin: 0 auto;
   text-align: center;
   padding: 0 24px;
@@ -291,9 +264,25 @@ img { display: block; max-width: 100%; }
 }
 .brand-fixed img { width: 22px; opacity: .9; }
 
+/* Staff sign-in. Top right, opposite the wordmark, deliberately
+   understated — a parent should read straight past it. */
+.signin {
+  position: fixed; top: 22px; right: 28px; z-index: 60;
+  min-height: 44px; padding: 0 20px;
+  display: inline-flex; align-items: center;
+  border-radius: 100px; text-decoration: none;
+  border: 1px solid rgba(216,166,87,.4);
+  background: rgba(20,16,31,.55);
+  color: var(--cream);
+  font-family: var(--sans); font-size: 12px;
+  letter-spacing: .16em; text-transform: uppercase;
+  transition: border-color .3s var(--ease), transform .3s var(--ease), background .3s var(--ease);
+}
+.signin:hover { border-color: var(--gold); color: var(--gold-2); transform: translateY(-2px); }
+
 /* The four rungs of the descent. Fills as you go, and each one is
    a real link — the only navigation on the page. */
-.ladder { position: fixed; right: 30px; top: 50%; transform: translateY(-50%); z-index: 60;
+.ladder { position: fixed; right: 30px; top: 52%; transform: translateY(-50%); z-index: 60;
           display: flex; flex-direction: column; gap: 18px; }
 .ladder a {
   width: 34px; height: 34px; display: grid; place-items: center;
@@ -344,7 +333,8 @@ img { display: block; max-width: 100%; }
 
 /* The scroll cue, on the first screen only. */
 .cue {
-  position: absolute; bottom: 38px; left: 50%; transform: translateX(-50%);
+  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+  white-space: nowrap;
   z-index: 6; text-align: center;
   font-family: var(--sans); font-size: 10.5px; letter-spacing: .3em; text-transform: uppercase;
   color: var(--cream-2);
@@ -367,6 +357,7 @@ img { display: block; max-width: 100%; }
   .eyebrow { font-size: 10.5px; letter-spacing: .22em; margin-bottom: 16px; }
   .brand-fixed { top: 18px; left: 18px; font-size: 18px; }
   .ladder { right: 14px; gap: 14px; }
+  .signin { top: 14px; right: 14px; padding: 0 14px; font-size: 11px; min-height: 42px; }
   .ladder a { width: 28px; height: 28px; }
   .sound { bottom: 18px; right: 18px; padding: 0 16px; }
   .hours div { min-width: 0; flex: 1 1 100%; }

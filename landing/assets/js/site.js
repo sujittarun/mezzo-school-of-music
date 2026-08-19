@@ -86,10 +86,11 @@
       inst:   el.querySelector(".instrument"),
       portal: el.querySelector(".portal"),
       pimg:   el.querySelector(".portal img"),
-      ap:     raw.length === 4 && !raw.some(isNaN)
-                ? { cx: raw[0], cy: raw[1], w: raw[2], h: raw[3] } : null,
-      top: 0, run: 1, h: 0, target: 24, offX: 0, offY: 0,
-      shown: false, last: {}
+      ar:     parseFloat(el.getAttribute("data-ar")) || 1,
+      ap:     raw.length === 3 && !raw.some(isNaN)
+                ? { cx: raw[0], cy: raw[1], r: raw[2] } : null,
+      top: 0, run: 1, h: 0, apX: 0, apY: 0, apR: 1, Rmax: 1,
+      offX: 0, offY: 0, shown: false, last: {}
     };
   });
 
@@ -128,42 +129,35 @@
          end, and give the instrument what remains. */
       var gap  = Math.max(18, vh * 0.035);
       var copyBottom = a.copy ? (a.copy.offsetTop + a.copy.offsetHeight) : vh * 0.10;
-      var room = vh - copyBottom - gap - 14;
-      var want = a.wide ? Math.min(vh * 0.42, vw * 0.52)
-                        : Math.min(vh * 0.62, vw * 0.72);
-      a.inst.style.height    = Math.max(104, Math.min(want, room)) + "px";
+      /* Leave the bottom of the screen alone: the scroll cue lives down
+         there on the first act, and an instrument touching the edge
+         reads as cropped rather than standing in the room. */
+      var room = vh - copyBottom - gap - Math.max(56, vh * 0.09);
+      var want = Math.min(vh * 0.58, room);
+      var H = Math.max(120, want);
+      var W = H * a.ar;
+      if (W > vw * 0.90) { W = vw * 0.90; H = W / a.ar; }   /* keep the aspect */
+      a.inst.style.width     = W + "px";
+      a.inst.style.height    = H + "px";
       a.inst.style.marginTop = Math.max(0, copyBottom + gap) + "px";
 
-      /* offsetWidth, NOT getBoundingClientRect. The rect includes the
-         element's own transform, so re-measuring during a dive — a
-         phone being rotated mid-fall is enough — reads the instrument
-         at scale 3, sets an aperture three times too wide, and then
-         computes the growth needed to fill the screen from a lie. */
-      var w = a.inst.offsetWidth, h = a.inst.offsetHeight;
-      if (!w || !h) return;
-
-      var pw = a.ap.w * w, ph = a.ap.h * h;
-      a.portal.style.width  = pw + "px";
-      a.portal.style.height = ph + "px";
-
       /* Where the aperture ACTUALLY is, in the stage's coordinates —
-         not "the middle of the screen plus a bit". The instrument sits
-         below the words, so anything anchored to the centre of the
-         screen is a hundred pixels off the hole it is meant to be
-         behind, and they drift further apart the more they scale. */
+         the soundhole of that guitar, the port hole in that bass drum,
+         the opening under that piano lid. The iris starts exactly
+         there, at exactly that size, which is the whole illusion. */
       var stage = a.inst.offsetParent;
-      var apX = a.inst.offsetLeft + w / 2 + (a.ap.cx - 0.5) * w;
-      var apY = a.inst.offsetTop  + h / 2 + (a.ap.cy - 0.5) * h;
-
-      a.portal.style.left = apX + "px";
-      a.portal.style.top  = apY + "px";
+      a.apX = a.inst.offsetLeft + a.ap.cx * W;
+      a.apY = a.inst.offsetTop  + a.ap.cy * H;
+      a.apR = Math.max(2, a.ap.r * W);
       a.inst.style.transformOrigin = (a.ap.cx * 100) + "% " + (a.ap.cy * 100) + "%";
 
-      a.offX = apX - (stage ? stage.offsetWidth  : vw) / 2;
-      a.offY = apY - (stage ? stage.offsetHeight : vh) / 2;
+      a.offX = a.apX - (stage ? stage.offsetWidth  : vw) / 2;
+      a.offY = a.apY - (stage ? stage.offsetHeight : vh) / 2;
 
-      /* How much growth actually covers this screen, both ways. */
-      a.target = Math.max(vw / pw, vh / ph) * 1.3;
+      /* Far enough for the iris to clear the corners once it is centred,
+         expressed as the growth factor both it and the instrument use. */
+      a.Rmax   = Math.hypot(vw, vh) * 0.62;
+      a.target = a.Rmax / a.apR;
     });
   }
 
@@ -220,25 +214,41 @@
       }
 
       if (a.inst && a.portal) {
-        /* Scale GEOMETRICALLY, not linearly. Flying toward something at
-           a steady speed multiplies its apparent size by a constant
-           factor per unit of distance, so the honest curve is target^t.
-           A linear ramp looks motionless for half the dive and then
-           jump-cuts; this feels like a steady fall the whole way. */
+        /* THE HOLE AND THE IRIS GROW AT EXACTLY THE SAME RATE.
+           They have to. If the iris outruns the instrument, the next
+           room spills out over the soundboard and you are watching a
+           circle wipe; if it lags, you are staring at a hole with a
+           postage stamp in it. Locking them is the whole illusion, so
+           the instrument's scale IS the iris's scale.
+
+           This is affordable now only because the instruments are
+           bitmaps. Scaling a photograph is a GPU texture operation;
+           scaling the SVGs this replaced meant re-rasterising vector
+           art at twenty-five times the size of the screen, every
+           frame. Same arithmetic, completely different cost. */
         var S    = Math.pow(a.target, dive);
         var panX = -a.offX * dive, panY = -a.offY * dive;
-        var br   = dive > 0 ? 1 : 1 + Math.sin(hold * Math.PI) * 0.03;
+        var br   = dive > 0 ? 1 : 1 + Math.sin(hold * Math.PI) * 0.025;
 
         set(a.inst, "transform",
             "translate(" + panX.toFixed(1) + "px," + panY.toFixed(1) + "px) scale(" +
             (S * br).toFixed(4) + ")", m, "it");
-        set(a.portal, "transform",
-            "translate(calc(-50% + " + panX.toFixed(1) + "px), calc(-50% + " +
-            panY.toFixed(1) + "px)) scale(" + S.toFixed(4) + ")", m, "pt");
-        if (a.pimg) set(a.pimg, "transform", "scale(" + (1 / S).toFixed(6) + ")", m, "pi");
+        /* Gone before it can look soft. A 505px photograph at twenty
+           times is mush, so it leaves while it still reads as wood. */
+        set(a.inst, "opacity", (1 - span(dive, 0.42, 0.80)).toFixed(3), m, "io");
 
-        set(a.inst, "opacity",
-            (dive > 0.9 ? 1 - span(dive, 0.9, 1) : 1).toFixed(3), m, "io");
+        /* THE IRIS. Geometric again, for the same reason the old scale
+           was: opening at a steady rate multiplies the radius by a
+           constant factor per unit of scroll. It starts at exactly the
+           radius of the hole in the photograph and ends past the
+           corners, and its centre walks from the hole to the middle of
+           the screen as you line up on it. */
+        var R  = a.apR * S;
+        var cx = a.apX + (window.innerWidth  / 2 - a.apX) * dive;
+        var cy = a.apY + (window.innerHeight / 2 - a.apY) * dive;
+        set(a.portal, "clipPath",
+            "circle(" + R.toFixed(1) + "px at " + cx.toFixed(1) + "px " + cy.toFixed(1) + "px)",
+            m, "clip");
       }
 
       /* Which instruments are playing. Entering an act brings its own

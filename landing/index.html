@@ -34,6 +34,11 @@
 
 <a class="brand-fixed" href="#act-1"><img src="../assets/img/logo-white.png" alt="" />Mezzo</a>
 
+<!-- The way in for the one person who works here. Everyone else on
+     this page is a parent and should never need it, so it is quiet:
+     present, findable, and not competing with "Come and learn". -->
+<a class="signin" href="../">Sign in</a>
+
 <nav class="ladder" aria-label="Sections">
   <a href="#act-1" data-name="Welcome"><i></i></a>
   <a href="#act-2" data-name="Instruments"><i></i></a>
@@ -54,38 +59,17 @@
      aperture is the soundhole, and the room behind it is the
      photograph of a guitar's actual interior.
      ============================================================ -->
-<section class="act" id="act-1" data-ap="0.5,0.56,0.26,0.156">
+<section class="act" id="act-1" data-ar="0.3885" data-ap="0.499,0.638,0.123">
   <div class="stage">
-    <div class="room"><img src="assets/img/room-violin-2400.jpg" srcset="assets/img/room-violin-1400.jpg 1400w, assets/img/room-violin-2400.jpg 2400w" sizes="100vw" alt="" fetchpriority="high" /></div>
-    <div class="veil" style="background:radial-gradient(ellipse 60% 50% at 50% 55%,rgba(10,8,16,.35) 0%,rgba(10,8,16,.85) 60%,#0A0810 100%)"></div>
+    <div class="room"><img src="assets/img/room-violin-2400.jpg" srcset="assets/img/room-violin-1400.jpg 1400w, assets/img/room-violin-2400.jpg 2400w" sizes="100vw" alt="" /></div>
+    <div class="veil"></div>
 
     <div class="dive">
+      <!-- The next room, full screen and never scaled. An iris
+           opens on it, centred on the aperture of the instrument
+           in front. -->
       <div class="portal"><img src="assets/img/room-guitar-2400.jpg" srcset="assets/img/room-guitar-1400.jpg 1400w, assets/img/room-guitar-2400.jpg 2400w" sizes="100vw" alt="" /></div>
-      <div class="instrument">
-        <svg viewBox="0 0 600 1000" aria-hidden="true">
-          <rect class="body" x="266" y="60" width="68" height="270" rx="5"/>
-          <path class="body" d="M256 4h88a24 24 0 0 1 24 24v42a16 16 0 0 1-16 16H248a16 16 0 0 1-16-16V28a24 24 0 0 1 24-24z"/>
-          <!-- The body and the soundhole are ONE path. fill-rule evenodd is
-               what turns the second subpath into a hole instead of a disc,
-               and that hole is the only way through this screen. -->
-          <path class="body" fill-rule="evenodd" d="M300 300c80 0 152 42 152 112 0 60-46 108-46 148 0 52 86 80 86 192 0 120-86 190-192 190s-192-70-192-190c0-112 86-140 86-192 0-40-46-88-46-148 0-70 72-112 152-112z M378 560a78 78 0 1 0-156 0 78 78 0 1 0 156 0z"/>
-          <path class="body-edge" d="M300 300c80 0 152 42 152 112 0 60-46 108-46 148 0 52 86 80 86 192 0 120-86 190-192 190s-192-70-192-190c0-112 86-140 86-192 0-40-46-88-46-148 0-70 72-112 152-112z"/>
-          <circle class="line" cx="300" cy="560" r="97"/>
-          <circle class="line" cx="300" cy="560" r="89"/>
-          <rect x="230" y="712" width="140" height="26" rx="9" fill="#0F0B18" stroke="#C9BFB0" stroke-opacity=".3"/>
-          <g class="line" opacity=".22">
-            <line x1="266" y1="112" x2="334" y2="112"/><line x1="266" y1="164" x2="334" y2="164"/>
-            <line x1="266" y1="212" x2="334" y2="212"/><line x1="266" y1="256" x2="334" y2="256"/>
-          </g>
-          <g class="string">
-            <line x1="272" y1="34" x2="248" y2="726"/><line x1="283" y1="34" x2="268" y2="726"/>
-            <line x1="294" y1="34" x2="288" y2="726"/><line x1="306" y1="34" x2="312" y2="726"/>
-            <line x1="317" y1="34" x2="332" y2="726"/><line x1="328" y1="34" x2="352" y2="726"/>
-          </g>
-          <circle class="glow-soft" cx="300" cy="560" r="78"/>
-          <circle class="glow" cx="300" cy="560" r="78"/>
-        </svg>
-      </div>
+      <img class="instrument" src="assets/img/inst-guitar.webp" alt="An acoustic guitar" />
     </div>
 
     <div class="copy">
@@ -102,37 +86,17 @@
      ACT II — INSIDE THE GUITAR. A piano stands in the room, and
      the way on is the one key that is not there.
      ============================================================ -->
-<section class="act" id="act-2" data-wide data-ap="0.585,0.420,0.52,0.185">
+<section class="act" id="act-2" data-ar="0.8192" data-ap="0.487,0.487,0.090">
   <div class="stage">
-    <div class="room"><img src="assets/img/room-guitar-2400.jpg" srcset="assets/img/room-guitar-1400.jpg 1400w, assets/img/room-guitar-2400.jpg 2400w" sizes="100vw" alt="Inside the body of an acoustic guitar" /></div>
+    <div class="room"><img src="assets/img/room-guitar-2400.jpg" srcset="assets/img/room-guitar-1400.jpg 1400w, assets/img/room-guitar-2400.jpg 2400w" sizes="100vw" alt="" /></div>
     <div class="veil"></div>
 
     <div class="dive">
+      <!-- The next room, full screen and never scaled. An iris
+           opens on it, centred on the aperture of the instrument
+           in front. -->
       <div class="portal"><img src="assets/img/room-piano-2400.jpg" srcset="assets/img/room-piano-1400.jpg 1400w, assets/img/room-piano-2400.jpg 2400w" sizes="100vw" alt="" /></div>
-      <div class="instrument">
-        <!-- A full grand piano with the lid raised, which is the one view
-             of it nobody has to be told about. The aperture is the
-             opening under the lid: the way the sound gets out, so the
-             way in. -->
-        <svg viewBox="0 0 1200 800" aria-hidden="true">
-          <path class="body" d="M1102 416L306 142L276 172L1078 448Z"/>
-          <path class="body-edge" d="M1102 416L306 142L276 172L1078 448Z"/>
-          <path class="line" d="M646 286L664 414" stroke-width="7"/>
-          <path class="body" d="M110 420L1000 420C1080 420 1120 450 1120 490L1120 505C1120 545 1080 570 1000 570L190 570C140 570 110 545 110 505Z"/>
-          <path class="body-edge" d="M110 420L1000 420C1080 420 1120 450 1120 490L1120 505C1120 545 1080 570 1000 570L190 570C140 570 110 545 110 505Z"/>
-          <g class="string" opacity=".35"><line x1="330" y1="196" x2="360" y2="418"/><line x1="384" y1="213" x2="414" y2="418"/><line x1="438" y1="230" x2="468" y2="418"/><line x1="492" y1="247" x2="522" y2="418"/><line x1="546" y1="264" x2="576" y2="418"/><line x1="600" y1="281" x2="630" y2="418"/><line x1="654" y1="298" x2="684" y2="418"/><line x1="708" y1="315" x2="738" y2="418"/><line x1="762" y1="332" x2="792" y2="418"/><line x1="816" y1="349" x2="846" y2="418"/><line x1="870" y1="366" x2="900" y2="418"/><line x1="924" y1="383" x2="954" y2="418"/><line x1="978" y1="400" x2="1008" y2="418"/><line x1="1032" y1="417" x2="1062" y2="418"/></g>
-          <path class="body" d="M52 418L286 418L286 476L52 476Z"/>
-          <g class="key-w"><rect x="66.0" y="424" width="19" height="44" rx="2"/><rect x="86.5" y="424" width="19" height="44" rx="2"/><rect x="107.0" y="424" width="19" height="44" rx="2"/><rect x="127.5" y="424" width="19" height="44" rx="2"/><rect x="148.0" y="424" width="19" height="44" rx="2"/><rect x="168.5" y="424" width="19" height="44" rx="2"/><rect x="189.0" y="424" width="19" height="44" rx="2"/><rect x="209.5" y="424" width="19" height="44" rx="2"/><rect x="230.0" y="424" width="19" height="44" rx="2"/><rect x="250.5" y="424" width="19" height="44" rx="2"/><rect x="271.0" y="424" width="19" height="44" rx="2"/></g>
-          <g class="key-b"><rect x="79.5" y="424" width="11" height="27" rx="1.5"/><rect x="100.0" y="424" width="11" height="27" rx="1.5"/><rect x="141.0" y="424" width="11" height="27" rx="1.5"/><rect x="161.5" y="424" width="11" height="27" rx="1.5"/><rect x="182.0" y="424" width="11" height="27" rx="1.5"/><rect x="223.0" y="424" width="11" height="27" rx="1.5"/><rect x="243.5" y="424" width="11" height="27" rx="1.5"/></g>
-          <g class="body">
-            <path d="M150 570h40l-9 172h-22z"/><path d="M604 570h40l-9 172h-22z"/>
-            <path d="M1040 570h40l-9 172h-22z"/>
-          </g>
-          <path class="line" d="M596 640h56M604 664h40" stroke-width="6" opacity=".3"/>
-          <path class="glow-soft" d="M306 176L1090 420L306 420Z"/>
-          <path class="glow" d="M306 176L1090 420L306 420Z"/>
-        </svg>
-      </div>
+      <img class="instrument" src="assets/img/inst-piano.webp" alt="A concert grand piano with the lid raised" />
     </div>
 
     <div class="copy">
@@ -150,36 +114,17 @@
 <!-- ============================================================
      ACT III — INSIDE THE PIANO. A drum, and the way on is its head.
      ============================================================ -->
-<section class="act" id="act-3" data-wide data-ap="0.5,0.5,0.38,0.38">
+<section class="act" id="act-3" data-ar="1.3662" data-ap="0.587,0.745,0.044">
   <div class="stage">
-    <div class="room"><img src="assets/img/room-piano-2400.jpg" srcset="assets/img/room-piano-1400.jpg 1400w, assets/img/room-piano-2400.jpg 2400w" sizes="100vw" alt="Inside a grand piano, among the strings" /></div>
+    <div class="room"><img src="assets/img/room-piano-2400.jpg" srcset="assets/img/room-piano-1400.jpg 1400w, assets/img/room-piano-2400.jpg 2400w" sizes="100vw" alt="" /></div>
     <div class="veil"></div>
 
     <div class="dive">
+      <!-- The next room, full screen and never scaled. An iris
+           opens on it, centred on the aperture of the instrument
+           in front. -->
       <div class="portal"><img src="assets/img/room-drum-2400.jpg" srcset="assets/img/room-drum-1400.jpg 1400w, assets/img/room-drum-2400.jpg 2400w" sizes="100vw" alt="" /></div>
-      <div class="instrument">
-        <svg viewBox="0 0 1000 1000" aria-hidden="true">
-          <path class="body" fill-rule="evenodd" d="M500 70a430 430 0 1 1 0 860 430 430 0 0 1 0-860z M500 310a190 190 0 1 0 0 380 190 190 0 0 0 0-380z"/>
-          <circle class="body-edge" cx="500" cy="500" r="428"/>
-          <circle class="line" cx="500" cy="500" r="392"/>
-          <circle class="line" cx="500" cy="500" r="286" opacity=".2"/>
-          <circle class="line" cx="500" cy="500" r="228" opacity=".14"/>
-          <g fill="#0F0B18" stroke="#C9BFB0" stroke-opacity=".34">
-            <rect x="484" y="30"  width="32" height="58" rx="8"/><rect x="484" y="912" width="32" height="58" rx="8"/>
-            <rect x="30"  y="484" width="58" height="32" rx="8"/><rect x="912" y="484" width="58" height="32" rx="8"/>
-            <rect x="176" y="176" width="46" height="32" rx="8" transform="rotate(45 199 192)"/>
-            <rect x="778" y="176" width="46" height="32" rx="8" transform="rotate(-45 801 192)"/>
-            <rect x="176" y="792" width="46" height="32" rx="8" transform="rotate(-45 199 808)"/>
-            <rect x="778" y="792" width="46" height="32" rx="8" transform="rotate(45 801 808)"/>
-          </g>
-          <g class="string" opacity=".3">
-            <line x1="130" y1="470" x2="870" y2="470"/><line x1="130" y1="500" x2="870" y2="500"/>
-            <line x1="130" y1="530" x2="870" y2="530"/>
-          </g>
-          <circle class="glow-soft" cx="500" cy="500" r="190"/>
-          <circle class="glow" cx="500" cy="500" r="190"/>
-        </svg>
-      </div>
+      <img class="instrument" src="assets/img/inst-drum.webp" alt="A drum kit" />
     </div>
 
     <div class="copy">
@@ -198,41 +143,17 @@
      ACT IV — INSIDE THE DRUM. The violin, which is the school's
      own mark, and the last aperture.
      ============================================================ -->
-<section class="act" id="act-4" data-ap="0.498,0.587,0.142,0.226">
+<section class="act" id="act-4" data-ar="0.3838" data-ap="0.573,0.742,0.048">
   <div class="stage">
-    <div class="room"><img src="assets/img/room-drum-2400.jpg" srcset="assets/img/room-drum-1400.jpg 1400w, assets/img/room-drum-2400.jpg 2400w" sizes="100vw" alt="Inside a drum, beneath the lit head" /></div>
+    <div class="room"><img src="assets/img/room-drum-2400.jpg" srcset="assets/img/room-drum-1400.jpg 1400w, assets/img/room-drum-2400.jpg 2400w" sizes="100vw" alt="" /></div>
     <div class="veil"></div>
 
     <div class="dive">
+      <!-- The next room, full screen and never scaled. An iris
+           opens on it, centred on the aperture of the instrument
+           in front. -->
       <div class="portal"><img src="assets/img/room-violin-2400.jpg" srcset="assets/img/room-violin-1400.jpg 1400w, assets/img/room-violin-2400.jpg 2400w" sizes="100vw" alt="" /></div>
-      <div class="instrument">
-        <svg viewBox="0 0 520 1000" aria-hidden="true">
-          <rect class="body" x="234" y="150" width="52" height="340" rx="4"/>
-          <path class="body" d="M236 60c-24 0-42 18-42 40 0 24 20 40 44 38 20-2 30-16 28-30-2-14-16-20-26-16 8-14 28-12 38 2 10 18 2 44-18 54l4 34 48-8-8-104c-4-26-26-46-54-46h-14z"/>
-          <!-- The body has corners. A violin's waist is not a curve, it is
-               two C-bouts meeting the bouts at a point, and that is most
-               of what tells it apart from a small guitar. -->
-          <path class="body" fill-rule="evenodd" d="M260 470c60 0 106 35 106 80 0 35-26 60-36 82l14 14c-14 14-22 29-22 46 0 18 8 32 22 46l-14 14c12 22 58 44 58 96 0 60-58 98-128 98s-128-38-128-98c0-52 46-74 58-96l-14-14c14-14 22-28 22-46 0-17-8-32-22-46l14-14c-10-22-36-47-36-82 0-45 46-80 106-80z M272 477c16 0 24 15 16 27-8 16-20 36-22 66-2 30-14 50-22 70-8 16-4 28 6 32 16 6 18 22 4 26-18 4-32-8-30-24 2-18 14-34 20-54 6-24 14-42 14-64 0-22-12-36-18-48-8-14 10-34 32-31z"/>
-          <path class="body-edge" d="M260 470c60 0 106 35 106 80 0 35-26 60-36 82l14 14c-14 14-22 29-22 46 0 18 8 32 22 46l-14 14c12 22 58 44 58 96 0 60-58 98-128 98s-128-38-128-98c0-52 46-74 58-96l-14-14c14-14 22-28 22-46 0-17-8-32-22-46l14-14c-10-22-36-47-36-82 0-45 46-80 106-80z"/>
-          <rect x="196" y="760" width="128" height="18" rx="6" fill="#0F0B18" stroke="#C9BFB0" stroke-opacity=".3"/>
-          <path class="body" d="M238 812h44l10 122c1 13-9 23-22 23h-20c-13 0-23-10-22-23z"/>
-          <g class="string">
-            <line x1="246" y1="142" x2="236" y2="830"/><line x1="253" y1="142" x2="249" y2="830"/>
-            <line x1="261" y1="142" x2="265" y2="830"/><line x1="268" y1="142" x2="278" y2="830"/>
-          </g>
-          <!-- The bow, laid across the lower bout. A violin without one
-               is an object; with one it is an instrument someone plays. -->
-          <g>
-            <path d="M26 952C180 906 340 856 496 802" fill="none" stroke="#C9A227" stroke-width="8" stroke-linecap="round" opacity=".85"/>
-            <path d="M40 972C192 926 350 878 502 824" fill="none" stroke="#F4EFE6" stroke-width="3.5" stroke-linecap="round" opacity=".5"/>
-            <path d="M20 940l26 46" stroke="#C9A227" stroke-width="6" stroke-linecap="round" opacity=".85"/>
-            <rect x="34" y="936" width="30" height="44" rx="7" transform="rotate(-17 49 958)" fill="#0F0B18" stroke="#C9A227" stroke-opacity=".7" stroke-width="2"/>
-            <path d="M498 796l10 32" stroke="#C9A227" stroke-width="6" stroke-linecap="round" opacity=".85"/>
-          </g>
-          <path class="glow-soft" d="M272 477c16 0 24 15 16 27-8 16-20 36-22 66-2 30-14 50-22 70-8 16-4 28 6 32 16 6 18 22 4 26-18 4-32-8-30-24 2-18 14-34 20-54 6-24 14-42 14-64 0-22-12-36-18-48-8-14 10-34 32-31z"/>
-          <path class="glow" d="M272 477c16 0 24 15 16 27-8 16-20 36-22 66-2 30-14 50-22 70-8 16-4 28 6 32 16 6 18 22 4 26-18 4-32-8-30-24 2-18 14-34 20-54 6-24 14-42 14-64 0-22-12-36-18-48-8-14 10-34 32-31z"/>
-        </svg>
-      </div>
+      <img class="instrument" src="assets/img/inst-violin.webp" alt="A violin and its bow" />
     </div>
 
     <div class="copy">
