@@ -286,21 +286,30 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
   height: 20px; width: calc(100% - 20px);
   overflow: visible; pointer-events: none;
 }
+/* stroke-width is in the SVG's own units, so a scaleY of 9 would make
+   a 1.6px string render 14px thick — a ribbon, not a string.
+   vector-effect="non-scaling-stroke" on the path keeps the stroke a
+   constant width however far the geometry is stretched. */
 .wire path {
-  fill: none; stroke: #D8A657; stroke-width: 1.6; opacity: .75;
+  fill: none; stroke: #D8A657; stroke-width: 2; opacity: .8;
   transform-origin: 50% 50%;
 }
-/* A plucked string does not wobble evenly, it loses amplitude fast and
-   keeps going a while — hence the uneven, decaying steps. */
-.wire.twang path { animation: twang .62s cubic-bezier(.3,.7,.4,1); }
+/* A PLUCK STARTS AT FULL DISPLACEMENT AND DECAYS.
+   The first version began at rest and swung out at 12% — which looks
+   right if you type one letter and stop, and looks like nothing at all
+   if you type at speed. Every keystroke restarts the animation, so at
+   a normal typing rate it was being sent back to the resting position
+   before it had moved anywhere, and only the first letter of an email
+   ever appeared to move the string. Starting at the peak means every
+   letter visibly displaces it, however fast they arrive. */
+.wire.twang path { animation: twang .55s cubic-bezier(.25,.7,.4,1); }
 @keyframes twang {
-  0%   { transform: scaleY(1) }
-  12%  { transform: scaleY(-8) }
-  26%  { transform: scaleY(5.5) }
-  40%  { transform: scaleY(-3.4) }
-  54%  { transform: scaleY(2.1) }
-  68%  { transform: scaleY(-1.2) }
-  82%  { transform: scaleY(.6) }
+  0%   { transform: scaleY(-9) }
+  14%  { transform: scaleY(6.4) }
+  29%  { transform: scaleY(-4.2) }
+  44%  { transform: scaleY(2.6) }
+  60%  { transform: scaleY(-1.6) }
+  78%  { transform: scaleY(.9) }
   100% { transform: scaleY(1) }
 }
 @media (min-width: 720px) { .wrap { padding: 20px 16px 30px; } }
