@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Mezzo School of Music</title>
+<meta name="theme-color" content="#4B3F72" />
+<link rel="icon" href="assets/img/favicon.png" />
+<link rel="apple-touch-icon" href="assets/img/icon-192.png" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="stylesheet" href="assets/css/app.css?v=1" />
+</head>
+<body>
+<div id="root"></div>
+<div class="tabs" id="tabs" hidden></div>
+<script src="assets/js/cloud.js?v=1"></script>
+<script>
+/* ============================================================
+   MEZZO — the whole app.
+
+   Three tabs and nothing else. Everything on screen is either
+   something he taps or a number he reads; there is no navigation to
+   learn and no screen he can end up on without a way back, because
+   the tabs never leave.
+
+   Money is never computed here. resolve_fee prices a student,
+   record_fee_payment writes the rupees, reminder_queue decides who is
+   late — and this tenant's config already says "one nudge, one day
+   late", so the list that comes back IS his list. Filtering it here
+   would be how his screen and his WhatsApp start disagreeing.
+   ============================================================ */
+(function () {
+  "use strict";
+  var root = document.getElementById("root"), tabs = document.getElementById("tabs");
+
+  var S = {
+    tab: "register",
+    mode: "today",            // today | month
+    day: MZ.todayIso(),
+    month: null,              // {y, m}
+    q: "",
+    register: null,           // rows from attendance_month
+    dues: null,
+    money: null,
+    ref: null,
+    busy: {},                 // enrollment_id -> true while a mark is in flight
+    err: ""
+  };
+  (function () { var d = new Date(); S.month = { y: d.getFullYear(), m: d.getMonth() + 1 }; })();
+
+  /* ---------- small helpers ---------- */
+  function esc(s) { var d = document.createElement("i"); d.textContent = String(s == null ? "" : s); return d.innerHTML; }
+  function inr(n) { return "₹" + Number(n || 0).toLocaleString("en-IN"); }
+  function el(html) { var d = document.createElement("div"); d.innerHTML = html; return d.firstElementChild; }
+  function dayName(iso) {
+    var p = iso.split("-"), d = new Date(+p[0], +p[1] - 1, +p[2]);
+    return d.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" });
+  }
+  function isSunday(iso) { var p = iso.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]).getDay() === 0; }
+  function shiftDay(iso, by) {
+    var p = iso.split("-"), d = new Date(+p[0], +p[1] - 1, +p[2]);
+    d.setDate(d.getDate() + by); return MZ.iso(d);
+  }
+  var toastT = null;
+  function toast(msg) {
+    var old = document.querySelector(".toast"); if (old) old.remove();
+    var t = el('<div class="toast">' + esc(msg) + "</div>");
+    document.body.appendChild(t);
+    clearTimeout(toastT); toastT = setTimeout(function () { t.remove(); }, 2200);
+  }
+  function fail(e) {
+    S.err = (e && e.message) || "Something went wrong. Check the internet and try again.";
+    render();
+  }
+
+  /* ---------- sign in ---------- */
+  function gate() {
+    tabs.hidden = true;
+    root.innerHTML =
+      '<div class="gate">' +
+        '<img src="assets/img/logo.png" alt="" />' +
+        "<h1>Mezzo School of Music</h1>" +
+        "<p>Sign in to open the register</p>" +
+        (S.err ? '<div class="err">' + esc(S.err) + "</div>" : "") +
+        '<label class="field"><span>Email</span>' +
+          '<input id="em" type="email" autocomplete="username" inputmode="email" /></label>' +
+        '<label class="field"><span>Password</span>' +
+          '<input id="pw" type="password" autocomplete="current-password" /></label>' +
+        '<button class="btn" id="go">Sign in</button>' +
+      "</div>";
+    /* Never a value= on these two. This repo is public, and a prefilled
+       password here is a live credential on the open web that stays in
+       git history after it is removed. */
+    var go = document.getElementById("go");
+    function submit() {
+      var em = document.getElementById("em").value.trim();
+      var pw = document.getElementById("pw").value;
+      if (!em || !pw) { S.err = "Enter the email and password."; return render(); }
+      go.disabled = true; go.textContent = "Signing in…";
+      MZ.signIn(em, pw).then(function () { S.err = ""; boot(); })
+        .catch(function (e) { go.disabled = false; go.textContent = "Sign in"; fail(e); });
+    }
+    go.onclick = submit;
+    document.getElementById("pw").onkeydown = function (e) { if (e.key === "Enter") submit(); };
+  }
+
+  /* ---------- chrome ---------- */
+  function header(sub) {
+    return '<div class="top">' +
+      '<img src="assets/img/logo.png" alt="" />' +
+      '<div class="t"><b>Mezzo</b><span>' + esc(sub) + "</span></div>" +
+      '<button id="out">Sign out</button></div>';
+  }
+  function drawTabs() {
+    tabs.hidden = false;
+    var T = [["register", "✓", "Register"], ["dues", "₹", "Dues"], ["money", "≡", "Money"]];
+    tabs.innerHTML = T.map(function (t) {
+      return '<button data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' class="on"' : "") +
+        '><span class="ic">' + t[1] + "</span>" + t[2] + "</button>";
+    }).join("");
+  }
+
+  /* ============================================================
+     TAB 1 — REGISTER
+     Opens on today, because 99 times out of 100 that is why the app
+     is open. The month grid is one tap away and reads the SAME
+     function, so the two can never disagree.
+     ============================================================ */
+  function loadRegister() {
+    S.register = null;
+    var r = S.mode === "today"
+      ? { from: S.day, to: S.day }
+      : MZ.monthRange(S.month.y, S.month.m);
+    return MZ.register(r.from, r.to).then(function (rows) {
+      S.register = { rows: rows || [], from: r.from, to: r.to };
+      render();
+    }).catch(fail);
+  }
+
+  function viewRegister() {
+    var body = "";
+    if (S.mode === "today") {
+      body += '<div class="daybar">' +
+        '<button data-day="-1">‹</button>' +
+        '<div class="d"><b>' + esc(dayName(S.day)) + "</b><span>" +
+          (S.day === MZ.todayIso() ? "Today" : (isSunday(S.day) ? "Sunday · closed" : "")) +
+        "</span></div>" +
+        '<button data-day="1"' + (S.day >= MZ.todayIso() ? " disabled" : "") + ">›</button>" +
+      "</div>";
+    } else {
+      var mn = new Date(S.month.y, S.month.m - 1, 1)
+        .toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+      body += '<div class="daybar">' +
+        '<button data-mon="-1">‹</button>' +
+        '<div class="d"><b>' + esc(mn) + "</b><span>whole month</span></div>" +
+        '<button data-mon="1">›</button>' +
+      "</div>";
+    }
+
+    body += '<div class="sub-toggle">' +
+      '<button data-mode="today"' + (S.mode === "today" ? ' class="on"' : "") + ">One day</button>" +
+      '<button data-mode="month"' + (S.mode === "month" ? ' class="on"' : "") + ">Whole month</button>" +
+    "</div>";
+
+    if (!S.register) return body + '<div class="note">Loading…</div>';
+
+    var rows = S.register.rows;
+    if (S.q) {
+      var q = S.q.toLowerCase();
+      rows = rows.filter(function (r) {
+        return (r.member_name || "").toLowerCase().indexOf(q) >= 0 ||
+               (r.sport || "").toLowerCase().indexOf(q) >= 0;
+      });
+    }
+    if (S.register.rows.length > 12) {
+      body += '<input class="search" id="q" placeholder="Find a student or instrument…" value="' + esc(S.q) + '" />';
+    }
+    if (!S.register.rows.length) {
+      return body + '<div class="card"><div class="note">No students yet.<br><br>' +
+        '<button class="btn" data-add="1">Add the first student</button></div></div>';
+    }
+    if (!rows.length) return body + '<div class="card"><div class="note">Nobody matches that.</div></div>';
+
+    body += S.mode === "today" ? dayList(rows) : monthGrid(rows);
+    body += '<button class="btn ghost" data-add="1" style="margin-top:6px">+ Add a student</button>';
+    return body;
+  }
+
+  function dayList(rows) {
+    var marked = 0;
+    var html = rows.map(function (r) {
+      var st = r.marks && r.marks[S.day];
+      if (st === "present") marked++;
+      var cls = st === "present" ? "present" : st === "absent" ? "absent" : "";
+      var glyph = st === "present" ? "✓" : st === "absent" ? "✕" : "";
+      return '<div class="srow">' +
+        '<div class="nm"><b>' + esc(r.member_name) + "</b><span>" + esc(r.sport || "") + "</span></div>" +
+        '<button class="tick ' + cls + (S.busy[r.enrollment_id] ? " busy" : "") + '"' +
+          ' data-mark="' + r.enrollment_id + '" data-batch="' + (r.batch_id || "") + '"' +
+          ' data-now="' + (st || "") + '" aria-label="' + esc(r.member_name) + '">' + glyph + "</button>" +
+      "</div>";
+    }).join("");
+    return '<div class="card"><div class="rowline" style="margin-bottom:6px">' +
+        '<b style="font-size:15px">' + marked + " of " + rows.length + " here</b>" +
+        '<span style="flex:1"></span><span class="muted">tap to mark</span>' +
+      "</div>" + html + "</div>";
+  }
+
+  function monthGrid(rows) {
+    var y = S.month.y, m = S.month.m, days = MZ.monthRange(y, m).days;
+    var head = "", i, iso;
+    for (i = 1; i <= days; i++) {
+      iso = y + "-" + String(m).padStart(2, "0") + "-" + String(i).padStart(2, "0");
+      head += '<th class="' + (isSunday(iso) ? "sun" : "") + '">' + i + "</th>";
+    }
+    var body = rows.map(function (r) {
+      var cells = "";
+      for (i = 1; i <= days; i++) {
+        iso = y + "-" + String(m).padStart(2, "0") + "-" + String(i).padStart(2, "0");
+        var st = r.marks && r.marks[iso];
+        cells += '<td><span class="cell"><i class="' +
+          (st === "present" ? "p" : st === "absent" ? "a" : "n") + '">' +
+          (st === "present" ? "✓" : st === "absent" ? "✕" : "") + "</i></span></td>";
+      }
+      return "<tr><td class=\"nmcol\">" + esc(r.member_name) +
+        '<div style="font-weight:400;font-size:11.5px;color:var(--ink-3)">' + esc(r.sport || "") + "</div></td>" +
+        cells + '<td class="tot">' + r.present_days + "</td></tr>";
+    }).join("");
+    return '<div class="card"><div class="gridwrap"><table class="reg">' +
+      "<thead><tr><th class=\"nmcol\"></th>" + head + '<th class="tot">Total</th></tr></thead>' +
+      "<tbody>" + body + "</tbody></table></div>" +
+      '<div class="muted" style="margin-top:10px">Scroll sideways for the rest of the month. ' +
+      "Tap <b>One day</b> to mark attendance.</div></div>";
+  }
+
+  /* Tap cycles blank → present → absent → blank. One control, three
+     states, and the colour says which without reading anything. */
+  function cycle(btn) {
+    var eid = +btn.getAttribute("data-mark");
+    var bid = +btn.getAttribute("data-batch");
+    var now = btn.getAttribute("data-now");
+    if (!bid) { toast("This student has no class time set."); return; }
+    if (S.busy[eid]) return;
+    var next = now === "present" ? "absent" : now === "absent" ? null : "present";
+    S.busy[eid] = true; btn.classList.add("busy");
+    MZ.mark(bid, S.day, eid, next).then(function () {
+      delete S.busy[eid];
+      var row = (S.register.rows || []).filter(function (r) { return r.enrollment_id === eid; })[0];
+      if (row) {
+        row.marks = row.marks || {};
+        if (next) row.marks[S.day] = next; else delete row.marks[S.day];
+      }
+      render();
+    }).catch(function (e) { delete S.busy[eid]; fail(e); });
+  }
+
+  /* ============================================================
+     TAB 2 — DUES
+     reminder_queue() already knows who is late, and this tenant is
+     configured for "one day overdue, keep telling me". Whatever it
+     returns is the list. Two buttons per person: send, or paid.
+     ============================================================ */
+  function loadDues() {
+    S.dues = null;
+    return MZ.dues().then(function (rows) { S.dues = rows || []; render(); }).catch(fail);
+  }
+  function waLink(d) {
+    var ph = String(d.phone || "").replace(/\D/g, "");
+    if (ph.length === 10) ph = "91" + ph;
+    var msg = "Namaste" + (d.parent_name ? " " + d.parent_name : "") + ", this is Mezzo School of Music. " +
+      "The monthly fee for " + d.member_name + " (" + (d.sport || "class") + ") of " +
+      "₹" + Number(d.amount || 0).toLocaleString("en-IN") + " was due on " +
+      new Date(d.due_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) +
+      ". Kindly pay at your convenience. Thank you.";
+    return "https://wa.me/" + ph + "?text=" + encodeURIComponent(msg);
+  }
+  function viewDues() {
+    if (!S.dues) return '<div class="note">Loading…</div>';
+    if (!S.dues.length) {
+      return '<div class="card"><div class="note">' +
+        '<div style="font-size:34px">✓</div>Nobody is overdue.<br>Everyone has paid.</div></div>';
+    }
+    var total = S.dues.reduce(function (a, d) { return a + Number(d.amount || 0); }, 0);
+    return '<div class="card">' +
+      '<div class="rowline" style="margin-bottom:10px">' +
+        "<div><b style=\"font-size:19px\">" + S.dues.length + " to collect</b>" +
+        '<div class="muted">' + inr(total) + " in total</div></div></div>" +
+      S.dues.map(function (d) {
+        var blocked = d.blocked_reason === "missing_phone";
+        return '<div class="due">' +
+          '<div class="hd"><b>' + esc(d.member_name) + "</b><em>" + inr(d.amount) + "</em></div>" +
+          '<div class="sub"><span class="late">' + d.days_since + " day" + (d.days_since === 1 ? "" : "s") +
+            " late</span> · " + esc(d.sport || "") +
+            (d.already_sent ? " · asked today" : "") + "</div>" +
+          '<div class="acts">' +
+            (blocked
+              ? '<button disabled style="opacity:.5">No phone number</button>'
+              : '<a class="wa" target="_blank" rel="noopener" href="' + esc(waLink(d)) + '"' +
+                ' data-sent="' + d.enrollment_id + '" data-amt="' + d.amount + '"' +
+                ' data-ph="' + esc(d.phone || "") + '">WhatsApp</a>') +
+            '<button class="paid" data-paid="' + d.enrollment_id + '" data-amt="' + d.amount +
+              '" data-nm="' + esc(d.member_name) + '">Paid</button>' +
+          "</div></div>";
+      }).join("") + "</div>";
+  }
+
+  /* ============================================================
+     TAB 3 — MONEY
+     Three numbers and one form. Adding an expense is amount, what it
+     was for, save — nothing else, because anything else is a reason
+     not to bother recording it.
+     ============================================================ */
+  function loadMoney() {
+    S.money = null;
+    var r = MZ.monthRange(S.month.y, S.month.m);
+    return Promise.all([MZ.payments(r.from, r.to), MZ.expenses(r.from, r.to)])
+      .then(function (x) {
+        S.money = { paid: x[0] || [], spent: x[1] || [], from: r.from, to: r.to };
+        render();
+      }).catch(fail);
+  }
+  function viewMoney() {
+    var mn = new Date(S.month.y, S.month.m - 1, 1)
+      .toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+    var head = '<div class="daybar">' +
+      '<button data-mon="-1">‹</button>' +
+      '<div class="d"><b>' + esc(mn) + "</b><span>this month</span></div>" +
+      '<button data-mon="1">›</button></div>';
+    if (!S.money) return head + '<div class="note">Loading…</div>';
+
+    var inTot = S.money.paid.filter(function (p) { return p.status !== "void"; })
+                            .reduce(function (a, p) { return a + Number(p.amount || 0); }, 0);
+    var outTot = S.money.spent.reduce(function (a, p) { return a + Number(p.amount || 0); }, 0);
+
+    return head +
+      '<div class="card"><div class="figs">' +
+        '<div class="fig in"><b>' + inr(inTot) + "</b><span>Fees collected</span></div>" +
+        '<div class="fig out"><b>' + inr(outTot) + "</b><span>Spent</span></div>" +
+        '<div class="fig"><b>' + inr(inTot - outTot) + "</b><span>Left</span></div>" +
+      "</div></div>" +
+      '<div class="card"><h3 style="font-size:15px;margin-bottom:12px">Add an expense</h3>' +
+        '<label class="field"><span>How much</span>' +
+          '<input id="exAmt" type="number" inputmode="numeric" min="1" placeholder="0" /></label>' +
+        '<label class="field"><span>What for</span>' +
+          '<input id="exWhat" placeholder="Guitar strings, rent, electricity…" /></label>' +
+        '<button class="btn" id="exSave">Save expense</button>' +
+      "</div>" +
+      (S.money.spent.length
+        ? '<div class="card"><h3 style="font-size:15px;margin-bottom:6px">Spent this month</h3>' +
+          S.money.spent.map(function (e) {
+            return '<div class="srow"><div class="nm"><b>' + esc(e.detail || e.category) + "</b>" +
+              "<span>" + new Date(e.on_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) +
+              "</span></div><b>" + inr(e.amount) + "</b></div>";
+          }).join("") + "</div>"
+        : "") +
+      (S.money.paid.length
+        ? '<div class="card"><h3 style="font-size:15px;margin-bottom:6px">Fees received</h3>' +
+          '<div class="muted" style="margin-bottom:8px">' + S.money.paid.length + " payment" +
+          (S.money.paid.length === 1 ? "" : "s") + "</div>" +
+          S.money.paid.slice(0, 30).map(function (p) {
+            return '<div class="srow"><div class="nm"><b>' + inr(p.amount) + "</b><span>" +
+              new Date(p.on_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) +
+              " · " + esc(p.mode || "") + "</span></div></div>";
+          }).join("") + "</div>"
+        : "");
+  }
+
+  /* ---------- add a student ---------- */
+  function viewAdd() {
+    var ins = (S.ref && S.ref.instruments) || [], bs = (S.ref && S.ref.batches) || [];
+    return '<div class="card"><h3 style="font-size:17px;margin-bottom:14px">New student</h3>' +
+      '<label class="field"><span>Name</span><input id="nsName" /></label>' +
+      '<label class="field"><span>Parent’s phone</span>' +
+        '<input id="nsPhone" type="tel" inputmode="numeric" placeholder="10 digits" /></label>' +
+      '<label class="field"><span>Instrument</span><select id="nsIns">' +
+        ins.map(function (i) { return '<option value="' + esc(i.name) + '">' + esc(i.name) + "</option>"; }).join("") +
+      "</select></label>" +
+      '<label class="field"><span>Comes on</span><select id="nsBatch">' +
+        bs.map(function (b) { return '<option value="' + b.id + '">' + esc(b.name) + "</option>"; }).join("") +
+      "</select></label>" +
+      '<div class="muted" style="margin:-2px 0 14px">The fee is set automatically — ' +
+        "₹2,500 for piano, ₹1,500 for everything else.</div>" +
+      '<button class="btn" id="nsSave">Save student</button>' +
+      '<button class="btn ghost" id="nsCancel" style="margin-top:8px">Cancel</button></div>';
+  }
+
+  /* ---------- render ---------- */
+  function render() {
+    if (!MZ.signedIn()) return gate();
+    drawTabs();
+    var sub = S.tab === "register" ? "Attendance register"
+            : S.tab === "dues" ? "Fees to collect" : "Money this month";
+    var inner = S.tab === "add" ? viewAdd()
+              : S.tab === "register" ? viewRegister()
+              : S.tab === "dues" ? viewDues() : viewMoney();
+    root.innerHTML = header(sub) + '<div class="wrap">' +
+      (S.err ? '<div class="err">' + esc(S.err) + "</div>" : "") + inner + "</div>";
+  }
+
+  /* ---------- one delegated click handler ---------- */
+  document.addEventListener("click", function (e) {
+    var t = e.target;
+    var tab = t.closest("[data-tab]");
+    if (tab) { S.tab = tab.getAttribute("data-tab"); S.err = ""; enter(); return; }
+    if (t.closest("#out")) { MZ.signOut(); location.reload(); return; }
+
+    var mk = t.closest("[data-mark]"); if (mk) { cycle(mk); return; }
+
+    var dd = t.closest("[data-day]");
+    if (dd) { S.day = shiftDay(S.day, +dd.getAttribute("data-day")); loadRegister(); render(); return; }
+    var dm = t.closest("[data-mon]");
+    if (dm) {
+      var n = S.month.m + (+dm.getAttribute("data-mon"));
+      S.month = n < 1 ? { y: S.month.y - 1, m: 12 } : n > 12 ? { y: S.month.y + 1, m: 1 } : { y: S.month.y, m: n };
+      (S.tab === "money" ? loadMoney : loadRegister)(); render(); return;
+    }
+    var md = t.closest("[data-mode]");
+    if (md) { S.mode = md.getAttribute("data-mode"); loadRegister(); render(); return; }
+
+    if (t.closest("[data-add]")) {
+      S.tab = "add";
+      MZ.reference().then(function (r) { S.ref = r; render(); }).catch(fail);
+      render(); return;
+    }
+    if (t.closest("#nsCancel")) { S.tab = "register"; render(); return; }
+    if (t.closest("#nsSave")) { saveStudent(); return; }
+    if (t.closest("#exSave")) { saveExpense(); return; }
+
+    /* WhatsApp is a real <a> so the OS opens it. window.open returns
+       null whenever noopener is set — that is success, not failure —
+       so nothing here inspects a handle. We only record that he asked. */
+    var wa = t.closest("[data-sent]");
+    if (wa) {
+      MZ.logReminder({ enrollment: +wa.getAttribute("data-sent"),
+                       amount: +wa.getAttribute("data-amt"),
+                       phone: wa.getAttribute("data-ph") })
+        .then(function () { loadDues(); }).catch(function () {});
+      return;
+    }
+    var pd = t.closest("[data-paid]");
+    if (pd) { takePayment(+pd.getAttribute("data-paid"), +pd.getAttribute("data-amt"), pd.getAttribute("data-nm")); return; }
+  });
+  document.addEventListener("input", function (e) {
+    if (e.target.id === "q") { S.q = e.target.value; var v = S.q;
+      var cur = document.getElementById("q"); render();
+      var n = document.getElementById("q"); if (n) { n.value = v; n.focus(); } }
+  });
+
+  function saveStudent() {
+    var b = document.getElementById("nsSave");
+    b.disabled = true; b.textContent = "Saving…";
+    MZ.addStudent({
+      name: document.getElementById("nsName").value,
+      phone: document.getElementById("nsPhone").value.replace(/\D/g, ""),
+      instrument: document.getElementById("nsIns").value,
+      batch: +document.getElementById("nsBatch").value,
+      centre: (S.ref.centres[0] || {}).id
+    }).then(function (m) {
+      toast(m.name + " added"); S.tab = "register"; loadRegister(); render();
+    }).catch(function (e) { b.disabled = false; b.textContent = "Save student"; fail(e); });
+  }
+
+  function saveExpense() {
+    var b = document.getElementById("exSave");
+    var amt = +document.getElementById("exAmt").value;
+    var what = document.getElementById("exWhat").value.trim();
+    b.disabled = true; b.textContent = "Saving…";
+    MZ.addExpense({ amount: amt, detail: what || "General", category: "General" })
+      .then(function () { toast("Expense saved"); loadMoney(); })
+      .catch(function (e) { b.disabled = false; b.textContent = "Save expense"; fail(e); });
+  }
+
+  /* record_fee_payment does everything: writes the payment, rolls the
+     renewal date forward and closes the reminder. That is why there is
+     no second step here and no number computed in this file. */
+  function takePayment(enrollment, amount, name) {
+    if (!window.confirm("Received " + inr(amount) + " from " + name + "?")) return;
+    MZ.takePayment({ enrollment: enrollment, amount: amount, months: 1, mode: "UPI" })
+      .then(function () { toast("Payment recorded"); loadDues(); })
+      .catch(fail);
+  }
+
+  /* ---------- entering a tab loads only what that tab needs ---------- */
+  function enter() {
+    render();
+    if (S.tab === "register") loadRegister();
+    else if (S.tab === "dues") loadDues();
+    else if (S.tab === "money") loadMoney();
+  }
+  function boot() {
+    MZ.report("page_view", {});
+    MZ.reference().then(function (r) { S.ref = r; }).catch(function () {});
+    enter();
+  }
+
+  window.addEventListener("error", function (e) {
+    MZ.report("client_error", { msg: String((e && e.message) || "error").slice(0, 140) });
+  });
+
+  if (MZ.signedIn()) boot(); else gate();
+})();
+</script>
+</body>
+</html>
