@@ -40,6 +40,7 @@ const store = {}, sess = {};
 let onClick = null, onInput = null, getApi = null;
 const fetchLog = [];
 let nextBody = [];
+let slowUrls = [];
 
 function mkEl(id) {
   return {
@@ -91,11 +92,16 @@ const ctx = {
     const body = opt && opt.body ? JSON.parse(opt.body) : null;
     fetchLog.push({ url: String(url), method: (opt && opt.method) || "GET", body });
     const out = typeof nextBody === "function" ? nextBody(String(url), body) : nextBody;
-    return Promise.resolve({
+    const res = {
       ok: true, status: 200,
       text: () => Promise.resolve(JSON.stringify(out)),
       json: () => Promise.resolve(out),
-    });
+    };
+    /* slowUrls lets a test delay a response so request ORDER can be
+       exercised, not just its content. Reference data is three parallel
+       requests and lands after the single register call in a browser. */
+    const slow = slowUrls.some((u) => String(url).includes(u));
+    return slow ? new Promise((r) => setTimeout(() => r(res), 5)) : Promise.resolve(res);
   },
   confirm: () => true, alert() {}, prompt: () => null,
 };
@@ -177,6 +183,87 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
     assert(h.includes("Anu"), "the child who has not come was dropped from the register");
     assert(h.includes("Bala"), "the child who came is missing");
     assert(h.includes("1 of 2 here"), "the present count is wrong: " + (h.match(/\d+ of \d+ here/) || ["none"])[0]);
+  });
+
+  /* The day patterns arrive on a SECOND request, after the register has
+     already painted. Without a re-render when they land, the filter sits
+     on its safe fallback — show everybody — and looks broken while being
+     perfectly correct about what it knew at the time.
+
+     This was found in a browser, not here, and this check is a SHAPE
+     check, not a behavioural one. That is a deliberate admission: the
+     ordering that breaks it depends on three parallel requests landing
+     after one, and every attempt to force that order in node produced a
+     test that passed either way — which is worse than no test, because
+     it reads as proof. The real proof is opening the app. What this
+     asserts is only that the callback still redraws.
+     If you make this behavioural, delete this paragraph. */
+  await check("the reference callback redraws (shape check — see the note)", () => {
+    const boot = appSrc.slice(appSrc.indexOf("function boot()"), appSrc.indexOf("window.addEventListener"));
+    const m = boot.match(/MZ\.reference\(\)\.then\(function \(r\) \{([^}]*)\}/);
+    assert(m, "boot() no longer loads the class-day reference at all");
+    assert(/render\(\)/.test(m[1]),
+      "the day patterns land and nothing redraws — every student will show on every day");
+  });
+
+  /* Weekday students do not come on Saturday. Showing all 80 names on
+     every day is noise, and an unmarked circle against a child who was
+     never expected reads as a register he forgot to fill in. */
+  await check("only the students whose class runs today are listed", async () => {
+    signIn();
+    api.S.ref = { batches: [{ id: 9, days: [1, 2, 3, 4, 5] }, { id: 10, days: [6] }], centres: [], instruments: [] };
+    nextBody = [
+      { member_name: "Weekday Child", enrollment_id: 1, batch_id: 9, sport: "Piano", present_days: 0, marks: {} },
+      { member_name: "Saturday Child", enrollment_id: 2, batch_id: 10, sport: "Drums", present_days: 0, marks: {} },
+    ];
+    api.S.tab = "register"; api.S.mode = "today"; api.S.q = ""; api.S.showOff = false;
+    api.S.day = "2026-08-19";                       // a Wednesday
+    api.enter(); await tick(); await tick();
+    let h = byId("root").innerHTML;
+    assert(h.includes("Weekday Child"), "the child who has a class today is missing");
+    assert(!h.includes("Saturday Child"), "a Saturday child is listed on a Wednesday");
+    assert(/Show 1 more/.test(h), "there is no way to mark a makeup lesson");
+
+    /* Hiding them must never be final — a makeup lesson on an off day
+       is a real thing, and it has to be one tap away, not a setting. */
+    onClick({ target: { closest: (s) => (s === "[data-off]" ? {} : null) } });
+    await tick();
+    h = byId("root").innerHTML;
+    assert(h.includes("Saturday Child"), "the off-day child cannot be reached at all");
+
+    api.S.day = "2026-08-22"; api.S.showOff = false;  // a Saturday
+    api.enter(); await tick(); await tick();
+    h = byId("root").innerHTML;
+    assert(h.includes("Saturday Child"), "the Saturday child is missing on a Saturday");
+    assert(!/^[\s\S]*Weekday Child[\s\S]*Show 1 more/.test(h) || h.includes("Show 1 more"),
+      "the weekday child was neither listed nor offered");
+  });
+
+  /* If the batch reference ever comes back without its day pattern,
+     the register must not empty itself. "We do not know" and "never"
+     are different answers and only one of them is safe. */
+  await check("a batch with no day pattern still shows its students", async () => {
+    signIn();
+    api.S.ref = { batches: [{ id: 9 }, { id: 10, days: [] }], centres: [], instruments: [] };
+    nextBody = [
+      { member_name: "Child A", enrollment_id: 1, batch_id: 9,  sport: "Piano", present_days: 0, marks: {} },
+      { member_name: "Child B", enrollment_id: 2, batch_id: 10, sport: "Drums", present_days: 0, marks: {} },
+    ];
+    api.S.tab = "register"; api.S.mode = "today"; api.S.showOff = false; api.S.day = "2026-08-19";
+    api.enter(); await tick(); await tick();
+    const h = byId("root").innerHTML;
+    assert(h.includes("Child A"), "a batch with no days field emptied the register");
+    assert(h.includes("Child B"), "a batch with an empty days array emptied the register");
+  });
+
+  await check("a day with no class says so instead of showing an empty register", async () => {
+    signIn();
+    api.S.ref = { batches: [{ id: 9, days: [1, 2, 3, 4, 5] }], centres: [], instruments: [] };
+    nextBody = [{ member_name: "Weekday Child", enrollment_id: 1, batch_id: 9, sport: "Piano", present_days: 0, marks: {} }];
+    api.S.tab = "register"; api.S.mode = "today"; api.S.showOff = false;
+    api.S.day = "2026-08-23";                        // a Sunday
+    api.enter(); await tick(); await tick();
+    assert(byId("root").innerHTML.includes("No class today"), "Sunday shows a register instead of saying it is closed");
   });
 
   /* ---- 2. marking: the thing he touches most ---- */

@@ -39,6 +39,7 @@
     day: MZ.todayIso(),
     month: null,              // {y, m}
     q: "",
+    showOff: false,
     register: null,           // rows from attendance_month
     dues: null,
     money: null,
@@ -57,6 +58,30 @@
     return d.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" });
   }
   function isSunday(iso) { var p = iso.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]).getDay() === 0; }
+  function isoDow(iso) {                       // 1 = Monday … 7 = Sunday
+    var p = iso.split("-"), d = new Date(+p[0], +p[1] - 1, +p[2]).getDay();
+    return d === 0 ? 7 : d;
+  }
+  /* Does this student's class actually run on that day?
+     Weekday students do not come on Saturday and Saturday students do
+     not come midweek. Showing all 80 names every day is noise; worse,
+     an unmarked circle against a child who was never expected reads as
+     "you forgot to mark them", which is the opposite of the truth. */
+  function runsOn(batchId, iso) {
+    var bs = (S.ref && S.ref.batches) || [];
+    for (var i = 0; i < bs.length; i++) {
+      if (bs[i].id === batchId) {
+        var d = bs[i].days;
+        /* No day pattern is not "no days" — it is "we do not know", and
+           the safe answer to not knowing is to show the child. Reading
+           an empty array as "never" would empty his whole register on a
+           day the reference data came back thin. */
+        if (!d || !d.length) return true;
+        return d.indexOf(isoDow(iso)) >= 0;
+      }
+    }
+    return true;                               // unknown batch: never hide a child
+  }
   function shiftDay(iso, by) {
     var p = iso.split("-"), d = new Date(+p[0], +p[1] - 1, +p[2]);
     d.setDate(d.getDate() + by); return MZ.iso(d);
@@ -181,12 +206,27 @@
     }
     if (!rows.length) return body + '<div class="card"><div class="note">Nobody matches that.</div></div>';
 
-    body += S.mode === "today" ? dayList(rows) : monthGrid(rows);
+    if (S.mode === "today") {
+      var due = rows.filter(function (r) { return runsOn(r.batch_id, S.day); });
+      var off = rows.filter(function (r) { return !runsOn(r.batch_id, S.day); });
+      body += due.length ? dayList(due)
+            : '<div class="card"><div class="note">No class today.</div></div>';
+      /* Never hide them behind a decision he has to remember: a makeup
+         lesson on an off day is a real thing, and it is one tap away. */
+      if (off.length) {
+        body += S.showOff
+          ? dayList(off, off.length + " not usually here today")
+          : '<button class="btn ghost" data-off="1" style="margin-bottom:12px">' +
+            "Someone came on an off day? Show " + off.length + " more</button>";
+      }
+    } else {
+      body += monthGrid(rows);
+    }
     body += '<button class="btn ghost" data-add="1" style="margin-top:6px">+ Add a student</button>';
     return body;
   }
 
-  function dayList(rows) {
+  function dayList(rows, heading) {
     var marked = 0;
     var html = rows.map(function (r) {
       var st = r.marks && r.marks[S.day];
@@ -201,7 +241,7 @@
       "</div>";
     }).join("");
     return '<div class="card"><div class="rowline" style="margin-bottom:6px">' +
-        '<b style="font-size:15px">' + marked + " of " + rows.length + " here</b>" +
+        '<b style="font-size:15px">' + (heading || (marked + " of " + rows.length + " here")) + "</b>" +
         '<span style="flex:1"></span><span class="muted">tap to mark</span>' +
       "</div>" + html + "</div>";
   }
@@ -218,9 +258,12 @@
       for (i = 1; i <= days; i++) {
         iso = y + "-" + String(m).padStart(2, "0") + "-" + String(i).padStart(2, "0");
         var st = r.marks && r.marks[iso];
-        cells += '<td><span class="cell"><i class="' +
-          (st === "present" ? "p" : st === "absent" ? "a" : "n") + '">' +
-          (st === "present" ? "✓" : st === "absent" ? "✕" : "") + "</i></span></td>";
+        var runs = runsOn(r.batch_id, iso);
+        cells += '<td><span class="cell">' +
+          (st ? '<i class="' + (st === "present" ? "p" : "a") + '">' +
+                (st === "present" ? "✓" : "✕") + "</i>"
+              : runs ? '<i class="n"></i>' : '<i class="off">·</i>') +
+          "</span></td>";
       }
       return "<tr><td class=\"nmcol\">" + esc(r.member_name) +
         '<div style="font-weight:400;font-size:11.5px;color:var(--ink-3)">' + esc(r.sport || "") + "</div></td>" +
@@ -407,13 +450,14 @@
     var mk = t.closest("[data-mark]"); if (mk) { cycle(mk); return; }
 
     var dd = t.closest("[data-day]");
-    if (dd) { S.day = shiftDay(S.day, +dd.getAttribute("data-day")); loadRegister(); render(); return; }
+    if (dd) { S.day = shiftDay(S.day, +dd.getAttribute("data-day")); S.showOff = false; loadRegister(); render(); return; }
     var dm = t.closest("[data-mon]");
     if (dm) {
       var n = S.month.m + (+dm.getAttribute("data-mon"));
       S.month = n < 1 ? { y: S.month.y - 1, m: 12 } : n > 12 ? { y: S.month.y + 1, m: 1 } : { y: S.month.y, m: n };
       (S.tab === "money" ? loadMoney : loadRegister)(); render(); return;
     }
+    if (t.closest("[data-off]")) { S.showOff = true; render(); return; }
     var md = t.closest("[data-mode]");
     if (md) { S.mode = md.getAttribute("data-mode"); loadRegister(); render(); return; }
 
@@ -489,7 +533,12 @@
   }
   function boot() {
     MZ.report("page_view", {});
-    MZ.reference().then(function (r) { S.ref = r; }).catch(function () {});
+    /* The register needs the batches' day patterns to know who is even
+       expected today, and this arrives after the first paint. Without
+       the re-render it stayed on the safe fallback — show everybody —
+       so the filter looked broken while being perfectly correct about
+       what it knew at the time. */
+    MZ.reference().then(function (r) { S.ref = r; render(); }).catch(function () {});
     enter();
   }
 

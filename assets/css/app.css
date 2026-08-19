@@ -115,6 +115,9 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
 .cell i.p { background: var(--ok); }
 .cell i.a { background: var(--no); }
 .cell i.n { background: transparent; border: 1px solid var(--line); }
+/* A day this child's class does not run. Not "unmarked" — never
+   expected. An empty circle here would read as a register he forgot. */
+.cell i.off { color: var(--ink-3); opacity: .35; border: 0; font-size: 13px; }
 .tot { font-weight: 700; padding: 0 10px !important; white-space: nowrap; }
 
 /* ---------- dues ---------- */
