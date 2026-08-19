@@ -87,8 +87,13 @@
       portal: el.querySelector(".portal"),
       pimg:   el.querySelector(".portal img"),
       ar:     parseFloat(el.getAttribute("data-ar")) || 1,
-      ap:     raw.length === 3 && !raw.some(isNaN)
-                ? { cx: raw[0], cy: raw[1], r: raw[2] } : null,
+      /* cx, cy, rx — and an optional fourth number, the ratio of the
+         aperture's height to its width. A soundhole and a port hole are
+         circles and leave it out; a piano's lid opening is a wide, flat
+         slot and a circle jammed into it is exactly what looked odd. */
+      ap:     raw.length >= 3 && !raw.some(isNaN)
+                ? { cx: raw[0], cy: raw[1], r: raw[2],
+                    ratio: raw.length > 3 ? raw[3] : 1 } : null,
       top: 0, run: 1, h: 0, apX: 0, apY: 0, apR: 1, Rmax: 1,
       offX: 0, offY: 0, shown: false, last: {}
     };
@@ -155,7 +160,9 @@
       a.offY = a.apY - (stage ? stage.offsetHeight : vh) / 2;
 
       /* Far enough for the iris to clear the corners once it is centred,
-         expressed as the growth factor both it and the instrument use. */
+         expressed as the growth factor both it and the instrument use.
+         The shape rounds out on the way in (see below), so the ending
+         only has to cover a circle. */
       a.Rmax   = Math.hypot(vw, vh) * 0.62;
       a.target = a.Rmax / a.apR;
     });
@@ -243,12 +250,18 @@
            radius of the hole in the photograph and ends past the
            corners, and its centre walks from the hole to the middle of
            the screen as you line up on it. */
-        var R  = a.apR * S;
+        var RX = a.apR * S;
+        /* The aperture starts the shape it really is — a wide slot for
+           a piano lid, a circle for a soundhole — and rounds out as you
+           go through it, because once you are inside the shape of the
+           doorway stops being the point. */
+        var ratio = a.ap.ratio + (1 - a.ap.ratio) * outCubic(dive);
+        var RY = RX * ratio;
         var cx = a.apX + (window.innerWidth  / 2 - a.apX) * dive;
         var cy = a.apY + (window.innerHeight / 2 - a.apY) * dive;
         set(a.portal, "clipPath",
-            "circle(" + R.toFixed(1) + "px at " + cx.toFixed(1) + "px " + cy.toFixed(1) + "px)",
-            m, "clip");
+            "ellipse(" + RX.toFixed(1) + "px " + RY.toFixed(1) + "px at " +
+            cx.toFixed(1) + "px " + cy.toFixed(1) + "px)", m, "clip");
       }
 
       /* Which instruments are playing. Entering an act brings its own

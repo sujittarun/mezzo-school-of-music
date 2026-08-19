@@ -263,4 +263,42 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
   font-size: 17px; letter-spacing: .3em;
 }
 .pf input:focus { outline: none; }
+
+/* A wrong password should feel wrong, not just read wrong. */
+.pf.shake { animation: shake .42s cubic-bezier(.36,.07,.19,.97); }
+@keyframes shake {
+  10%, 90% { transform: translateX(-2px) }
+  20%, 80% { transform: translateX(4px) }
+  30%, 50%, 70% { transform: translateX(-7px) }
+  40%, 60% { transform: translateX(7px) }
+}
+
+/* ---------- the email field is a string ----------
+   You write your name on a string and you play your password on the
+   keys. The string carries no information — the input above it does —
+   so it can be purely a pleasure, and it stays silent because thirty
+   plucks per address would be a novelty for one day. */
+.sf { position: relative; padding-bottom: 16px; }
+.wire {
+  position: absolute; left: 10px; right: 10px; bottom: 2px;
+  height: 20px; width: calc(100% - 20px);
+  overflow: visible; pointer-events: none;
+}
+.wire path {
+  fill: none; stroke: #D8A657; stroke-width: 1.6; opacity: .75;
+  transform-origin: 50% 50%;
+}
+/* A plucked string does not wobble evenly, it loses amplitude fast and
+   keeps going a while — hence the uneven, decaying steps. */
+.wire.twang path { animation: twang .62s cubic-bezier(.3,.7,.4,1); }
+@keyframes twang {
+  0%   { transform: scaleY(1) }
+  12%  { transform: scaleY(-8) }
+  26%  { transform: scaleY(5.5) }
+  40%  { transform: scaleY(-3.4) }
+  54%  { transform: scaleY(2.1) }
+  68%  { transform: scaleY(-1.2) }
+  82%  { transform: scaleY(.6) }
+  100% { transform: scaleY(1) }
+}
 @media (min-width: 720px) { .wrap { padding: 20px 16px 30px; } }

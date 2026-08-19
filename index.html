@@ -164,7 +164,9 @@
         "<p>Sign in to open the register</p>" +
         (S.err ? '<div class="err">' + esc(S.err) + "</div>" : "") +
         '<label class="field"><span>Email</span>' +
-          '<input id="em" type="email" autocomplete="username" inputmode="email" /></label>' +
+          '<div class="sf"><input id="em" type="email" autocomplete="username" inputmode="email" />' +
+          '<svg class="wire" viewBox="0 0 300 20" preserveAspectRatio="none" aria-hidden="true">' +
+          '<path d="M0 10 C 75 9.4 75 9.4 150 10 C 225 10.6 225 10.6 300 10"/></svg></div></label>' +
         '<label class="field"><span>Password</span>' +
           '<div class="pf" id="pf"><div class="pkeys" id="pkeys">' + keyboardHtml() + "</div>" +
           '<input id="pw" type="password" autocomplete="current-password" /></div></label>' +
@@ -195,13 +197,60 @@
       };
     }
 
+    /* The email field is a string, and typing plucks it. It is the
+       quietest idea on the screen and the one that ties the two fields
+       together: you WRITE your name on a string and you PLAY your
+       password on the keys. It makes no sound of its own — thirty
+       characters of plucking would be a novelty for one day and an
+       irritation forever — it only moves. */
+    var em = document.getElementById("em");
+    var wire = document.querySelector(".wire");
+    if (em && wire) {
+      em.oninput = function () {
+        wire.classList.remove("twang");
+        void wire.offsetWidth;                 /* restart the animation */
+        wire.classList.add("twang");
+      };
+      em.onfocus = function () { tone(45); };  /* one low note, tuning up */
+    }
+
+    /* Right password: the keys run up the scale under your hand and
+       settle on a chord. Wrong one: a dull low pair and a shake, which
+       is what a wrong note actually sounds like. */
+    function glissando() {
+      var all = keys ? keys.children : [];
+      ORDER.forEach(function (note, i) {
+        setTimeout(function () {
+          tone(note);
+          for (var j = 0; j < all.length; j++) {
+            if (+all[j].getAttribute("data-note") === note) {
+              all[j].className += " on";
+              break;
+            }
+          }
+        }, i * 34);
+      });
+      setTimeout(function () { [60, 64, 67, 72].forEach(function (n) { tone(n); }); }, ORDER.length * 34 + 90);
+    }
+    function wrongNote() {
+      tone(47); tone(48);                      /* a semitone apart, on purpose */
+      var pf = document.getElementById("pf");
+      if (pf) { pf.classList.remove("shake"); void pf.offsetWidth; pf.classList.add("shake"); }
+    }
+
     function submit() {
-      var em = document.getElementById("em").value.trim();
+      var email = document.getElementById("em").value.trim();
       var pass = pw.value;
-      if (!em || !pass) { S.err = "Enter the email and password."; return render(); }
+      if (!email || !pass) { S.err = "Enter the email and password."; return render(); }
       go.disabled = true; go.textContent = "Signing in…";
-      MZ.signIn(em, pass).then(function () { S.err = ""; boot(); })
-        .catch(function (e) { go.disabled = false; go.textContent = "Sign in"; fail(e); });
+      MZ.signIn(email, pass).then(function () {
+        S.err = "";
+        glissando();
+        /* Let it finish playing before the screen changes under it. */
+        setTimeout(boot, 700);
+      }).catch(function (e) {
+        go.disabled = false; go.textContent = "Sign in"; wrongNote(); fail(e);
+      });
     }
     go.onclick = submit;
     pw.onkeydown = function (e) { if (e.key === "Enter") submit(); };
