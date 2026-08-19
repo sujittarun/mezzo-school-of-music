@@ -1,0 +1,371 @@
+/* ============================================================
+   MEZZO SCHOOL OF MUSIC — the landing page.
+
+   THE IDEA. Every acoustic instrument is a room: a hollow body of
+   air is literally what turns a vibrating string into a sound you
+   can hear. So this page takes that literally. You do not scroll
+   down it, you fall through it — into the guitar through its
+   soundhole, out of the guitar into the piano, through the piano
+   into the drum, and through the drum into the violin.
+
+   The violin is last on purpose. The school's mark is a line-art
+   violin taken from Dr. Krishnan's own business card, so the whole
+   descent ends inside the logo, and the last frame resolves from
+   "inside a violin" to that violin on the brand purple.
+
+   ONE LOOK. There is no light mode and no dark mode. A cinematic
+   page that re-lights itself is two designs, each half-considered.
+
+   NO BUILD STEP, and no framework — the same rule the manager app
+   follows. Everything here is hand-written CSS, one stylesheet.
+   ============================================================ */
+
+:root {
+  --brand:  #4B3F72;   /* from the business card */
+  --brand-2:#6B5CA5;
+  --ink:    #14101F;
+  --ink-2:  #0A0810;
+  --cream:  #F4EFE6;
+  --cream-2:#C9BFB0;
+  --gold:   #D8A657;   /* the light coming through every aperture */
+  --gold-2: #F0C784;
+
+  --serif: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
+  --sans:  "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  --ease: cubic-bezier(.22,.61,.36,1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: auto; }        /* the dive owns the scroll; smooth would fight it */
+
+body {
+  background: var(--ink-2);
+  color: var(--cream);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+img { display: block; max-width: 100%; }
+
+/* ============================================================
+   THE ACT
+   Each act is four screens tall. Inside it a single sticky stage
+   stays pinned for the whole four, and every layer in that stage
+   is driven by one number: how far through the act you are.
+   ============================================================ */
+.act { position: relative; height: 420vh; }
+/* Tall enough that the last screen has an entrance of its own, but
+   it never dives, so it does not need four. */
+.act:last-of-type { height: 175vh; }
+
+.stage {
+  position: sticky; top: 0;
+  height: 100vh; width: 100%;
+  overflow: hidden;
+  display: grid; place-items: center;
+}
+
+/* --- layer 1: the room you are currently standing in --- */
+.room { position: absolute; inset: 0; z-index: 1; }
+.room img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  will-change: transform;
+}
+/* The rooms are photographs and the type has to sit on them. This
+   veil is what keeps a headline readable over a lit soundhole
+   without washing the photograph out to grey. */
+.veil {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 50%, rgba(10,8,16,0) 0%, rgba(10,8,16,.55) 70%, rgba(10,8,16,.86) 100%),
+    linear-gradient(180deg, rgba(10,8,16,.72) 0%, rgba(10,8,16,.18) 30%, rgba(10,8,16,.28) 70%, rgba(10,8,16,.8) 100%);
+}
+
+/* --- layer 2: the aperture you are about to fall through ---
+   .portal holds the NEXT room. It is an ellipse the size of the
+   instrument's opening, and it scales at exactly the same rate as
+   the instrument does, so the opening and what is behind it stay
+   locked together. The image inside counter-scales, which is what
+   keeps it looking like a room seen through a hole rather than a
+   thumbnail being blown up. */
+.dive {
+  position: absolute; inset: 0; z-index: 3;
+  display: grid; place-items: center;
+  pointer-events: none;
+}
+.portal {
+  position: absolute;
+  border-radius: 50%;
+  overflow: hidden;
+  will-change: transform;
+  box-shadow: 0 0 120px 20px rgba(216,166,87,.28);
+}
+.portal img {
+  position: absolute; left: 50%; top: 50%;
+  /* The reset above caps images at their container, and this one's
+     container is the 67px aperture — which quietly shrank the room
+     behind the hole to 67px and made the whole dive render black. */
+  max-width: none;
+  width: 100vw; height: 100vh;
+  margin-left: -50vw; margin-top: -50vh;
+  object-fit: cover;
+  will-change: transform;
+}
+/* Flying between two black keys is a slot, not a hole. */
+.act[data-shape="slot"] .portal { border-radius: 44% / 12%; }
+
+/* Sized by HEIGHT, not width — a guitar and a keyboard have nothing
+   in common horizontally, and the stage is what is short. */
+.instrument {
+  position: relative; z-index: 4;
+  height: min(60vh, 68vw);
+  margin-top: 17vh;                 /* clear of the words above it */
+  will-change: transform, opacity;
+  filter: drop-shadow(0 30px 80px rgba(0,0,0,.75));
+}
+.instrument svg { height: 100%; width: auto; display: block; overflow: visible; }
+/* The keyboard and the drum are wide, and would otherwise run off
+   the sides of a phone. */
+.act[data-wide] .instrument { height: min(34vh, 40vw); margin-top: 24vh; }
+
+/* The instrument bodies are solid so the aperture reads as the only
+   way through. The line work on top is the same hairline language
+   as the logo on his card. */
+.body      { fill: #171220; }
+.body-edge { fill: none; stroke: var(--gold); stroke-width: 2.2; opacity: .55; }
+.line      { fill: none; stroke: var(--cream-2); stroke-width: 1.6; opacity: .38; stroke-linecap: round; }
+.string    { fill: none; stroke: var(--gold-2); stroke-width: 1.5; opacity: .5; }
+.glow      { fill: none; stroke: var(--gold); stroke-width: 3; opacity: .9;
+             filter: drop-shadow(0 0 14px rgba(240,199,132,.9)); }
+.key-w     { fill: #E8E2D6; }
+.key-b     { fill: #120E1A; }
+
+/* ============================================================
+   COPY
+   ============================================================ */
+/* The words sit in the top third and the instrument fills the rest,
+   so a headline is never read across a lit aperture. */
+.copy {
+  position: absolute; z-index: 5;
+  top: 9vh; left: 0; right: 0; margin: 0 auto;
+  text-align: center;
+  padding: 0 24px;
+  max-width: 780px;
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+/* The last act has no instrument, so its words take the whole stage. */
+.act:last-of-type .copy { position: relative; top: auto; }
+.copy > * { pointer-events: auto; }
+
+.eyebrow {
+  font-family: var(--sans);
+  font-size: 12px; font-weight: 500;
+  letter-spacing: .38em; text-transform: uppercase;
+  color: var(--gold); opacity: .9;
+  margin-bottom: 22px;
+}
+.display {
+  font-family: var(--serif);
+  font-weight: 300;
+  font-size: clamp(42px, 7.4vw, 104px);
+  line-height: 1.02;
+  letter-spacing: -.012em;
+  text-shadow: 0 4px 40px rgba(0,0,0,.75);
+}
+.display em { font-style: italic; color: var(--gold-2); }
+.lede {
+  font-family: var(--serif);
+  font-size: clamp(18px, 2.1vw, 25px);
+  line-height: 1.62;
+  color: var(--cream-2);
+  margin-top: 22px;
+  max-width: 54ch; margin-left: auto; margin-right: auto;
+  text-shadow: 0 2px 24px rgba(0,0,0,.8);
+}
+
+/* Each letter of a display line rises on its own, a beat apart, the
+   way notes in a phrase do. Set by the script, not by a keyframe,
+   so the delay can follow the scroll instead of a clock. */
+.wd { display: inline-block; white-space: nowrap; }
+.ch { display: inline-block; will-change: transform, opacity; }
+
+/* ============================================================
+   THE SEVEN INSTRUMENTS
+   ============================================================ */
+.roster {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 10px; margin-top: 30px;
+}
+.roster span {
+  font-family: var(--sans); font-size: 14px; letter-spacing: .04em;
+  padding: 10px 18px; border-radius: 100px;
+  border: 1px solid rgba(216,166,87,.32);
+  background: rgba(20,16,31,.5);
+  backdrop-filter: blur(8px);
+  color: var(--cream);
+  transition: border-color .3s var(--ease), transform .3s var(--ease), background .3s var(--ease);
+}
+.roster span:hover {
+  border-color: var(--gold); transform: translateY(-3px);
+  background: rgba(75,63,114,.55);
+}
+
+/* The timetable, as two panels of glass. */
+.hours { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin-top: 32px; }
+.hours div {
+  border: 1px solid rgba(216,166,87,.25);
+  background: rgba(20,16,31,.45);
+  backdrop-filter: blur(10px);
+  border-radius: 14px; padding: 20px 30px; min-width: 210px;
+}
+.hours b { display: block; font-family: var(--sans); font-size: 12px; letter-spacing: .22em;
+           text-transform: uppercase; color: var(--gold); margin-bottom: 8px; font-weight: 500; }
+.hours span { font-family: var(--serif); font-size: 25px; color: var(--cream); }
+
+/* ============================================================
+   FINALE
+   ============================================================ */
+.finale { display: grid; place-items: center; text-align: center; gap: 4px; }
+.finale .mark { width: clamp(80px, 11vw, 128px); opacity: .95; margin-bottom: 26px; }
+.contact { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin-top: 34px; }
+
+.btn {
+  font-family: var(--sans); font-size: 15px; font-weight: 500; letter-spacing: .02em;
+  min-height: 54px; padding: 0 32px;
+  display: inline-flex; align-items: center; gap: 10px;
+  border-radius: 100px; border: 1px solid transparent;
+  cursor: pointer; text-decoration: none;
+  transition: transform .28s var(--ease), box-shadow .28s var(--ease), background .28s var(--ease);
+  position: relative; overflow: hidden;
+}
+.btn.primary { background: var(--gold); color: #241B08; }
+.btn.primary:hover { transform: translateY(-2px); box-shadow: 0 14px 40px rgba(216,166,87,.4); }
+.btn.ghost { border-color: rgba(244,239,230,.3); color: var(--cream); background: rgba(20,16,31,.4); }
+.btn.ghost:hover { border-color: var(--gold); transform: translateY(-2px); }
+
+/* A press sends a ring out from the point of contact, the way a
+   struck drum head does. The script positions it; this draws it. */
+.ripple {
+  position: absolute; border-radius: 50%; transform: translate(-50%,-50%) scale(0);
+  background: radial-gradient(circle, rgba(255,255,255,.6) 0%, rgba(255,255,255,0) 70%);
+  pointer-events: none; animation: ring .6s var(--ease) forwards;
+}
+@keyframes ring { to { transform: translate(-50%,-50%) scale(1); opacity: 0; } }
+
+.addr { font-family: var(--serif); font-size: 18px; color: var(--cream-2); line-height: 1.7; margin-top: 30px; }
+.addr a { color: var(--gold-2); text-decoration: none; border-bottom: 1px solid rgba(240,199,132,.3); }
+
+/* ============================================================
+   FIXED CHROME
+   ============================================================ */
+.brand-fixed {
+  position: fixed; top: 26px; left: 30px; z-index: 60;
+  display: flex; align-items: center; gap: 12px;
+  font-family: var(--serif); font-size: 21px; letter-spacing: .01em;
+  color: var(--cream); text-decoration: none;
+  mix-blend-mode: difference;
+}
+.brand-fixed img { width: 22px; opacity: .9; }
+
+/* The four rungs of the descent. Fills as you go, and each one is
+   a real link — the only navigation on the page. */
+.ladder { position: fixed; right: 30px; top: 50%; transform: translateY(-50%); z-index: 60;
+          display: flex; flex-direction: column; gap: 18px; }
+.ladder a {
+  width: 34px; height: 34px; display: grid; place-items: center;
+  text-decoration: none; position: relative;
+}
+.ladder i {
+  display: block; width: 8px; height: 8px; border-radius: 50%;
+  background: rgba(244,239,230,.28);
+  transition: background .4s var(--ease), transform .4s var(--ease), box-shadow .4s var(--ease);
+}
+.ladder a.on i { background: var(--gold); transform: scale(1.7);
+                 box-shadow: 0 0 18px rgba(216,166,87,.8); }
+.ladder a::after {
+  content: attr(data-name);
+  position: absolute; right: 40px; top: 50%; transform: translateY(-50%) translateX(8px);
+  font-family: var(--sans); font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--cream-2); white-space: nowrap; opacity: 0;
+  transition: opacity .3s var(--ease), transform .3s var(--ease);
+}
+.ladder a:hover::after { opacity: 1; transform: translateY(-50%) translateX(0); }
+
+/* The sound switch. Muted until he asks for it — a page that plays
+   itself is a page people close. */
+.sound {
+  position: fixed; bottom: 28px; right: 30px; z-index: 60;
+  min-width: 54px; min-height: 54px; padding: 0 20px;
+  display: flex; align-items: center; gap: 11px;
+  border-radius: 100px; cursor: pointer;
+  border: 1px solid rgba(216,166,87,.32);
+  background: rgba(20,16,31,.6); backdrop-filter: blur(10px);
+  color: var(--cream); font-family: var(--sans); font-size: 12px;
+  letter-spacing: .16em; text-transform: uppercase;
+  transition: border-color .3s var(--ease), transform .3s var(--ease);
+}
+.sound:hover { border-color: var(--gold); transform: translateY(-2px); }
+/* Five bars that stand still when muted and dance when not. Each
+   act that you have entered lights one more of them, because the
+   score really is assembled by scrolling. */
+.bars { display: flex; align-items: flex-end; gap: 2.5px; height: 15px; }
+.bars b { width: 2.5px; height: 4px; background: var(--cream-2); border-radius: 2px;
+          transition: background .3s var(--ease); }
+.sound.on .bars b { background: var(--gold); animation: eq .9s ease-in-out infinite alternate; }
+.sound.on .bars b:nth-child(2) { animation-delay: .12s }
+.sound.on .bars b:nth-child(3) { animation-delay: .26s }
+.sound.on .bars b:nth-child(4) { animation-delay: .07s }
+.sound.on .bars b:nth-child(5) { animation-delay: .33s }
+@keyframes eq { from { height: 3px } to { height: 15px } }
+
+/* The scroll cue, on the first screen only. */
+.cue {
+  position: absolute; bottom: 38px; left: 50%; transform: translateX(-50%);
+  z-index: 6; text-align: center;
+  font-family: var(--sans); font-size: 10.5px; letter-spacing: .3em; text-transform: uppercase;
+  color: var(--cream-2);
+}
+.cue u { display: block; width: 1px; height: 46px; margin: 12px auto 0; border: 0;
+         background: linear-gradient(180deg, var(--gold), transparent);
+         animation: fall 2.1s var(--ease) infinite; transform-origin: top; }
+@keyframes fall { 0% { transform: scaleY(0); opacity: 0 } 40% { transform: scaleY(1); opacity: 1 }
+                  100% { transform: scaleY(1) translateY(46px); opacity: 0 } }
+
+/* ============================================================
+   SMALL SCREENS
+   His parents are on phones. The dive still works — it is a
+   transform, not a hover — but the instrument needs the width.
+   ============================================================ */
+@media (max-width: 760px) {
+  .instrument { height: min(44vh, 74vw); margin-top: 22vh; }
+  .act[data-wide] .instrument { height: min(24vh, 42vw); margin-top: 30vh; }
+  .copy { top: 7vh; }
+  .brand-fixed { top: 18px; left: 18px; font-size: 18px; }
+  .ladder { right: 14px; gap: 14px; }
+  .ladder a { width: 28px; height: 28px; }
+  .sound { bottom: 18px; right: 18px; padding: 0 16px; }
+  .hours div { min-width: 0; flex: 1 1 100%; }
+  /* Clear of the sound switch, which is fixed over this corner. */
+  .finale .addr { padding-bottom: 76px; }
+}
+
+/* ============================================================
+   REDUCED MOTION
+   Someone who gets motion sick from a zoom still needs the address
+   and the phone number. The page becomes four still rooms with the
+   words on them, and loses nothing but the dive.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .act { height: 100vh; }
+  .stage { position: relative; }
+  .dive { display: none; }
+  .cue u { animation: none; }
+  .sound.on .bars b { animation: none; height: 10px; }
+  .copy, .room img { opacity: 1 !important; transform: none !important; }
+  .ch { opacity: 1 !important; transform: none !important; }
+}

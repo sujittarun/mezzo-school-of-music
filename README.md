@@ -16,15 +16,24 @@ Three tabs, and nothing else.
 | **Dues** | Whoever is a day or more late on their fee, with a WhatsApp button and a Paid button. |
 | **Money** | Fees collected and money spent this month, and a two-field form to add an expense. |
 
+## The landing page
+
+`landing/` is the public site for **mezzoschoolofmusic.in** — a separate
+surface with its own rules, and its own `README`. It is not the app: it
+is for a parent deciding whether to bring their child, and it is allowed
+to be as elaborate as that job needs. The app is for one man marking a
+register, and is not.
+
 ## Running it
 
-It is a static site. Open `index.html`, or serve the folder:
+Both are static sites. One server covers them:
 
 ```bash
-python3 -m http.server 8080
+node scripts/serve-landing.js
 ```
 
-There is no build step, no npm install, no framework.
+`/` is the manager app, `/landing/` is the public page. There is no
+build step, no npm install, no framework.
 
 ## Before you change anything
 
