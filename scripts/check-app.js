@@ -382,6 +382,17 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
       "the page does fee arithmetic");
   });
 
+  /* A static site with ?v=1 pinned in it forever is a site nobody ever
+     sees an update to: the browser holds the old CSS and JS and the
+     deploy appears to have done nothing. This does not check that the
+     stamp is CORRECT — nothing can — only that it was moved off the
+     value it shipped with, which is the mistake that actually happens. */
+  await check("the asset cache stamp has been moved off ?v=1", () => {
+    const stamps = (html.match(/\?v=([0-9a-z]+)/g) || []);
+    assert(stamps.length >= 2, "assets are not cache-stamped at all");
+    assert(!stamps.includes("?v=1"), "an asset is still pinned at ?v=1");
+  });
+
   await check("telemetry carries counts, never a name, phone or amount", () => {
     const rep = cloudSrc.slice(cloudSrc.indexOf("function report("), cloudSrc.indexOf("function reference("));
     ["name:", "phone", "amount", "member_name"].forEach((bad) => {

@@ -90,11 +90,33 @@ button { cursor: pointer; }
 .srow .nm { flex: 1; min-width: 0; }
 .srow .nm b { display: block; font-size: 16.5px; font-weight: 600; }
 .srow .nm span { font-size: 13px; color: var(--ink-3); }
+/* ---------- a row is tuned to its instrument ----------
+   --hue is set per row from the student's instrument. It is the only
+   way a register of eighty names can tell him WHICH instrument at a
+   glance, so it runs down the edge of the row, colours the label, and
+   rims the tick. */
+.tuned { border-left: 3px solid var(--hue); padding-left: 11px; border-radius: 2px; }
+.srow.tuned .nm span { color: var(--hue); font-weight: 600; }
+.due.tuned { padding-left: 13px; }
+
+/* The tick is a drum head: round, rimmed in the instrument's colour,
+   and it takes a strike. */
 .tick {
+  position: relative; overflow: hidden;
   width: 46px; height: 46px; flex: 0 0 46px; border-radius: 50%;
-  border: 2px solid var(--line); background: #fff;
+  border: 2px solid var(--hue, var(--line)); background: #fff;
   font-size: 22px; line-height: 1; display: flex; align-items: center; justify-content: center;
   transition: background .12s, border-color .12s;
+}
+/* The ring a struck head throws, from the middle out. */
+.tick.strike::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  border: 2px solid var(--hue, var(--brand));
+  animation: strike .5s cubic-bezier(.2,.7,.4,1) forwards;
+}
+@keyframes strike {
+  from { transform: scale(.2); opacity: .9 }
+  to   { transform: scale(1.9); opacity: 0 }
 }
 .tick.present { background: var(--ok);  border-color: var(--ok);  color: #fff; }
 .tick.absent  { background: var(--no);  border-color: var(--no);  color: #fff; }
@@ -106,7 +128,8 @@ table.reg { border-collapse: separate; border-spacing: 0; font-size: 13px; }
 table.reg th, table.reg td { padding: 0; text-align: center; }
 table.reg .nmcol {
   position: sticky; left: 0; z-index: 2; background: var(--card);
-  text-align: left; padding: 7px 10px 7px 2px; min-width: 132px;
+  text-align: left; padding: 7px 10px 7px 9px; min-width: 132px;
+  border-left: 3px solid var(--hue, transparent);
   border-right: 1px solid var(--line); font-weight: 600; white-space: nowrap;
 }
 table.reg thead th { padding: 6px 0 8px; color: var(--ink-3); font-weight: 600; font-size: 11.5px; }
@@ -173,8 +196,14 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
   font-size: 12.5px; font-weight: 600; color: var(--ink-3);
   display: flex; flex-direction: column; align-items: center; gap: 3px;
 }
-.tabs button .ic { font-size: 22px; line-height: 1; }
+/* The three marks. Hairline, like the violin on his card — not filled
+   icons, which would shout next to it. */
+.tabs button .ic { display: block; width: 26px; height: 26px; line-height: 0; }
+.tabs button .ic svg { width: 26px; height: 26px; display: block;
+  fill: none; stroke: currentColor; stroke-width: 1.5;
+  stroke-linecap: round; stroke-linejoin: round; }
 .tabs button.on { color: var(--brand); }
+.tabs button.on .ic svg { stroke-width: 1.8; }
 
 /* ---------- misc ---------- */
 .sub-toggle { display: flex; gap: 6px; margin-bottom: 12px; }

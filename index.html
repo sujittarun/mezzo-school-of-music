@@ -8,12 +8,12 @@
 <link rel="icon" href="assets/img/favicon.png" />
 <link rel="apple-touch-icon" href="assets/img/icon-192.png" />
 <link rel="manifest" href="manifest.webmanifest" />
-<link rel="stylesheet" href="assets/css/app.css?v=1" />
+<link rel="stylesheet" href="assets/css/app.css?v=20260819e" />
 </head>
 <body>
 <div id="root"></div>
 <div class="tabs" id="tabs" hidden></div>
-<script src="assets/js/cloud.js?v=1"></script>
+<script src="assets/js/cloud.js?v=20260819e"></script>
 <script>
 /* ============================================================
    MEZZO — the whole app.
@@ -48,6 +48,36 @@
     err: ""
   };
   (function () { var d = new Date(); S.month = { y: d.getFullYear(), m: d.getMonth() + 1 }; })();
+
+  /* ---------- the instruments ----------
+     Eight instruments, eight colours and eight notes. This is the only
+     place either is decided.
+
+     The colour is not decoration. He teaches eight instruments to
+     eighty children and the one thing a register cannot tell him at a
+     glance is WHICH — so the colour carries that, down the side of
+     every row, through the month grid, into the dues list and the
+     money. Scanning becomes seeing.
+
+     The note is the same idea for the ear. Marking a piano student
+     sounds like a piano and a guitar student like a plucked string, so
+     a mis-tap is something he HEARS before he sees it — on a register
+     where a wrong tap marks a child absent, that is worth more than it
+     costs.
+
+     PLATFORM.md is explicit that this belongs here: "A batch's colour
+     satisfies none of them, and belongs in the app." */
+  var INSTRUMENT = {
+    Piano:    { hue: "#5B4CC4", note: 60 },
+    Keyboard: { hue: "#0E8C8C", note: 62 },
+    Guitar:   { hue: "#C77D24", note: 64 },
+    Violin:   { hue: "#B8383B", note: 67 },
+    Ukulele:  { hue: "#D9634A", note: 69 },
+    Drums:    { hue: "#A9541C", note: 48 },
+    Vocals:   { hue: "#B23F86", note: 72 },
+    Flute:    { hue: "#6E8F5E", note: 71 }
+  };
+  function inst(name) { return INSTRUMENT[name] || { hue: "#6B5CA5", note: 65 }; }
 
   /* ---------- small helpers ---------- */
   function esc(s) { var d = document.createElement("i"); d.textContent = String(s == null ? "" : s); return d.innerHTML; }
@@ -276,10 +306,20 @@
   }
   function drawTabs() {
     tabs.hidden = false;
-    var T = [["register", "✓", "Register"], ["dues", "₹", "Dues"], ["money", "≡", "Money"]];
+    /* Three marks, drawn in the same hairline as the violin on his
+       card, and each one earns its tab rather than illustrating it:
+       a metronome counts days the way it counts beats, a bell rings
+       until somebody answers, and a drum head seen face-on is also
+       the shape of a coin. */
+    var ICON = {
+      register: '<svg viewBox="0 0 24 24"><path d="M9.2 2.6h5.6l3.4 18.8H5.8z"/><path d="M7.4 13h9.2"/><path d="M15.6 5.4 9.6 17.4"/><circle cx="9.5" cy="17.6" r="1.4"/></svg>',
+      dues:     '<svg viewBox="0 0 24 24"><path d="M12 3.2a6.6 6.6 0 0 1 6.6 6.6c0 4 1.2 5.6 2.2 6.6H3.2c1-1 2.2-2.6 2.2-6.6A6.6 6.6 0 0 1 12 3.2z"/><path d="M10 19.4a2.1 2.1 0 0 0 4 0"/><path d="M12 3.2V1.6"/></svg>',
+      money:    '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.6"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21"/></svg>'
+    };
+    var T = [["register", "Register"], ["dues", "Dues"], ["money", "Money"]];
     tabs.innerHTML = T.map(function (t) {
       return '<button data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' class="on"' : "") +
-        '><span class="ic">' + t[1] + "</span>" + t[2] + "</button>";
+        '><span class="ic">' + ICON[t[0]] + "</span>" + t[1] + "</button>";
     }).join("");
   }
 
@@ -371,10 +411,12 @@
       if (st === "present") marked++;
       var cls = st === "present" ? "present" : st === "absent" ? "absent" : "";
       var glyph = st === "present" ? "✓" : st === "absent" ? "✕" : "";
-      return '<div class="srow">' +
+      var ins = inst(r.sport);
+      return '<div class="srow tuned" style="--hue:' + ins.hue + '">' +
         '<div class="nm"><b>' + esc(r.member_name) + "</b><span>" + esc(r.sport || "") + "</span></div>" +
         '<button class="tick ' + cls + (S.busy[r.enrollment_id] ? " busy" : "") + '"' +
           ' data-mark="' + r.enrollment_id + '" data-batch="' + (r.batch_id || "") + '"' +
+          ' data-note="' + ins.note + '"' +
           ' data-now="' + (st || "") + '" aria-label="' + esc(r.member_name) + '">' + glyph + "</button>" +
       "</div>";
     }).join("");
@@ -403,8 +445,9 @@
               : runs ? '<i class="n"></i>' : '<i class="off">·</i>') +
           "</span></td>";
       }
-      return "<tr><td class=\"nmcol\">" + esc(r.member_name) +
-        '<div style="font-weight:400;font-size:11.5px;color:var(--ink-3)">' + esc(r.sport || "") + "</div></td>" +
+      var ins = inst(r.sport);
+      return '<tr style="--hue:' + ins.hue + '"><td class="nmcol">' + esc(r.member_name) +
+        '<div style="font-weight:600;font-size:11.5px;color:var(--hue)">' + esc(r.sport || "") + "</div></td>" +
         cells + '<td class="tot">' + r.present_days + "</td></tr>";
     }).join("");
     return '<div class="card"><div class="gridwrap"><table class="reg">' +
@@ -423,6 +466,17 @@
     if (!bid) { toast("This student has no class time set."); return; }
     if (S.busy[eid]) return;
     var next = now === "present" ? "absent" : now === "absent" ? null : "present";
+
+    /* A struck head, and the note of the instrument that child plays.
+       Present is that note; absent is the same note a fourth below and
+       duller; clearing says nothing at all. He will learn the sound of
+       his own register, which means a mis-tap is something he hears
+       before he has to look for it. */
+    var n = +btn.getAttribute("data-note") || 65;
+    if (next === "present")      tone(n, 0.85);
+    else if (next === "absent")  tone(n - 17, 0.55);
+    btn.classList.remove("strike"); void btn.offsetWidth; btn.classList.add("strike");
+
     S.busy[eid] = true; btn.classList.add("busy");
     MZ.mark(bid, S.day, eid, next).then(function () {
       delete S.busy[eid];
@@ -468,7 +522,7 @@
         '<div class="muted">' + inr(total) + " in total</div></div></div>" +
       S.dues.map(function (d) {
         var blocked = d.blocked_reason === "missing_phone";
-        return '<div class="due">' +
+        return '<div class="due tuned" style="--hue:' + inst(d.sport).hue + '">' +
           '<div class="hd"><b>' + esc(d.member_name) + "</b><em>" + inr(d.amount) + "</em></div>" +
           '<div class="sub"><span class="late">' + d.days_since + " day" + (d.days_since === 1 ? "" : "s") +
             " late</span> · " + esc(d.sport || "") +
