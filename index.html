@@ -39,6 +39,8 @@
     day: MZ.todayIso(),
     month: null,              // {y, m}
     q: "",
+    fIns: null,               // instrument filter, null = all
+    fBat: null,               // batch filter, null = all
     showOff: false,
     register: null,           // rows from attendance_month
     dues: null,
@@ -73,14 +75,14 @@
      #14101F. Every one is lifted until it holds its own against the
      background it actually sits on. */
   var INSTRUMENT = {
-    Piano:    { hue: "#9C8CF5", note: 60 },
-    Keyboard: { hue: "#3ECFCF", note: 62 },
-    Guitar:   { hue: "#EFAC55", note: 64 },
-    Violin:   { hue: "#F07A7D", note: 67 },
-    Ukulele:  { hue: "#F79478", note: 69 },
-    Drums:    { hue: "#E09453", note: 48 },
-    Vocals:   { hue: "#EE7FC0", note: 72 },
-    Flute:    { hue: "#A2CB8F", note: 71 }
+    Piano:    { hue: "#5B4CC4", note: 60 },
+    Keyboard: { hue: "#0E8C8C", note: 62 },
+    Guitar:   { hue: "#C07520", note: 64 },
+    Violin:   { hue: "#B8383B", note: 67 },
+    Ukulele:  { hue: "#D9634A", note: 69 },
+    Drums:    { hue: "#9E4E18", note: 48 },
+    Vocals:   { hue: "#B23F86", note: 72 },
+    Flute:    { hue: "#5F8450", note: 71 }
   };
   function inst(name) { return INSTRUMENT[name] || { hue: "#6B5CA5", note: 65 }; }
 
@@ -267,21 +269,47 @@
        So the animation is driven directly instead. Cancel the running
        one, start a new one — no classes, no reflow, no guessing about
        what a browser decided to batch. */
-    var TWANG = [
-      { transform: "scaleY(-9)",  offset: 0    },
-      { transform: "scaleY(6.4)", offset: 0.14 },
-      { transform: "scaleY(-4.2)",offset: 0.29 },
-      { transform: "scaleY(2.6)", offset: 0.44 },
-      { transform: "scaleY(-1.6)",offset: 0.60 },
-      { transform: "scaleY(.9)",  offset: 0.78 },
-      { transform: "scaleY(1)",   offset: 1    }
-    ];
+    /* NO TWO PLUCKS ARE THE SAME.
+       The first version rang down an identical curve every time —
+       same amplitude, same direction, same shape — so however often
+       you plucked it, it moved in exactly one way and read as a
+       mechanism rather than a string.
+
+       A real string does not do that. Where you catch it decides the
+       shape of the wave, how hard decides the amplitude, and it never
+       lands twice in the same place. So each keystroke picks a fresh
+       one: the belly of the wave moves along the string, the pull goes
+       up or down, and both the size and the ring-down time vary. */
+    function wave() {
+      var at   = 0.22 + Math.random() * 0.56;      /* where it was caught */
+      var x    = 300 * at;
+      var lift = 10 - Math.random() * 4;
+      var up   = Math.random() < 0.5 ? -1 : 1;
+      var y    = 10 + lift * up;
+      /* one belly, at a different place along the string each time */
+      return "M0 10 C " + (x * 0.45).toFixed(1) + " 10 " + (x * 0.7).toFixed(1) + " " + y.toFixed(1) +
+             " " + x.toFixed(1) + " " + y.toFixed(1) +
+             " C " + (x + (300 - x) * 0.3).toFixed(1) + " " + y.toFixed(1) +
+             " " + (x + (300 - x) * 0.55).toFixed(1) + " 10 300 10";
+    }
+
     function pluckString() {
-      if (!wirePath || !wirePath.animate) {     /* very old browser: no motion, no error */
-        return;
+      if (!wirePath) return;
+      wirePath.setAttribute("d", wave());          /* a new shape to ring down */
+      if (!wirePath.animate) return;               /* very old browser: shape only */
+
+      var amp  = 0.75 + Math.random() * 0.5;
+      var dir  = Math.random() < 0.5 ? -1 : 1;
+      var dur  = 430 + Math.random() * 220;
+      var frames = [], n = 7;
+      for (var i = 0; i <= n; i++) {
+        /* an exponential decay, alternating sides, ending at rest */
+        var k = i === n ? 1 : (1 - i / n) * amp * (i % 2 ? -dir : dir) + (i === 0 ? 0 : 0);
+        frames.push({ transform: "scaleY(" + (i === n ? 1 : (k * 4).toFixed(2)) + ")",
+                      offset: i / n });
       }
       if (twang) twang.cancel();
-      twang = wirePath.animate(TWANG, { duration: 550, easing: "cubic-bezier(.25,.7,.4,1)" });
+      twang = wirePath.animate(frames, { duration: dur, easing: "cubic-bezier(.25,.7,.4,1)" });
     }
 
     if (em && wire) {
@@ -408,6 +436,48 @@
     if (!S.register) return body + '<div class="note">Loading…</div>';
 
     var rows = S.register.rows;
+
+    /* THE FILTER ROW.
+       One line, scrollable sideways, and it is built from what is
+       actually in front of him — only the instruments with a student
+       on this list, so it is three chips on a quiet Tuesday and seven
+       on a Saturday rather than a fixed wall of eight.
+
+       What does it replace? The search box, most of the time. Finding
+       "the guitar children" meant typing g-u-i-t-a-r; now it is one
+       tap, and the search stays for finding one child by name. The
+       chips are 40px rather than the 48 this app holds itself to
+       everywhere else — a mis-tap on a filter shows the wrong list for
+       a second, where a mis-tap on the register marks a child absent.
+       Those two are not the same risk and should not cost the same
+       screen. */
+    var present = [];
+    S.register.rows.forEach(function (r) {
+      if (r.sport && present.indexOf(r.sport) < 0) present.push(r.sport);
+    });
+    present.sort();
+
+    var bats = (S.ref && S.ref.batches) || [];
+    if (present.length > 1 || (S.mode === "month" && bats.length > 1)) {
+      body += '<div class="filters"><div class="frow">' +
+        '<button class="chip' + (S.fIns ? "" : " on") + '" data-fi="">All</button>' +
+        present.map(function (n) {
+          var h = inst(n).hue;
+          return '<button class="chip' + (S.fIns === n ? " on" : "") + '" data-fi="' + esc(n) +
+                 '" style="--hue:' + h + '">' + esc(n) + "</button>";
+        }).join("") +
+        (S.mode === "month" && bats.length > 1
+          ? '<span class="fsep"></span>' +
+            bats.map(function (b) {
+              return '<button class="chip' + (S.fBat === b.id ? " on" : "") + '" data-fb="' + b.id +
+                     '">' + esc(b.short_name || b.name) + "</button>";
+            }).join("")
+          : "") +
+      "</div></div>";
+    }
+
+    if (S.fIns) rows = rows.filter(function (r) { return r.sport === S.fIns; });
+    if (S.fBat) rows = rows.filter(function (r) { return r.batch_id === S.fBat; });
     if (S.q) {
       var q = S.q.toLowerCase();
       rows = rows.filter(function (r) {
@@ -422,7 +492,10 @@
       return body + '<div class="card"><div class="note">No students yet.<br><br>' +
         '<button class="btn" data-add="1">Add the first student</button></div></div>';
     }
-    if (!rows.length) return body + '<div class="card"><div class="note">Nobody matches that.</div></div>';
+    if (!rows.length) {
+      return body + '<div class="card"><div class="note">Nobody matches that.<br><br>' +
+        '<button class="btn ghost" data-fi="">Show everyone</button></div></div>';
+    }
 
     if (S.mode === "today") {
       var due = rows.filter(function (r) { return runsOn(r.batch_id, S.day); });
@@ -689,6 +762,10 @@
       S.month = n < 1 ? { y: S.month.y - 1, m: 12 } : n > 12 ? { y: S.month.y + 1, m: 1 } : { y: S.month.y, m: n };
       (S.tab === "money" ? loadMoney : loadRegister)(); render(); return;
     }
+    var fi = t.closest("[data-fi]");
+    if (fi) { var v = fi.getAttribute("data-fi"); S.fIns = v || null; S.q = ""; render(); return; }
+    var fb = t.closest("[data-fb]");
+    if (fb) { var n = +fb.getAttribute("data-fb"); S.fBat = S.fBat === n ? null : n; render(); return; }
     if (t.closest("[data-off]")) { S.showOff = true; render(); return; }
     var md = t.closest("[data-mode]");
     if (md) { S.mode = md.getAttribute("data-mode"); loadRegister(); render(); return; }

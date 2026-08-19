@@ -15,39 +15,40 @@
 /* ============================================================
    THE PALETTE
 
-   This app used to be white cards on grey. It was legible and it was
-   nothing — a spreadsheet with rounded corners, sitting behind a
-   sign-in screen that looked like a concert hall. The two did not
-   belong to the same product.
+   Three goes at this. White cards on grey was legible and lifeless.
+   Dark was stylish and, in his words, had no life in it — which is
+   fair: a register is a cheerful daily task and a black screen makes
+   it feel like an admin system.
 
-   So it is dark now, on a photograph of the inside of a violin so far
-   down it reads as atmosphere rather than picture. Everything he
-   touches is unchanged: same three tabs, same 48px targets, same
-   sizes. Only the surface moved.
+   So: LIGHT, but warm and coloured, not white. The base is parchment
+   rather than #fff, and the colour comes from washes of the
+   instruments' own hues bled into the corners — the palette the app
+   already uses for meaning, doing the lighting as well. It reads as
+   sunlight in a music room, which is where he is at four in the
+   afternoon.
 
    The one rule that governs the colour: STATES ARE GREEN AND RED,
-   IDENTITY IS THE INSTRUMENT'S OWN HUE. Present and absent must never
-   be told apart by anything a colour-blind eye cannot separate, so
-   they keep a tick and a cross as well.
+   IDENTITY IS THE INSTRUMENT'S OWN HUE. Present and absent also keep
+   a tick and a cross, so they never rely on colour alone.
    ============================================================ */
 :root {
-  --brand:   #8A76D6;        /* lifted off #4B3F72 so it reads on dark */
-  --brand-d: #4B3F72;        /* the card's own purple, for fills */
-  --brand-l: rgba(138,118,214,.18);
-  --gold:    #D8A657;
+  --brand:   #5A4A93;
+  --brand-d: #3B3160;
+  --brand-l: #EFEAFB;
+  --gold:    #C08A2E;
 
-  --ink:     #F4EFE6;
-  --ink-2:   #C6BCAE;
-  --ink-3:   #9990A6;
+  --ink:     #241F35;
+  --ink-2:   #5C5570;
+  --ink-3:   #8B8399;
 
-  --line:    rgba(244,239,230,.14);
-  --bg:      #14101F;
-  --card:    rgba(255,255,255,.055);
-  --card-2:  rgba(255,255,255,.10);
+  --line:    rgba(75,63,114,.13);
+  --bg:      #FAF6F0;
+  --card:    rgba(255,255,255,.84);
+  --card-2:  rgba(255,255,255,.62);
 
-  --ok:      #45B478;  --ok-bg:   rgba(69,180,120,.17);
-  --no:      #DC6660;  --no-bg:   rgba(220,102,96,.17);
-  --warn:    #E0A54A;  --warn-bg: rgba(224,165,74,.17);
+  --ok:      #1B8A55;  --ok-bg:   #E4F5EC;
+  --no:      #C0392F;  --no-bg:   #FCEAE7;
+  --warn:    #96601A;  --warn-bg: #FBF0DC;
   --tap:     52px;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -61,13 +62,25 @@ body {
 /* The room, behind everything. A fixed pseudo-element rather than
    background-attachment: fixed, which iOS Safari has never handled
    without tearing — and this is an iPad app first. */
+/* THE LIGHT IN THE ROOM.
+   Four washes in the instruments' own colours, bled into the corners
+   where nothing is ever read, plus the photograph of a violin's
+   interior at a tenth of its strength for grain. It is colour and it
+   is a background image, and neither of them ever sits under a number
+   he has to read. */
 body::before {
-  content: ""; position: fixed; inset: 0; z-index: -1;
+  content: ""; position: fixed; inset: 0; z-index: -2;
+  background:
+    radial-gradient(62% 46% at 10% 6%,   rgba(124,106,224,.26) 0%, rgba(124,106,224,0) 62%),
+    radial-gradient(58% 42% at 92% 3%,   rgba(214,150,58,.30)  0%, rgba(214,150,58,0)  62%),
+    radial-gradient(66% 52% at 86% 94%,  rgba(31,178,178,.24)  0%, rgba(31,178,178,0)  64%),
+    radial-gradient(60% 46% at 6% 97%,   rgba(226,101,170,.22) 0%, rgba(226,101,170,0) 62%),
+    var(--bg);
+}
+body::after {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
   background: url(../img/bg.jpg) center / cover no-repeat;
-  /* Low enough to be a room and not a picture. Anything brighter and
-     the card has to fight it for the eye, which a register must never
-     have to do. */
-  opacity: .32;
+  opacity: .10; mix-blend-mode: multiply;
 }
 h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 button, input, select { font: inherit; color: inherit; }
@@ -77,8 +90,8 @@ button { cursor: pointer; }
 /* The header keeps the card's own purple rather than the lifted one —
    it is a filled band, so it can be as deep as the card is. */
 .top {
-  background: linear-gradient(140deg, #5A4B8A 0%, #4B3F72 55%, #372E57 100%);
-  color: #fff; border-bottom: 1px solid rgba(244,239,230,.12);
+  background: linear-gradient(118deg, #4B3F72 0%, #6A4E9C 48%, #8C5B9B 82%, #A9663F 132%);
+  color: #fff;
   padding: calc(14px + env(safe-area-inset-top)) 16px 14px;
   display: flex; align-items: center; gap: 12px;
 }
@@ -100,9 +113,9 @@ button { cursor: pointer; }
    is sitting in it. */
 .card {
   background: var(--card); border: 1px solid var(--line);
-  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
   border-radius: 16px; padding: 15px; margin-bottom: 12px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.28);
+  box-shadow: 0 8px 26px rgba(75,63,114,.10);
 }
 .muted { color: var(--ink-3); font-size: 14px; }
 .rowline { display: flex; align-items: center; gap: 10px; }
@@ -142,7 +155,7 @@ button { cursor: pointer; }
 .tick {
   position: relative; overflow: hidden;
   width: 46px; height: 46px; flex: 0 0 46px; border-radius: 50%;
-  border: 2px solid var(--hue, var(--line)); background: rgba(255,255,255,.07);
+  border: 2px solid var(--hue, var(--line)); background: #fff;
   font-size: 22px; line-height: 1; display: flex; align-items: center; justify-content: center;
   transition: background .12s, border-color .12s;
 }
@@ -220,13 +233,13 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
   width: 100%; min-height: var(--tap); border: 0; border-radius: 12px;
   background: var(--brand); color: #fff; font-size: 16.5px; font-weight: 700;
 }
-.btn.ghost { background: transparent; color: var(--brand); border: 1.5px solid var(--brand); }
+.btn.ghost { background: rgba(255,255,255,.7); color: var(--brand); border: 1.5px solid var(--brand); }
 .btn:disabled { opacity: .5; }
 
 /* ---------- tabs: always there, never nested ---------- */
 .tabs {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-  display: flex; background: rgba(20,16,31,.82); backdrop-filter: blur(18px);
+  display: flex; background: rgba(255,255,255,.88); backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px); border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -243,6 +256,32 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
   stroke-linecap: round; stroke-linejoin: round; }
 .tabs button.on { color: var(--brand); }
 .tabs button.on .ic svg { stroke-width: 1.8; }
+
+/* ---------- the filter row ----------
+   Subtle by construction: one line, no panel, no modal, no label. It
+   scrolls sideways rather than wrapping, so it is always exactly one
+   line high however many instruments are in the room today. */
+.filters { margin: 0 0 12px; }
+.frow {
+  display: flex; gap: 7px; align-items: center;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px; scrollbar-width: none;
+}
+.frow::-webkit-scrollbar { display: none; }
+.chip {
+  flex: 0 0 auto; height: 40px; padding: 0 15px;
+  border-radius: 100px; border: 1.5px solid var(--line);
+  background: rgba(255,255,255,.72); color: var(--ink-2);
+  font-size: 14px; font-weight: 600; white-space: nowrap;
+  transition: background .16s, color .16s, border-color .16s;
+}
+/* Active takes the instrument's own colour, so the filter and the rows
+   it leaves behind are visibly the same idea. */
+.chip.on {
+  border-color: var(--hue, var(--brand));
+  background: var(--hue, var(--brand)); color: #fff;
+}
+.fsep { flex: 0 0 auto; width: 1px; height: 22px; background: var(--line); margin: 0 3px; }
 
 /* ---------- misc ---------- */
 .sub-toggle { display: flex; gap: 6px; margin-bottom: 12px; }

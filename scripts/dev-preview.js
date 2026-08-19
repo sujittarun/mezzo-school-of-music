@@ -85,6 +85,11 @@ localStorage.setItem("mz-session", JSON.stringify({
   expires_at: Date.now() + 864e5, email: "preview@example.invalid",
   role: "staff", tenant: "mezzo"
 }));
+/* Take it back on the way out. The preview shares an origin with the
+   real app, so a fake session left in localStorage makes index.html
+   boot straight past the sign-in screen into a register that cannot
+   load — which looks exactly like a bug in the app, and is not. */
+addEventListener("pagehide", function () { localStorage.removeItem("mz-session"); });
 var FIX = ${JSON.stringify(fixtures)};
 window.fetch = function (url) {
   url = String(url);
