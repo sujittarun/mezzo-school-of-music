@@ -48,7 +48,10 @@ button { cursor: pointer; }
   padding: calc(14px + env(safe-area-inset-top)) 16px 14px;
   display: flex; align-items: center; gap: 12px;
 }
-.top img { width: 34px; height: 34px; border-radius: 8px; background: #fff; padding: 3px; }
+/* The mark is a line drawing, not a tile: it sits directly on the purple
+   with no white plate behind it, and keeps the violin's own tall
+   proportion rather than being squeezed into a square. */
+.top img { height: 40px; width: auto; display: block; }
 .top .t { flex: 1; min-width: 0; }
 .top .t b { display: block; font-size: 17px; line-height: 1.2; }
 .top .t span { display: block; font-size: 12.5px; opacity: .75; }
@@ -193,7 +196,7 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
 }
 /* ---------- sign in ---------- */
 .gate { max-width: 380px; margin: 0 auto; padding: 44px 20px; text-align: center; }
-.gate img { width: 76px; height: 76px; margin-bottom: 14px; }
+.gate img { height: 118px; width: auto; margin-bottom: 16px; }
 .gate h1 { font-size: 22px; margin-bottom: 4px; }
 .gate p  { color: var(--ink-3); font-size: 14.5px; margin: 0 0 26px; }
 .gate .field { text-align: left; }
