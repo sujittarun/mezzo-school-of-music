@@ -1,0 +1,158 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The Keys — Mezzo</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+ --paper:#F3EFE7; --ivory:#FFFDF8; --lip:#CFC4AE; --ink:#1B1712; --dim:#8C8375;
+ --rule:#DCD3C2; --green:#2E6B44; --red:#A63A2A; --amber:#C98A2E;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--paper);color:var(--ink);font:16px/1.45 Inter,sans-serif;
+ padding-bottom:104px;-webkit-font-smoothing:antialiased;user-select:none}
+header{padding:20px 20px 2px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
+ max-width:720px;margin:0 auto}
+h1{font:600 27px/1 "Cormorant Garamond",serif}
+.mv{font:italic 400 16px/1 "Cormorant Garamond",serif;color:var(--dim)}
+.cnt{margin-left:auto;font:600 11px/1 Inter;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.hint{padding:4px 20px 16px;color:var(--dim);font:500 13px/1.4 Inter;max-width:720px;margin:0 auto}
+
+.kb{max-width:720px;margin:0 auto;padding:0 14px}
+
+/* ── the black keys are the hour headings ───────────────────────────
+   A black key is shorter and narrower than a white one and sits
+   between them. That is exactly what a section heading has to be. */
+.blk{height:34px;width:56%;min-width:190px;background:#241E16;border-radius:0 7px 7px 0;
+ margin:14px 0 7px;display:flex;align-items:center;padding-left:16px;gap:10px;
+ box-shadow:0 3px 0 rgba(0,0,0,.35),0 5px 9px rgba(36,30,22,.28)}
+.blk b{color:#F6F1E6;font:600 12px/1 Inter;letter-spacing:.16em;text-transform:uppercase}
+.blk span{color:#A9A093;font:500 11px/1 Inter;letter-spacing:.05em}
+
+/* ── one white key is one child ─────────────────────────────────── */
+.key{position:relative;display:flex;align-items:center;gap:12px;
+ min-height:58px;padding:10px 16px 10px 22px;margin-bottom:3px;
+ background:var(--ivory);border-radius:0 8px 8px 0;
+ border-bottom:4px solid var(--lip);
+ box-shadow:0 1px 0 rgba(255,255,255,.9) inset, 0 3px 7px rgba(60,48,28,.10);
+ transition:transform .09s ease-out,background .14s,border-bottom-width .09s,box-shadow .14s}
+/* the note letter sits at the back of the key, where a pianist never looks */
+.key .nt{position:absolute;right:13px;top:8px;font:600 10px/1 "Cormorant Garamond",serif;
+ color:#C6BCA8;letter-spacing:.06em}
+.key .who{flex:1;min-width:0}
+.key .who b{display:block;font:600 17px/1.2 Inter}
+.key .who span{display:block;font:500 12px/1.3 Inter;color:var(--dim)}
+.key .st{flex:none;font:600 11px/1 Inter;letter-spacing:.14em;text-transform:uppercase;
+ color:#BDB3A0}
+
+/* PRESSED = present. The key goes down and forward, the lip collapses,
+   and the shadow moves above it. No legend needed for that. */
+.key.in{background:#EDE5D2;border-bottom-width:1px;transform:translateY(3px);
+ box-shadow:inset 0 4px 7px rgba(80,64,38,.22)}
+.key.in .st{color:var(--green)}
+.key.in .who b{color:#20401C}
+
+/* ABSENT = a felt damper laid across the key. The key stays up: nobody
+   played it. */
+.key.off{background:#F6F1E6}
+.key.off .who b,.key.off .who span{color:#A79E8D}
+.key.off .st{color:var(--red)}
+/* The damper is a strip of felt down the near edge of the key. It was
+   briefly a short line across the middle too, which landed on the name
+   and read as a strikethrough. One mark, at the edge. */
+.key.off::before{content:"";position:absolute;left:0;top:0;bottom:0;width:10px;
+ background:var(--red);opacity:.6}
+
+.key:active{transform:translateY(2px)}
+
+/* the hour that is happening now */
+.blk.now{background:#3A2E12;box-shadow:0 3px 0 rgba(0,0,0,.35),0 5px 9px rgba(36,30,22,.28),
+ 0 0 0 2px var(--amber)}
+.blk.now span{color:var(--amber)}
+
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--paper);
+ border-top:1.4px solid var(--rule);padding-bottom:env(safe-area-inset-bottom);z-index:5}
+.tabs a{flex:1;text-align:center;padding:15px 0 17px;text-decoration:none;color:var(--dim);
+ font:600 11px/1 Inter;letter-spacing:.18em;text-transform:uppercase}
+.tabs a.on{color:var(--red)}
+</style></head><body>
+
+<header><h1>Mezzo</h1><span class="mv" id="d"></span><span class="cnt" id="c"></span></header>
+<div class="hint">Press a key when the child arrives · press again for away, again to clear</div>
+<div class="kb" id="kb"></div>
+
+<nav class="tabs"><a class="on" href="#">Attendance</a><a href="#">Dues</a><a href="#">Money</a></nav>
+
+<script src="data.js"></script>
+<script>
+addEventListener('DOMContentLoaded',function(){ if(!window.MZDEMO){document.body.innerHTML=
+ '<div style="padding:34px;font:16px/1.6 system-ui;color:#A63A2A"><b>This prototype could not load its data.</b><br>data.js did not load — a missing file, not a broken design.</div>';}});
+</script>
+<script>
+var D=window.MZDEMO, NOW=5.6;
+var NOTE={ Piano:{n:'C',m:60}, Keyboard:{n:'E',m:64}, Guitar:{n:'E',m:52},
+           Violin:{n:'A',m:69}, Ukulele:{n:'G',m:67}, Vocals:{n:'A',m:57},
+           Drums:{n:'D',m:50} };
+document.getElementById('d').textContent=D.day;
+
+var AC=null;
+function ctx(){ try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} return AC; }
+/* Pressing a key sounds it. Damping it gives the short, dead thud a
+   felt damper makes — the same gesture, told apart by ear. */
+function press(midi,kind){
+ var a=ctx(); if(!a) return;
+ var o=a.createOscillator(), g=a.createGain(), t=a.currentTime;
+ o.type = kind==='in' ? 'triangle' : 'sine';
+ o.frequency.value=440*Math.pow(2,((kind==='in'?midi:midi-12)-69)/12);
+ g.gain.setValueAtTime(.0001,t);
+ g.gain.exponentialRampToValueAtTime(kind==='in'?.15:.07,t+.008);
+ g.gain.exponentialRampToValueAtTime(.0001,t+(kind==='in'?.9:.16));
+ o.connect(g); g.connect(a.destination); o.start(); o.stop(t+1);
+}
+
+function hourLabel(h){
+ var ap=h>=12?'pm':'pm', hh=h>12?h-12:h;
+ return hh+' '+ap;
+}
+
+function draw(){
+ /* one black key per class hour, the white keys under it are that hour */
+ var hours={};
+ D.students.forEach(function(s){ var h=Math.floor(s.at); (hours[h]=hours[h]||[]).push(s); });
+ var keys=Object.keys(hours).map(Number).sort(function(a,b){return a-b});
+
+ var h='';
+ keys.forEach(function(hr){
+  var grp=hours[hr];
+  var inn=grp.filter(function(s){return s.mark==='present'}).length;
+  var isNow = NOW>=hr && NOW<hr+1;
+  h+='<div class="blk'+(isNow?' now':'')+'"><b>'+hourLabel(hr)+'</b>'+
+     '<span>'+inn+' of '+grp.length+(isNow?' · now':'')+'</span></div>';
+  grp.forEach(function(s){
+   var i=D.students.indexOf(s);
+   var cls = s.mark==='present'?' in' : s.mark==='absent'?' off' : '';
+   var st  = s.mark==='present'?'In'  : s.mark==='absent'?'Away' : 'Not yet';
+   h+='<div class="key'+cls+'" data-i="'+i+'">'+
+      '<span class="nt">'+NOTE[s.inst].n+'</span>'+
+      '<span class="who"><b>'+s.name+'</b><span>'+s.inst+'</span></span>'+
+      '<span class="st">'+st+'</span></div>';
+  });
+ });
+ document.getElementById('kb').innerHTML=h;
+
+ var p=D.students.filter(function(s){return s.mark==='present'}).length;
+ document.getElementById('c').textContent=p+' of '+D.students.length+' in';
+}
+
+/* blank → present → absent → blank. null CLEARS the mark; it is a real
+   state, not "not present". */
+document.getElementById('kb').addEventListener('pointerdown',function(e){
+ var k=e.target.closest('[data-i]'); if(!k) return;
+ var s=D.students[+k.dataset.i];
+ s.mark = s.mark==null ? 'present' : s.mark==='present' ? 'absent' : null;
+ if(s.mark) press(NOTE[s.inst].m, s.mark==='present'?'in':'off');
+ draw();
+});
+
+draw();
+</script></body></html>

@@ -1,0 +1,163 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The Setlist — Mezzo</title>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+ --desk:#2A2622; --paper:#F7F1E1; --ink:#22201C; --pencil:#7C7568;
+ --marker:#1D6B4A; --drop:#B23B2B; --rule:#DED3B8;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--desk);color:var(--ink);font:16px/1.45 Inter,sans-serif;
+ padding:0 0 104px;-webkit-font-smoothing:antialiased;user-select:none}
+
+.sheetwrap{max-width:600px;margin:0 auto;padding:26px 12px 0;position:relative}
+/* two strips of tape, because a setlist lives taped to something */
+.tape{position:absolute;top:8px;width:82px;height:24px;background:rgba(255,252,240,.42);
+ border-left:1px solid rgba(255,255,255,.25);border-right:1px solid rgba(255,255,255,.25);
+ box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.tape.l{left:22px;transform:rotate(-6deg)}
+.tape.r{right:22px;transform:rotate(5deg)}
+
+.paper{background:var(--paper);transform:rotate(-.35deg);
+ box-shadow:0 10px 26px rgba(0,0,0,.35);padding:26px 22px 30px;
+ background-image:repeating-linear-gradient(180deg,transparent 0 33px,rgba(180,165,130,.13) 33px 34px)}
+
+.top{display:flex;align-items:flex-end;gap:12px;
+ border-bottom:2.4px solid var(--ink);padding-bottom:8px;margin-bottom:6px}
+h1{font:700 40px/.9 Caveat,cursive;letter-spacing:.01em}
+.day{font:600 24px/1 Caveat,cursive;color:var(--pencil);flex:1;min-width:0;
+ white-space:nowrap;overflow:hidden}
+.tally{margin-left:auto;font:600 22px/1 Caveat,cursive;color:var(--marker)}
+.hint{font:500 12.5px/1.4 Inter;color:var(--pencil);margin:10px 0 4px}
+
+.set{margin-top:20px}
+.hr{display:flex;align-items:baseline;gap:10px;margin-bottom:2px}
+.hr b{font:700 27px/1 Caveat,cursive}
+.hr i{font-style:normal;font:600 18px/1 Caveat,cursive;color:var(--pencil)}
+.hr em{font-style:normal;margin-left:auto;font:600 17px/1 Caveat,cursive;color:var(--marker)}
+.hr.now b::after{content:" ←  now";color:#B8801F;font:600 17px/1 Caveat,cursive}
+
+/* ── one line of the set is one child ───────────────────────────── */
+.ln{position:relative;display:flex;align-items:center;gap:10px;min-height:52px;padding:4px 2px}
+.ln .no{width:22px;flex:none;font:600 19px/1 Caveat,cursive;color:var(--pencil);text-align:right}
+.tick{width:30px;height:30px;flex:none}
+.tick path{fill:none;stroke:var(--marker);stroke-width:3.4;stroke-linecap:round;
+ stroke-linejoin:round;stroke-dasharray:44;stroke-dashoffset:44;
+ transition:stroke-dashoffset .26s ease-out}
+.ln.on .tick path{stroke-dashoffset:0}
+/* No overflow:hidden here. Caveat's letters lean past their advance
+   width, so clipping the box ate the last letter of every name —
+   "Aarthi" came out "Aarthı". */
+.nm{font:600 27px/1.05 Caveat,cursive;position:relative;white-space:nowrap;padding-right:6px}
+.inst{font:500 12px/1 Inter;color:var(--pencil);margin-left:auto;flex:none;
+ letter-spacing:.04em}
+/* dropped from the set — struck out in marker, the way a song is */
+/* The strike belongs to the NAME, not the row — anchored to the row it
+   ran the full width of the paper and out the other side. */
+/* An <svg> is a REPLACED element: left+right do not stretch it, so it
+   fell back to its intrinsic 300px viewBox width and ran off the page.
+   It needs a real width. */
+.strike{position:absolute;left:-5px;top:50%;width:calc(100% + 8px);height:22px;
+ transform:translateY(-11px);pointer-events:none}
+.strike path{fill:none;stroke:var(--drop);stroke-width:3;stroke-linecap:round;
+ stroke-dasharray:300;stroke-dashoffset:300;transition:stroke-dashoffset .3s ease-out}
+.ln.off .strike path{stroke-dashoffset:0}
+.ln.off .nm,.ln.off .no{color:#9A9082}
+.ln:active{background:rgba(180,165,130,.16)}
+
+.foot{margin-top:22px;padding-top:10px;border-top:1.6px solid var(--rule);
+ font:600 20px/1.3 Caveat,cursive;color:var(--pencil)}
+
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:#211E1A;
+ border-top:1px solid #3A342C;padding-bottom:env(safe-area-inset-bottom);z-index:5}
+.tabs a{flex:1;text-align:center;padding:15px 0 17px;text-decoration:none;color:#8B8377;
+ font:600 11px/1 Inter;letter-spacing:.18em;text-transform:uppercase}
+.tabs a.on{color:#E8C87A}
+</style></head><body>
+
+<div class="sheetwrap">
+ <div class="tape l"></div><div class="tape r"></div>
+ <div class="paper">
+  <div class="top"><h1>Mezzo</h1><span class="day" id="d"></span><span class="tally" id="c"></span></div>
+  <div class="hint">Tick them off as they arrive · tap again to strike, again to clear</div>
+  <div id="list"></div>
+  <div class="foot" id="f"></div>
+ </div>
+</div>
+
+<nav class="tabs"><a class="on" href="#">Attendance</a><a href="#">Dues</a><a href="#">Money</a></nav>
+
+<script src="data.js"></script>
+<script>
+addEventListener('DOMContentLoaded',function(){ if(!window.MZDEMO){document.body.innerHTML=
+ '<div style="padding:34px;font:16px/1.6 system-ui;color:#E8A79A"><b>This prototype could not load its data.</b><br>data.js did not load — a missing file, not a broken design.</div>';}});
+</script>
+<script>
+var D=window.MZDEMO, NOW=5.6;
+var NOTE={ Piano:60, Keyboard:64, Guitar:52, Violin:69, Ukulele:67, Vocals:57, Drums:50 };
+document.getElementById('d').textContent='— '+D.day.replace(/day /,' ');
+
+var AC=null;
+function ctx(){ try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} return AC; }
+function note(midi,up){
+ var a=ctx(); if(!a) return;
+ var o=a.createOscillator(), g=a.createGain(), t=a.currentTime;
+ o.type=up?'triangle':'sine'; o.frequency.value=440*Math.pow(2,((up?midi:midi-9)-69)/12);
+ g.gain.setValueAtTime(.0001,t);
+ g.gain.exponentialRampToValueAtTime(up?.14:.07,t+.008);
+ g.gain.exponentialRampToValueAtTime(.0001,t+(up?.5:.18));
+ o.connect(g); g.connect(a.destination); o.start(); o.stop(t+.6);
+}
+
+function hourLabel(h){ return (h>12?h-12:h)+' pm'; }
+
+function draw(){
+ var hours={};
+ D.students.forEach(function(s){ var h=Math.floor(s.at); (hours[h]=hours[h]||[]).push(s); });
+ var keys=Object.keys(hours).map(Number).sort(function(a,b){return a-b});
+
+ var h='', n=0;
+ keys.forEach(function(hr){
+  var grp=hours[hr], isNow=NOW>=hr&&NOW<hr+1;
+  var inn=grp.filter(function(s){return s.mark==='present'}).length;
+  h+='<div class="set"><div class="hr'+(isNow?' now':'')+'"><b>'+hourLabel(hr)+'</b>'+
+     '<i>'+grp.length+(grp.length>1?' names':' name')+'</i><em>'+inn+' in</em></div>';
+  grp.forEach(function(s){
+   n++;
+   var i=D.students.indexOf(s);
+   var cls=s.mark==='present'?' on':s.mark==='absent'?' off':'';
+   h+='<div class="ln'+cls+'" data-i="'+i+'">'+
+      '<span class="no">'+n+'.</span>'+
+      /* drawn by hand, not a font glyph — a tick you make, not a checkbox */
+      '<svg class="tick" viewBox="0 0 30 30"><path d="M5 16 L11.5 23 L25.5 6.5"/></svg>'+
+      '<span class="nm">'+s.name+
+        '<svg class="strike" viewBox="0 0 300 22" preserveAspectRatio="none">'+
+        '<path d="M2 12 C 70 6, 150 16, 298 9"/></svg></span>'+
+      '<span class="inst">'+s.inst+'</span>'+
+      '</div>';
+  });
+  h+='</div>';
+ });
+ document.getElementById('list').innerHTML=h;
+
+ var p=D.students.filter(function(s){return s.mark==='present'}).length;
+ var a=D.students.filter(function(s){return s.mark==='absent'}).length;
+ document.getElementById('c').textContent=p+'/'+D.students.length;
+ document.getElementById('f').textContent =
+   p+' ticked · '+a+' struck · '+(D.students.length-p-a)+' still to come';
+}
+
+/* blank → ticked → struck → blank. The third state CLEARS it; an
+   unticked name is not the same as one you decided was away. */
+document.getElementById('list').addEventListener('pointerdown',function(e){
+ var l=e.target.closest('[data-i]'); if(!l) return;
+ var s=D.students[+l.dataset.i];
+ s.mark = s.mark==null ? 'present' : s.mark==='present' ? 'absent' : null;
+ if(s.mark) note(NOTE[s.inst], s.mark==='present');
+ draw();
+});
+
+draw();
+</script></body></html>

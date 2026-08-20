@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>The musical three — Mezzo</title>
+<title>The musical set — Mezzo</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
 <style>
 :root{--ink:#1B1712;--grey:#6E6B78;--line:#E4E2EA;--red:#A63A2A;--green:#2E6B44}
@@ -12,13 +12,19 @@ p.lede{color:var(--grey);margin-top:12px;max-width:66ch;font-size:17px}
 .note{margin-top:14px;padding:14px 17px;background:#fff;border:1px solid var(--line);
  border-radius:11px;max-width:66ch;font-size:15px;color:var(--grey)}
 .note b{color:var(--ink)}
-.grid{display:grid;gap:24px;padding:26px;max-width:1600px;margin:0 auto;
+h2.band{max-width:1600px;margin:34px auto 0;padding:0 26px;
+ font:600 12px/1 Inter;letter-spacing:.2em;text-transform:uppercase;color:var(--grey)}
+h2.band span{color:var(--ink)}
+p.sub{max-width:66ch;margin:10px auto 0;padding:0 26px;color:var(--grey);font-size:15.5px}
+.wide{max-width:1600px;margin-left:auto;margin-right:auto}
+.grid{display:grid;gap:24px;padding:18px 26px 4px;max-width:1600px;margin:0 auto;
  grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}
 .card{background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;
  box-shadow:0 3px 14px rgba(14,13,18,.06);display:flex;flex-direction:column}
+.card.pick{border-color:#C8C3E0;box-shadow:0 4px 20px rgba(90,70,160,.13)}
 .hd{padding:18px 20px 15px;border-bottom:1px solid var(--line)}
 .n{font:600 11px/1 Inter;letter-spacing:.18em;text-transform:uppercase;color:var(--grey)}
-.hd h2{font:600 27px/1.15 "Cormorant Garamond",serif;margin:8px 0 4px}
+.hd h3{font:600 27px/1.15 "Cormorant Garamond",serif;margin:8px 0 4px}
 .hd .tab{font:600 10px/1 Inter;letter-spacing:.16em;text-transform:uppercase;color:var(--red);
  display:block;margin-bottom:9px}
 .hd p{font-size:14.5px;color:var(--grey);line-height:1.5}
@@ -30,48 +36,62 @@ iframe{width:390px;height:874px;border:0;transform:scale(.687);transform-origin:
 .ft{padding:14px 20px;border-top:1px solid var(--line)}
 .ft a{font:600 14px/1 Inter;color:#fff;background:var(--ink);text-decoration:none;
  padding:12px 17px;border-radius:10px;display:inline-block}
-footer{padding:10px 26px 70px;max-width:1600px;margin:0 auto;color:var(--grey);
- font-size:15px;max-width:70ch}
+footer{padding:22px 26px 70px;max-width:70ch;margin:0 auto;color:var(--grey);font-size:15px}
 footer b{color:var(--ink)}
 </style></head><body>
 <header>
- <h1>The musical three</h1>
- <p class="lede">You asked how usable the Score actually is. Honestly: it was the prettiest
- of the five and the weakest of the five, for three reasons — eighty children meant twenty
- near-identical staves, the vertical axis carried the instrument but you mark by reading the
- fill, so the height was decoration during the only task that matters, and finding one named
- child was hard.</p>
- <p class="lede">These three keep the music and fix that. They are not three skins; they are
- the three screens of one app, each borrowing a different real object from music —
- a conductor's score, a tuner, a player-piano roll — and each borrowing it because the object
- already solves the problem, not because it looks like music.</p>
- <div class="note"><b>All three are live — tap them in the previews.</b> Notes mark and sweep,
- the tuner glides into pitch and rings, the roll punches. They run on twenty-two children rather
- than eight, because eight never showed the crowding.</div>
+ <h1>The musical set</h1>
+ <p class="lede">The Dues tab and the Month tab stay as they are. The Score was creatively
+ right and operationally overboard — a screen you admire is not the same as a screen you open
+ every afternoon at five past three with a child standing in front of you.</p>
+ <p class="lede">So here are two more attendance ideas that are <em>plainly</em> simple —
+ both are a list, which is the least surprising thing an attendance screen can be — and
+ musical in what the list is <em>made of</em> rather than in how it is arranged.</p>
+ <div class="note"><b>The tab is now called Attendance</b>, in all four prototypes and in the
+ real app. All of these are live — tap them in the previews.</div>
 </header>
-<div class="grid" id="g"></div>
-<footer><b>What to tell me:</b> which of the three feels like the register he would open every
-afternoon. They can be mixed — the Roll could be the month behind the Score's today, and the
-Tuner could be the dues tab under either.</footer>
+
+<h2 class="band">Attendance — <span>pick one of these three</span></h2>
+<p class="sub">All three do the same job in the same three states: not yet → in → away → clear.
+They differ only in what you are looking at while you do it.</p>
+<div class="grid" id="a"></div>
+
+<h2 class="band">Already yours — <span>unchanged</span></h2>
+<p class="sub">Kept exactly as you saw them.</p>
+<div class="grid" id="b"></div>
+
+<footer><b>What to tell me:</b> which attendance screen, and I will make it the real one —
+wired to <code>attendance_month()</code>, with the real eighty children. The other two get deleted;
+carrying three is how an app ends up with a settings screen.</footer>
 <script>
-var S=[
- ["01","Register","The Conductor's Score",
-  "One stave per instrument, not one per child, with a brace binding them and the instrument names down the left. Horizontal position is the hour the child is due, so the barlines are the timetable. Filled notehead present, rest absent, hollow unmarked, and a NOW line down the afternoon.",
-  "Fixes all three: seven staves instead of twenty, x means time so the axis earns its place, and the sweep gesture marks a whole section in one movement — you drag along the Violin stave and four children come in.",
-  "1-conductor.html"],
- ["02","Dues","The Tuner",
-  "Every family is a note being tuned. Dead centre is settled; the needle sits flat by how many days they are late, and the further out, the redder. Tap a name and you hear that note played flat — the pitch is the size of the problem before you have read a number.",
-  "Collecting is the payoff: the needle glides into the gate and the note slides up into true. Late is a thing you hear, and settled is a screen that has gone perfectly still.",
-  "2-tuner.html"],
- ["03","Month","The Roll",
-  "The month as a player-piano roll, tractor perforations and all. Each child a lane, each day a column, and present is a punched hole. Closed Sundays are hatched, today is the amber column, and each lane carries its own rate down the right.",
-  "The pianola is the one metaphor where the hole IS the note — so punching one plays it. A run of absences is a gap in the music, visible from across the room without reading a single name.",
-  "3-roll.html"]
+var A=[
+ ["04","The Keys","Attendance",
+  "A list where every child is a white key on the piano, and the hour headings are the black keys. Marking someone in <em>presses their key</em> — it goes down, the lip collapses, the shadow moves above it, and the note sounds. Away lays a red felt damper down the near edge and leaves the key standing.",
+  "The simplest possible screen — a vertical list of big rows — that happens to be a keyboard. Nothing to read to know who is in: the pressed keys are the ones who came.",
+  "4-keys.html", true],
+ ["05","The Setlist","Attendance",
+  "The afternoon as a setlist taped to the wall. Numbered names in marker, grouped by hour, with the current hour arrowed. Tick one off as they arrive; tap again and they are struck out the way a dropped song is.",
+  "A performer's own paper, not a database. Two hand-drawn marks — a tick and a strike — and nothing else on the page to interpret.",
+  "5-setlist.html", true],
+ ["01","The Conductor's Score","Attendance",
+  "The one you have seen: one stave per instrument, horizontal position is the class hour, and a sweep along a stave brings a whole section in at once.",
+  "Kept here so the comparison is honest — it is still the only one where you mark five children in one movement. If that gesture is worth the density, it wins.",
+  "1-conductor.html", false]
 ];
-document.getElementById('g').innerHTML=S.map(function(s){
- return '<div class="card"><div class="hd"><div class="n">'+s[0]+'</div>'+
- '<span class="tab">'+s[1]+' tab</span><h2>'+s[2]+'</h2>'+
- '<p>'+s[3]+'</p><div class="fix">'+s[4]+'</div></div>'+
- '<div class="frame"><iframe src="'+s[5]+'" loading="lazy" title="'+s[2]+'"></iframe></div>'+
- '<div class="ft"><a href="'+s[5]+'">Open full screen</a></div></div>';}).join('');
+var B=[
+ ["02","The Tuner","Dues",
+  "Every family is a note being tuned. Centre is settled, the needle sits flat by how many days they are late, and collecting glides it into the gate while the note slides up into true.",
+  "", "2-tuner.html", false],
+ ["03","The Roll","Month",
+  "The month as a player-piano roll, tractor perforations and all. Present is a punched hole, Sundays are hatched, today is amber.",
+  "", "3-roll.html", false]
+];
+function cards(S){ return S.map(function(s){
+ return '<div class="card'+(s[6]?' pick':'')+'"><div class="hd"><div class="n">'+s[0]+'</div>'+
+ '<span class="tab">'+s[2]+' tab</span><h3>'+s[1]+'</h3>'+
+ '<p>'+s[3]+'</p>'+(s[4]?'<div class="fix">'+s[4]+'</div>':'')+'</div>'+
+ '<div class="frame"><iframe src="'+s[5]+'" loading="lazy" title="'+s[1]+'"></iframe></div>'+
+ '<div class="ft"><a href="'+s[5]+'">Open full screen</a></div></div>';}).join(''); }
+document.getElementById('a').innerHTML=cards(A);
+document.getElementById('b').innerHTML=cards(B);
 </script></body></html>

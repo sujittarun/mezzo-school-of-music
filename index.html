@@ -459,7 +459,7 @@
       dues:     '<svg viewBox="0 0 24 24"><path d="M12 3.2a6.6 6.6 0 0 1 6.6 6.6c0 4 1.2 5.6 2.2 6.6H3.2c1-1 2.2-2.6 2.2-6.6A6.6 6.6 0 0 1 12 3.2z"/><path d="M10 19.4a2.1 2.1 0 0 0 4 0"/><path d="M12 3.2V1.6"/></svg>',
       money:    '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.6"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21"/></svg>'
     };
-    var T = [["register", "Register"], ["dues", "Dues"], ["money", "Money"]];
+    var T = [["register", "Attendance"], ["dues", "Dues"], ["money", "Money"]];
     tabs.innerHTML = T.map(function (t) {
       return '<button data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' class="on"' : "") +
         '><span class="ic">' + ICON[t[0]] + "</span>" + t[1] + "</button>";
