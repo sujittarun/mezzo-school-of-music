@@ -174,8 +174,10 @@ button { cursor: pointer; }
    real and the faked bevel below is switched off — two bezels stacked
    on each other read as a smudge. */
 .has-refraction .card {
+  /* Only ever set where it renders. Everywhere else the plain blur
+     above stands, untouched — never a filter list that a browser will
+     parse happily and then throw away whole. */
   backdrop-filter: url(#mz-glass) blur(3px) saturate(1.5);
-  -webkit-backdrop-filter: blur(7px) saturate(1.5);
 }
 .has-refraction .card::before { display: none; }
 
@@ -264,10 +266,15 @@ button { cursor: pointer; }
 
 .srow.key {
   position: relative;
-  background: linear-gradient(180deg, rgba(255,255,255,.13), rgba(255,255,255,.05));
+  /* A DARK tint, not a light one, and NO backdrop-filter of its own.
+     Nesting a backdrop-filter inside a card that already has one
+     composites very differently in WebKit than in Blink: on a real
+     iPad these keys came out near-white and the children's names —
+     white text — all but vanished. The card is the glass; a key is
+     just a tinted panel lying on it, and its own darkness is what
+     guarantees the name on top of it can be read on any engine. */
+  background: linear-gradient(180deg, rgba(38,22,70,.42), rgba(26,13,52,.30));
   border: 1px solid rgba(255,255,255,.16);
-  backdrop-filter: blur(1.5px) saturate(1.3);
-  -webkit-backdrop-filter: blur(1.5px) saturate(1.3);
   border-left: 4px solid var(--hue);
   border-radius: 3px 14px 14px 3px;
   margin-bottom: 7px; padding-left: 10px;
@@ -284,7 +291,7 @@ button { cursor: pointer; }
 .srow.key.pressed {
   transform: translateX(5px);
   box-shadow: 0 0 0 rgba(0,0,0,0), inset 0 1px 0 rgba(255,255,255,.22);
-  background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.04));
+  background: linear-gradient(180deg, rgba(30,17,58,.52), rgba(22,11,46,.40));
 }
 /* The instrument's own mark, on its own key. */
 .ig { flex: 0 0 auto; width: 26px; height: 26px; margin-right: 10px; color: var(--hue); }

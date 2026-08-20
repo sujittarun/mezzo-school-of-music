@@ -35,9 +35,24 @@
   </filter>
 </defs></svg>
 <script>
-  /* Set before first paint so the pane is never styled twice. */
+  /* CSS.supports() LIES HERE, AND I CHECKED ON THE DEVICE.
+     iPadOS 18.3 Safari answers YES to backdrop-filter: url() and then
+     renders no backdrop effect at all — and because the url() sits in
+     the same filter list as the blur, it drops the blur with it. The
+     result on his actual iPad was flat translucent boxes with no
+     glass whatsoever: worse than never having tried.
+
+     So the support query is not enough. -webkit-touch-callout is a
+     WebKit-only property, which makes it a reliable tell for the
+     engine that has this bug — and it correctly also covers Chrome
+     and Edge on iOS, which are WebKit underneath and share it.
+
+     Verified both ways: Chromium true, iPad Safari 18.3 false. */
   try {
-    if (window.CSS && CSS.supports && CSS.supports("backdrop-filter", "url(#mz-glass)")) {
+    var C = window.CSS;
+    if (C && C.supports &&
+        C.supports("backdrop-filter", "url(#mz-glass)") &&
+        !C.supports("-webkit-touch-callout", "none")) {
       document.documentElement.className += " has-refraction";
     }
   } catch (e) {}
