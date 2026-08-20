@@ -1,0 +1,55 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Five ideas — Mezzo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0E0D12;--grey:#6E6B78;--line:#E4E2EA}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#F5F4F8;color:var(--ink);font:16px/1.55 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+header{padding:38px 26px 6px;max-width:1600px;margin:0 auto}
+h1{font:800 36px/1.08 Inter;letter-spacing:-.035em}
+p.lede{color:var(--grey);margin-top:12px;max-width:64ch;font-size:17px}
+.note{margin-top:14px;padding:13px 16px;background:#fff;border:1px solid var(--line);
+ border-radius:11px;max-width:64ch;font-size:15px;color:var(--grey)}
+.grid{display:grid;gap:24px;padding:26px;max-width:1600px;margin:0 auto;
+ grid-template-columns:repeat(auto-fit,minmax(310px,1fr))}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;
+ box-shadow:0 3px 14px rgba(14,13,18,.06);display:flex;flex-direction:column}
+.hd{padding:18px 20px 15px;border-bottom:1px solid var(--line)}
+.n{font:600 11px/1 Inter;letter-spacing:.18em;text-transform:uppercase;color:var(--grey)}
+.hd h2{font:800 22px/1.2 Inter;letter-spacing:-.025em;margin:9px 0 7px}
+.hd p{font-size:14.5px;color:var(--grey);line-height:1.5}
+.hd .why{margin-top:9px;font-size:13.5px;color:#8B5CF6;font-weight:600}
+.frame{position:relative;height:580px;background:#fff}
+iframe{width:390px;height:844px;border:0;transform:scale(.687);transform-origin:top left;
+ position:absolute;top:0;left:50%;margin-left:-134px}
+.ft{padding:14px 20px;border-top:1px solid var(--line)}
+.ft a{font:600 14px/1 Inter;color:#fff;background:var(--ink);text-decoration:none;
+ padding:12px 17px;border-radius:10px;display:inline-block}
+footer{padding:10px 26px 70px;max-width:1600px;margin:0 auto;color:var(--grey);font-size:15px}
+</style></head><body>
+<header>
+ <h1>Five ideas</h1>
+ <p class="lede">The last set were five skins — same header, same vertical list, same tab bar,
+ different paint. These five change the <em>structure</em> and the <em>gesture</em>: five different
+ ways of being a register, not five ways of colouring one.</p>
+ <div class="note"><b>They are interactive.</b> Tap the noteheads, swipe the cards, tap the children
+ on the plan or the dial. Open them full screen on the iPad — that is where they will be judged.</div>
+</header>
+<div class="grid" id="g"></div>
+<footer>Pick the idea, not the palette — colour and type are an afternoon's work once the shape is right.
+If one is close but wrong in a specific way, say which and I will push it further.</footer>
+<script>
+var S=[
+ ["01","The Score","Every child is a note on the stave, at the pitch of their own instrument. Present is a filled notehead, absent is a rest, unmarked is hollow. A day's attendance becomes something he can read the way he reads music.","Nobody has to explain a stave to a man who has read scores all his life.","1-score.html"],
+ ["02","The Deck","One child at a time, filling the screen. Swipe right for here, left for away, and the next arrives. Eighty children is eighty gestures, done without looking.","One target the size of the screen instead of eighty small circles — a mis-tap becomes almost impossible.","2-deck.html"],
+ ["03","Piano Roll","The month as a player-piano scroll. Each child a lane, each day a block, the keyboard down the left as the axis. Attendance stops being a table and becomes a pattern.","A broken rhythm or a run of absences is visible before you have read a single name.","3-roll.html"],
+ ["04","The Room","A plan of the studio seen from above. The piano in one corner, the drums in another, the children standing at whichever instrument they play.","He does not think of his afternoon as a list. He thinks of it as a room.","4-room.html"],
+ ["05","The Dial","The afternoon as a clock face — three o'clock to eight, each child at the hour they are due, with a hand showing the time now.","Everything behind the hand should already be marked. Being late to mark somebody becomes visible rather than remembered.","5-dial.html"]
+];
+document.getElementById('g').innerHTML=S.map(function(s){
+ return '<div class="card"><div class="hd"><div class="n">'+s[0]+'</div><h2>'+s[1]+'</h2>'+
+ '<p>'+s[2]+'</p><div class="why">'+s[3]+'</div></div>'+
+ '<div class="frame"><iframe src="'+s[4]+'" loading="lazy" title="'+s[1]+'"></iframe></div>'+
+ '<div class="ft"><a href="'+s[4]+'">Open full screen</a></div></div>';}).join('');
+</script></body></html>

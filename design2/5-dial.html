@@ -1,0 +1,93 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Dial — Mezzo</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   THE DIAL — the afternoon as a face, not a list.
+
+   His day is not a list, it is five hours: three o'clock to
+   eight. So the register is a clock face of exactly those hours,
+   and each child sits at the time they are due. The hand shows
+   the time now, so the children behind it are the ones who
+   should already have been marked and the ones ahead are still
+   to come.
+
+   Being late to mark somebody becomes visible rather than
+   remembered.
+   ============================================================ */
+:root{--bg:#0B0F14;--face:#141A22;--ink:#EAF0F7;--dim:#75839A;--now:#FF7A45;
+      --yes:#31C96B;--no:#FF5A5F}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font:16px/1.4 Inter,sans-serif;padding-bottom:88px;
+ -webkit-font-smoothing:antialiased;user-select:none}
+header{padding:20px 20px 4px;display:flex;align-items:baseline;gap:12px}
+h1{font:700 20px/1 "Space Grotesk",sans-serif;letter-spacing:-.01em}
+.day{font:500 13.5px/1 Inter;color:var(--dim)}
+.now{margin-left:auto;font:700 13px/1 "Space Grotesk";color:var(--now)}
+svg{width:100%;height:auto;display:block}
+.tick{stroke:#2A3442;stroke-width:2}
+.hr{font:500 11px/1 Inter;fill:var(--dim);text-anchor:middle}
+.kid{cursor:pointer}
+.kn{font:600 10px/1 Inter;fill:var(--ink);text-anchor:middle;pointer-events:none}
+.sel{padding:4px 20px 0;text-align:center;color:var(--dim);font:500 13.5px/1.5 Inter}
+.sel b{color:var(--ink);font-weight:600}
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--face);
+ border-top:1px solid #202836;padding-bottom:env(safe-area-inset-bottom)}
+.tabs a{flex:1;text-align:center;padding:15px 0 17px;text-decoration:none;color:var(--dim);
+ font:600 11px/1 Inter;letter-spacing:.16em;text-transform:uppercase}
+.tabs a.on{color:var(--now);box-shadow:inset 0 2px 0 var(--now)}
+</style></head><body>
+<header><h1>Mezzo</h1><span class="day" id="d"></span><span class="now">NOW 5:40 PM</span></header>
+<div id="dial"></div>
+<div class="sel" id="sel">Tap a child on the dial to mark them</div>
+<nav class="tabs"><a class="on" href="#">Register</a><a href="#">Dues</a><a href="#">Money</a></nav>
+<script src="_data.js"></script><script>
+var D=window.MZDEMO, R=112, CX=161, CY=152, NOWH=5.67; /* 5:40pm */
+var HUE={Piano:"#8B7CF6",Keyboard:"#2FD4C4",Guitar:"#F0A44A",Violin:"#F2707A",
+         Ukulele:"#FF9770",Drums:"#E08B4A",Vocals:"#F074C0"};
+D.students.forEach(function(s,i){ s.at = 3 + i*(5/D.students.length); }); /* 3pm→8pm */
+document.getElementById('d').textContent=D.day;
+function ang(h){ return (-90 + (h-3)/5*300) * Math.PI/180; }  /* 300° of arc, 3→8 */
+function draw(){
+ var s='<svg viewBox="0 0 322 306">';
+ s+='<circle cx="'+CX+'" cy="'+CY+'" r="'+R+'" fill="#141A22" stroke="#202836" stroke-width="2"/>';
+ for(var h=3;h<=8;h++){ var a=ang(h);
+  s+='<line class="tick" x1="'+(CX+Math.cos(a)*(R-32))+'" y1="'+(CY+Math.sin(a)*(R-32))+
+     '" x2="'+(CX+Math.cos(a)*(R-24))+'" y2="'+(CY+Math.sin(a)*(R-24))+'"/>';
+  s+='<text class="hr" x="'+(CX+Math.cos(a)*(R-46))+'" y="'+(CY+Math.sin(a)*(R-46)+4)+'">'+h+'</text>';}
+ /* the hand: everything behind it should already be marked */
+ var na=ang(NOWH);
+ s+='<path d="M'+CX+' '+CY+' L'+(CX+Math.cos(-Math.PI/2)*(R-26))+' '+(CY+Math.sin(-Math.PI/2)*(R-26))+
+    ' A'+(R-26)+' '+(R-26)+' 0 '+(((NOWH-3)/5*300>180)?1:0)+' 1 '+
+    (CX+Math.cos(na)*(R-26))+' '+(CY+Math.sin(na)*(R-26))+' Z" fill="rgba(255,122,69,.07)"/>';
+ s+='<line x1="'+CX+'" y1="'+CY+'" x2="'+(CX+Math.cos(na)*(R-26))+'" y2="'+(CY+Math.sin(na)*(R-26))+
+    '" stroke="#FF7A45" stroke-width="2.4"/>';
+ s+='<circle cx="'+CX+'" cy="'+CY+'" r="5" fill="#FF7A45"/>';
+ var done=D.students.filter(function(x){return x.mark}).length;
+ s+='<text x="'+CX+'" y="'+(CY-8)+'" text-anchor="middle" style="font:700 30px Space Grotesk;fill:#EAF0F7">'+
+    D.students.filter(function(x){return x.mark==="present"}).length+'</text>';
+ s+='<text x="'+CX+'" y="'+(CY+12)+'" text-anchor="middle" style="font:500 10px Inter;letter-spacing:.16em;fill:#75839A">HERE</text>';
+ s+='<text x="'+CX+'" y="'+(CY+30)+'" text-anchor="middle" style="font:500 10px Inter;fill:#75839A">'+
+    done+' of '+D.students.length+' marked</text>';
+ D.students.forEach(function(st,i){
+  /* ON the ring, not outside it: at R+22 the children on the left and
+     right edges were clipped by the frame. */
+  var a=ang(st.at), x=CX+Math.cos(a)*R, y=CY+Math.sin(a)*R;
+  var f=st.mark==='present'?'#31C96B':st.mark==='absent'?'#FF5A5F':'#1C242F';
+  var k=st.mark?f:(HUE[st.inst]||'#3A4655');
+  s+='<g class="kid" data-i="'+i+'"><circle cx="'+x+'" cy="'+y+'" r="19" fill="'+f+
+     '" stroke="'+k+'" stroke-width="2.6"/><text class="kn" x="'+x+'" y="'+(y+3.5)+'">'+
+     st.name.slice(0,3)+'</text><circle cx="'+x+'" cy="'+y+'" r="26" fill="transparent"/></g>';});
+ document.getElementById('dial').innerHTML=s+'</svg>';
+}
+document.addEventListener('click',function(e){
+ var g=e.target.closest&&e.target.closest('.kid'); if(!g)return;
+ var i=+g.getAttribute('data-i'), st=D.students[i];
+ st.mark = st.mark==='present'?'absent':st.mark==='absent'?null:'present';
+ var hh=Math.floor(st.at), mm=Math.round((st.at-hh)*60);
+ document.getElementById('sel').innerHTML='<b>'+st.name+'</b> · '+st.inst+' · due at '+
+  hh+':'+(mm<10?'0':'')+mm+' pm — '+(st.mark==='present'?'here':st.mark==='absent'?'away':'not marked');
+ draw();});
+draw();
+</script></body></html>

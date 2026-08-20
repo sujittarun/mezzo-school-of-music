@@ -1,0 +1,109 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Score — Mezzo</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   THE SCORE — the register IS a piece of music.
+
+   Every child is a note on the stave, at the pitch of their own
+   instrument. Present is a filled notehead. Absent is a rest.
+   Unmarked is a hollow note waiting to be played.
+
+   So a day's attendance is something he can READ at a glance the
+   way he reads music — a run of filled noteheads is a full class,
+   a bar of rests is a quiet afternoon. Nobody has to explain it
+   to a man who has read scores his whole life.
+   ============================================================ */
+:root{--paper:#FCFAF4;--ink:#14120E;--rule:#14120E;--red:#B03A2B;--green:#2F6B45;--dim:#8B8578}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font:16px/1.5 Inter,sans-serif;padding-bottom:92px;
+ -webkit-font-smoothing:antialiased}
+header{padding:22px 22px 6px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.mv{white-space:nowrap}
+h1{font:600 30px/1 "Cormorant Garamond",serif;letter-spacing:.01em}
+.mv{font:italic 400 17px/1 "Cormorant Garamond",serif;color:var(--dim)}
+.tempo{margin-left:auto;white-space:nowrap;font:500 11px/1 Inter;letter-spacing:.18em;text-transform:uppercase;color:var(--dim)}
+.sys{padding:6px 10px 0}
+svg{width:100%;height:auto;display:block;touch-action:manipulation}
+.ln{stroke:var(--rule);stroke-width:1.1;opacity:.75}
+.bar{stroke:var(--rule);stroke-width:1.6}
+.hd{cursor:pointer}
+.nm{font:400 14px/1 "Cormorant Garamond",serif;fill:var(--ink);text-anchor:middle}
+.ins{font:500 7.6px/1 Inter;letter-spacing:.12em;fill:var(--dim);text-anchor:middle}
+.legend{display:flex;gap:20px;justify-content:center;padding:16px 20px 0;color:var(--dim);
+ font:500 11px/1 Inter;letter-spacing:.1em;text-transform:uppercase}
+.legend b{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:-1px;margin-right:6px}
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--paper);
+ border-top:1.6px solid var(--rule);padding-bottom:env(safe-area-inset-bottom)}
+.tabs a{flex:1;text-align:center;padding:16px 0 18px;text-decoration:none;color:var(--dim);
+ font:600 11px/1 Inter;letter-spacing:.2em;text-transform:uppercase}
+.tabs a.on{color:var(--red)}
+</style></head><body>
+<header><h1>Mezzo</h1><span class="mv" id="d"></span><span class="tempo" id="c"></span></header>
+<div class="sys" id="sys"></div>
+<div class="legend"><span><b style="background:#2F6B45"></b>Here</span>
+<span><b style="background:#B03A2B"></b>Away</span>
+<span><b style="border:1.5px solid #8B8578"></b>Not marked</span></div>
+<nav class="tabs"><a class="on" href="#">Register</a><a href="#">Dues</a><a href="#">Money</a></nav>
+<script src="_data.js"></script><script>
+var D=window.MZDEMO, PER=4, GAP=6, TOP=42, H=176;
+/* each instrument sings at its own pitch, low to high */
+var PITCH={Drums:-7,Piano:-5,Keyboard:-3,Guitar:-1,Violin:1,Ukulele:3,Vocals:5};
+document.getElementById('d').textContent=D.day;
+document.getElementById('c').textContent=D.here+' of '+D.total+' present';
+
+function clef(x,y){ /* a treble clef, drawn rather than typed */
+ return '<path transform="translate('+x+','+(y-30)+') scale(.052)" fill="#14120E" d="M376 262c0-63-42-104-96-104-14 0-27 3-39 8l-14-92c-2-13-3-25-3-36 0-58 27-96 52-96 19 0 30 18 30 44 0 33-18 62-44 82l6 40c44-27 71-72 71-124C339 24 313-8 273-8c-52 0-92 55-92 133 0 15 1 31 4 48l16 104C126 306 76 372 76 448c0 88 63 152 148 152 12 0 24-1 35-4l10 66c2 11 3 21 3 30 0 45-25 74-60 74-30 0-52-19-56-45 22-3 38-22 38-45 0-26-21-46-47-46-28 0-50 23-50 53 0 44 43 79 105 79 65 0 111-42 111-107 0-11-1-23-3-35l-11-72c62-24 77-88 77-124zm-93 121l-30-197c9-3 18-4 27-4 44 0 76 33 76 82 0 51-30 100-73 119zm-40 76c-9 2-19 3-29 3-70 0-121-52-121-121 0-59 39-113 95-137l30 197c-25 6-43 27-43 52 0 21 12 39 30 47l38-41z"/>';
+}
+var MID=TOP+GAP*4;
+function head(cx,cy,st,i){
+ var f=st==='present'?'#2F6B45':st==='absent'?'#B03A2B':'none';
+ var s=st==='present'?'#2F6B45':st==='absent'?'#B03A2B':'#8B8578';
+ var g='<g class="hd" data-i="'+i+'">';
+ if(st==='absent'){
+  /* A REST, and it sits on the middle line where a rest belongs —
+     not at the child's own pitch. A rest has no pitch; that is the
+     whole point of it, and it is why an absence reads instantly
+     differently from a note. */
+  g+='<path transform="translate('+(cx-5.5)+','+(MID-13)+') scale(.62)" fill="#B03A2B" d="M7 0c4 6 9 10 9 16 0 5-5 9-9 13 6 3 11 7 11 13 0 7-6 11-11 16 3-2 5-5 5-8 0-6-7-8-13-8-5 0-9 3-9 8 0 8 8 14 14 20-5-5-11-11-11-18 0-6 5-10 10-14-5-4-10-8-10-14 0-6 5-10 10-14-3 2-4 4-4 7 0 5 6 7 11 7 4 0 8-2 8-6 0-7-7-12-11-18z"/>';
+ } else {
+  g+='<ellipse cx="'+cx+'" cy="'+cy+'" rx="8.4" ry="6.2" transform="rotate(-18 '+cx+' '+cy+')" fill="'+f+'" stroke="'+s+'" stroke-width="1.9"/>';
+  g+='<line x1="'+(cx+8)+'" y1="'+(cy-2)+'" x2="'+(cx+8)+'" y2="'+(cy-38)+'" stroke="'+s+'" stroke-width="1.8"/>';
+ }
+ g+='<circle cx="'+cx+'" cy="'+cy+'" r="26" fill="transparent"/></g>';
+ return g;
+}
+function draw(){
+ var rows=[],i,W=Math.max(340,document.body.clientWidth-20);
+ for(i=0;i<D.students.length;i+=PER) rows.push(D.students.slice(i,i+PER));
+ document.getElementById('sys').innerHTML=rows.map(function(gr,ri){
+  var mid=MID, s='<svg viewBox="0 0 '+W+' '+H+'">';
+  for(var l=0;l<5;l++) s+='<line class="ln" x1="10" y1="'+(TOP+l*GAP*2)+'" x2="'+(W-10)+'" y2="'+(TOP+l*GAP*2)+'"/>';
+  s+='<line class="bar" x1="10.5" y1="'+TOP+'" x2="10.5" y2="'+(TOP+GAP*8)+'"/>';
+  s+='<line class="bar" x1="'+(W-10.5)+'" y1="'+TOP+'" x2="'+(W-10.5)+'" y2="'+(TOP+GAP*8)+'"/>';
+  s+=clef(24,mid);
+  var x0=76, step=(W-96)/gr.length;
+  gr.forEach(function(st,k){
+   var cx=x0+step*k+step/2, cy=mid-(PITCH[st.inst]||0)*GAP;
+   /* ledger line for notes that fall off the stave */
+   var p=PITCH[st.inst]||0;
+   if(p<=-6) s+='<line class="ln" x1="'+(cx-14)+'" y1="'+(mid+GAP*6)+'" x2="'+(cx+14)+'" y2="'+(mid+GAP*6)+'"/>';
+   if(p>=6)  s+='<line class="ln" x1="'+(cx-14)+'" y1="'+(mid-GAP*6)+'" x2="'+(cx+14)+'" y2="'+(mid-GAP*6)+'"/>';
+   s+=head(cx,cy,st.mark,ri*PER+k);
+   s+='<text class="nm" x="'+cx+'" y="'+(TOP+GAP*8+30)+'">'+st.name+'</text>';
+   s+='<text class="ins" x="'+cx+'" y="'+(TOP+GAP*8+45)+'">'+st.inst.toUpperCase()+'</text>';
+  });
+  return s+'</svg>';
+ }).join('');
+}
+document.addEventListener('click',function(e){
+ var g=e.target.closest&&e.target.closest('.hd'); if(!g) return;
+ var i=+g.getAttribute('data-i'), m=D.students[i].mark;
+ D.students[i].mark = m==='present'?'absent':m==='absent'?null:'present';
+ D.here=D.students.filter(function(s){return s.mark==='present'}).length;
+ document.getElementById('c').textContent=D.here+' of '+D.total+' present';
+ draw();
+});
+addEventListener('resize',draw); draw();
+</script></body></html>

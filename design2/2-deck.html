@@ -1,0 +1,110 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Deck — Mezzo</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Inter:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   THE DECK — one child at a time, and you swipe.
+
+   Eighty students is eighty small circles to hit accurately in a
+   list. Here there is exactly ONE target and it is the size of
+   the screen: swipe right for here, left for away, and the next
+   child arrives. A mis-tap becomes almost impossible, because
+   there is nothing next to it to mis-tap.
+
+   It is also far faster. The whole register is one gesture per
+   child, done without looking, the way dealing cards is.
+   ============================================================ */
+:root{--bg:#0E1116;--card:#FFFFFF;--ink:#0E1116;--dim:#6B7280;
+      --yes:#12A150;--no:#E5484D;--acc:#7C5CFF}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:#fff;font:16px/1.4 Inter,sans-serif;height:100dvh;overflow:hidden;
+ display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;user-select:none}
+header{padding:18px 20px 10px;display:flex;align-items:center;gap:12px}
+h1{font:800 19px/1 "Bricolage Grotesque",sans-serif;letter-spacing:-.02em}
+.of{margin-left:auto;font:600 13px/1 Inter;color:var(--dim)}
+.track{height:4px;background:rgba(255,255,255,.12);border-radius:99px;margin:0 20px}
+.track i{display:block;height:100%;border-radius:99px;background:var(--acc);transition:width .3s cubic-bezier(.2,.8,.3,1)}
+.stage{flex:1;position:relative;margin:16px 18px 8px}
+.card{position:absolute;inset:0;background:var(--card);color:var(--ink);border-radius:28px;
+ padding:30px;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.5);
+ will-change:transform;touch-action:none}
+.card.b1{transform:scale(.94) translateY(16px);opacity:.55;box-shadow:none}
+.card.b2{transform:scale(.88) translateY(32px);opacity:.28;box-shadow:none}
+.ins{font:600 11px/1 Inter;letter-spacing:.2em;text-transform:uppercase;color:var(--acc)}
+.nm{font:800 clamp(38px,11vw,62px)/1 "Bricolage Grotesque",sans-serif;letter-spacing:-.04em;margin-top:14px}
+.meta{margin-top:auto;font:500 15px/1.5 Inter;color:var(--dim)}
+.stamp{position:absolute;top:26px;right:26px;font:800 20px/1 "Bricolage Grotesque";
+ letter-spacing:.08em;padding:9px 15px;border-radius:11px;border:3px solid;opacity:0;transform:rotate(9deg)}
+.stamp.y{color:var(--yes);border-color:var(--yes)}
+.stamp.n{color:var(--no);border-color:var(--no);left:26px;right:auto;transform:rotate(-9deg)}
+.done{position:absolute;inset:0;display:none;place-items:center;text-align:center;padding:30px}
+.done h2{font:800 34px/1.1 "Bricolage Grotesque";letter-spacing:-.03em}
+.done p{color:var(--dim);margin-top:10px}
+.acts{display:flex;gap:12px;padding:6px 18px calc(18px + env(safe-area-inset-bottom))}
+.acts button{flex:1;height:66px;border-radius:20px;border:0;cursor:pointer;
+ font:800 17px/1 "Bricolage Grotesque";letter-spacing:-.01em;color:#fff}
+.b-no{background:var(--no)} .b-yes{background:var(--yes)} 
+.b-un{flex:0 0 66px;background:rgba(255,255,255,.1);font-size:22px}
+.hint{text-align:center;color:var(--dim);font:500 12.5px/1 Inter;padding-bottom:8px}
+</style></head><body>
+<header><h1>Mezzo</h1><span class="of" id="of"></span></header>
+<div class="track"><i id="bar"></i></div>
+<div class="stage" id="stage"></div>
+<div class="hint">Swipe right if they came · left if they did not</div>
+<div class="acts">
+ <button class="b-no"  id="no">Away</button>
+ <button class="b-un"  id="un">↺</button>
+ <button class="b-yes" id="yes">Here</button>
+</div>
+<script src="_data.js"></script><script>
+var D=window.MZDEMO, i=0, hist=[];
+var stage=document.getElementById('stage');
+function render(){
+ var left=D.students.length-i;
+ document.getElementById('of').textContent=left?((i+1)+' of '+D.students.length):'All done';
+ document.getElementById('bar').style.width=(i/D.students.length*100)+'%';
+ if(i>=D.students.length){
+  stage.innerHTML='<div class="card" style="display:grid;place-items:center;text-align:center">'+
+   '<div><h2 style="font:800 34px/1.1 Bricolage Grotesque;letter-spacing:-.03em">Register done</h2>'+
+   '<p style="color:#6B7280;margin-top:10px">'+
+   D.students.filter(function(s){return s.mark==="present"}).length+' of '+D.students.length+' here today</p></div></div>';
+  return;
+ }
+ var html='';
+ for(var k=Math.min(i+2,D.students.length-1);k>=i;k--){
+  var s=D.students[k], cls=k===i?'':(k===i+1?'b1':'b2');
+  html+='<div class="card '+cls+'" data-k="'+k+'">'+
+   '<div class="ins">'+s.inst+'</div><div class="nm">'+s.name+'</div>'+
+   '<div class="meta">Mon–Fri · 3–8 pm<br>Last here on Tuesday</div>'+
+   '<div class="stamp y">HERE</div><div class="stamp n">AWAY</div></div>';
+ }
+ stage.innerHTML=html;
+ bind(stage.querySelector('.card:last-child'));
+}
+function fly(card,dir,mark){
+ D.students[i].mark=mark; hist.push(i);
+ card.style.transition='transform .34s cubic-bezier(.3,.7,.3,1),opacity .34s';
+ card.style.transform='translate('+(dir*520)+'px,'+(dir*40)+'px) rotate('+(dir*22)+'deg)';
+ card.style.opacity='0';
+ setTimeout(function(){ i++; render(); },200);
+}
+function bind(card){
+ if(!card) return; var sx=0,sy=0,dx=0,dy=0,down=false;
+ var y=card.querySelector('.stamp.y'), n=card.querySelector('.stamp.n');
+ card.addEventListener('pointerdown',function(e){down=true;sx=e.clientX;sy=e.clientY;
+  card.setPointerCapture(e.pointerId);card.style.transition='none';});
+ card.addEventListener('pointermove',function(e){ if(!down)return;
+  dx=e.clientX-sx; dy=e.clientY-sy;
+  card.style.transform='translate('+dx+'px,'+dy*.25+'px) rotate('+dx/22+'deg)';
+  y.style.opacity=Math.max(0,Math.min(1,dx/90)); n.style.opacity=Math.max(0,Math.min(1,-dx/90));});
+ card.addEventListener('pointerup',function(){ down=false;
+  if(Math.abs(dx)>96) fly(card,dx>0?1:-1,dx>0?'present':'absent');
+  else{ card.style.transition='transform .3s cubic-bezier(.3,1.5,.5,1)';
+        card.style.transform='';y.style.opacity=0;n.style.opacity=0; } dx=0;});
+}
+document.getElementById('yes').onclick=function(){var c=stage.querySelector('.card:last-child');if(c)fly(c,1,'present')};
+document.getElementById('no').onclick =function(){var c=stage.querySelector('.card:last-child');if(c)fly(c,-1,'absent')};
+document.getElementById('un').onclick =function(){ if(!hist.length)return; i=hist.pop(); D.students[i].mark=null; render(); };
+render();
+</script></body></html>

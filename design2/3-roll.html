@@ -1,0 +1,84 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Piano Roll — Mezzo</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   PIANO ROLL — the month as a player-piano scroll.
+
+   A month grid of ticks and crosses is a spreadsheet. A piano
+   roll is the same information as a PATTERN: you see a child's
+   attendance the way you see a rhythm — the steady ones are solid
+   bars, the erratic ones are broken, and a run of absences is a
+   gap you notice before you have read a single name.
+
+   The keyboard down the left is not decoration; it is the axis.
+   ============================================================ */
+:root{--bg:#12141A;--panel:#181B23;--line:#262A35;--dim:#7B8296;--ink:#EDEFF5}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.4 Inter,sans-serif;padding-bottom:84px;
+ -webkit-font-smoothing:antialiased}
+header{padding:18px 18px 12px;display:flex;align-items:center;gap:12px}
+h1{font:700 19px/1 Inter;letter-spacing:-.02em}
+.mon{font:600 12px/1 "IBM Plex Mono",monospace;color:var(--dim);letter-spacing:.06em}
+.legend{margin-left:auto;display:flex;gap:12px;font:600 10px/1 Inter;letter-spacing:.12em;
+ text-transform:uppercase;color:var(--dim)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.roll{overflow-x:auto;-webkit-overflow-scrolling:touch;border-top:1px solid var(--line);
+ border-bottom:1px solid var(--line);background:var(--panel)}
+table{border-collapse:collapse;min-width:100%}
+th.key{position:sticky;left:0;z-index:2;background:var(--panel);text-align:left;
+ padding:0 12px;width:150px;min-width:150px;border-right:2px solid var(--line)}
+th.key .n{font:600 14px/1 Inter;display:block}
+th.key .i{font:600 9.5px/1 Inter;letter-spacing:.14em;text-transform:uppercase;margin-top:4px;display:block}
+thead th{height:30px;font:400 10px/1 "IBM Plex Mono",monospace;color:var(--dim);font-weight:400;
+ border-bottom:1px solid var(--line)}
+tbody tr{height:44px}
+tbody tr:nth-child(odd) td{background:rgba(255,255,255,.017)}
+td{width:26px;min-width:26px;border-right:1px solid rgba(255,255,255,.045);padding:0}
+td.sun{background:rgba(255,255,255,.05)!important}
+.cell{display:block;height:26px;margin:9px 3px;border-radius:4px;cursor:pointer}
+.cell.p{box-shadow:inset 0 0 0 1px rgba(255,255,255,.16)}
+.cell.a{background:repeating-linear-gradient(45deg,#E5484D 0 3px,#7C2427 3px 6px)}
+.cell.n{background:rgba(255,255,255,.055)}
+/* The month total lives in the pinned NAME column, not in a second
+   pinned column on the right — that one floated over the middle of
+   the grid while scrolling and read as a rendering fault. */
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--panel);
+ border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.tabs a{flex:1;text-align:center;padding:15px 0 17px;text-decoration:none;color:var(--dim);
+ font:600 11px/1 Inter;letter-spacing:.16em;text-transform:uppercase}
+.tabs a.on{color:#8B7CF6;box-shadow:inset 0 2px 0 #8B7CF6}
+</style></head><body>
+<header><h1>Mezzo</h1><span class="mon">AUGUST 2026</span>
+ <span class="legend"><span><i style="background:#8B7CF6"></i>Here</span>
+ <span><i style="background:#E5484D"></i>Away</span></span></header>
+<div class="roll"><table id="t"></table></div>
+<nav class="tabs"><a class="on" href="#">Register</a><a href="#">Dues</a><a href="#">Money</a></nav>
+<script src="_data.js"></script><script>
+var HUE={Piano:"#8B7CF6",Keyboard:"#2FD4C4",Guitar:"#F0A44A",Violin:"#F2707A",
+         Ukulele:"#FF9770",Drums:"#E08B4A",Vocals:"#F074C0"};
+var D=window.MZDEMO, DAYS=31, t=document.getElementById('t');
+/* a plausible month, so the pattern is the point */
+var G=D.students.map(function(s,r){
+ var row=[]; for(var d=1;d<=DAYS;d++){
+  var dow=(d+3)%7; if(dow===0){row.push('x');continue}
+  var seed=(r*7+d*13)%11;
+  row.push(seed<7?'p':seed<9?'a':'n');
+ } return row;});
+var head='<thead><tr><th class="key"></th>';
+for(var d=1;d<=DAYS;d++) head+='<th class="'+(((d+3)%7===0)?'sun':'')+'">'+d+'</th>';
+head+='</tr></thead>';
+var body='<tbody>'+D.students.map(function(s,r){
+ var hue=HUE[s.inst]||'#888';
+ var n=G[r].filter(function(v){return v==='p'}).length;
+ var cells=G[r].map(function(v,k){
+  if(v==='x') return '<td class="sun"></td>';
+  var st=v==='p'?'<span class="cell p" style="background:'+hue+'"></span>'
+       :v==='a'?'<span class="cell a"></span>':'<span class="cell n"></span>';
+  return '<td>'+st+'</td>';}).join('');
+ return '<tr><th class="key"><span class="n">'+s.name+'</span>'+
+        '<span class="i" style="color:'+hue+'">'+s.inst+' · '+n+' days</span></th>'+cells+
+        '</tr>';}).join('')+'</tbody>';
+t.innerHTML=head+body;
+</script></body></html>

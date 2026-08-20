@@ -1,0 +1,82 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Room — Mezzo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   THE ROOM — a plan of the studio, not a list.
+
+   He does not experience his afternoon as a list of names. He
+   experiences it as a room: the piano in the corner, the drums
+   against the far wall, whoever is at each. So the register is
+   the room seen from above, and marking someone present is
+   putting them at their instrument.
+
+   The children cluster at the instrument they play, which means
+   the shape of the room tells him what today looks like before
+   he has read anything.
+   ============================================================ */
+:root{--floor:#F3EEE6;--wall:#2C2622;--ink:#221E1A;--dim:#8A8076;--yes:#1F7A4D;--no:#C0392F}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--floor);color:var(--ink);font:16px/1.4 Inter,sans-serif;padding-bottom:86px;
+ -webkit-font-smoothing:antialiased;user-select:none}
+header{padding:20px 20px 8px;display:flex;align-items:baseline;gap:12px}
+h1{font:800 21px/1 Inter;letter-spacing:-.02em}
+.day{font:600 14px/1 Inter;color:var(--dim)}
+.here{margin-left:auto;font:800 15px/1 Inter}
+.plan{padding:6px 14px 0}
+svg{width:100%;height:auto;display:block}
+.station{fill:#fff;stroke:#DCD3C6;stroke-width:2}
+.label{font:600 8.5px/1 Inter;letter-spacing:.14em;fill:var(--dim);text-anchor:middle}
+.kid{cursor:pointer}
+.kidname{font:600 9.5px/1 Inter;fill:#fff;text-anchor:middle;pointer-events:none}
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--wall);
+ padding-bottom:env(safe-area-inset-bottom)}
+.tabs a{flex:1;text-align:center;padding:16px 0 18px;text-decoration:none;color:#B7ADA1;
+ font:600 11px/1 Inter;letter-spacing:.16em;text-transform:uppercase}
+.tabs a.on{color:#fff;box-shadow:inset 0 2px 0 #E0B15C}
+.key{display:flex;gap:18px;justify-content:center;padding:14px 20px 0;color:var(--dim);
+ font:600 10.5px/1 Inter;letter-spacing:.1em;text-transform:uppercase}
+.key i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+</style></head><body>
+<header><h1>The room</h1><span class="day" id="d"></span><span class="here" id="c"></span></header>
+<div class="plan" id="plan"></div>
+<div class="key"><span><i style="background:#1F7A4D"></i>Here</span>
+<span><i style="background:#C0392F"></i>Away</span>
+<span><i style="background:#fff;box-shadow:inset 0 0 0 2px #C9BFB2"></i>Not marked</span></div>
+<nav class="tabs"><a class="on" href="#">Register</a><a href="#">Dues</a><a href="#">Money</a></nav>
+<script src="_data.js"></script><script>
+var D=window.MZDEMO;
+/* where each instrument lives in the room */
+var ST={Piano:[86,74,'PIANO'],Keyboard:[236,74,'KEYBOARD'],Drums:[86,196,'DRUMS'],
+        Guitar:[236,196,'GUITAR'],Violin:[86,318,'VIOLIN'],Ukulele:[236,318,'UKULELE'],
+        Vocals:[161,412,'VOCALS']};
+document.getElementById('d').textContent=D.day;
+function draw(){
+ document.getElementById('c').textContent=
+  D.students.filter(function(s){return s.mark==='present'}).length+' here';
+ var s='<svg viewBox="0 0 322 470">';
+ s+='<rect x="6" y="6" width="310" height="458" rx="16" fill="none" stroke="#DCD3C6" stroke-width="3"/>';
+ s+='<rect x="132" y="2" width="58" height="8" fill="#F3EEE6" stroke="#DCD3C6" stroke-width="2"/>'; /* the door */
+ s+='<text class="label" x="161" y="466">DOOR AT THE TOP · THADAGAM ROAD</text>';
+ for(var k in ST){var p=ST[k];
+  s+='<rect class="station" x="'+(p[0]-62)+'" y="'+(p[1]-34)+'" width="124" height="68" rx="12"/>';
+  s+='<text class="label" x="'+p[0]+'" y="'+(p[1]-16)+'">'+p[2]+'</text>';}
+ var seen={};
+ D.students.forEach(function(st,i){
+  var p=ST[st.inst]||[161,240,'']; var n=seen[st.inst]=(seen[st.inst]||0)+1;
+  var cx=p[0]+(n===1?-26:n===2?26:0), cy=p[1]+10;
+  var fill=st.mark==='present'?'#1F7A4D':st.mark==='absent'?'#C0392F':'#fff';
+  var strk=st.mark?fill:'#C9BFB2';
+  s+='<g class="kid" data-i="'+i+'"><circle cx="'+cx+'" cy="'+cy+'" r="19" fill="'+fill+
+     '" stroke="'+strk+'" stroke-width="2.4"/>'+
+     '<text class="kidname" x="'+cx+'" y="'+(cy+3.4)+'" style="fill:'+(st.mark?'#fff':'#221E1A')+'">'+
+     st.name.slice(0,3)+'</text><circle cx="'+cx+'" cy="'+cy+'" r="26" fill="transparent"/></g>';});
+ document.getElementById('plan').innerHTML=s+'</svg>';
+}
+document.addEventListener('click',function(e){
+ var g=e.target.closest&&e.target.closest('.kid'); if(!g)return;
+ var i=+g.getAttribute('data-i'), m=D.students[i].mark;
+ D.students[i].mark=m==='present'?'absent':m==='absent'?null:'present'; draw();});
+draw();
+</script></body></html>
