@@ -70,6 +70,9 @@ h1{font:600 27px/1 "Cormorant Garamond",serif}
  transform:translateY(102%);transition:transform .3s cubic-bezier(.3,1,.4,1);
  padding-bottom:calc(30px + env(safe-area-inset-bottom))}
 .sheet.on{transform:none}
+/* an 820pt-wide "Mark paid" button is a target you cannot miss and also
+   cannot read as a button. Same 660 cap as the rows. */
+.sheet .in{max-width:660px;margin:0 auto}
 .sheet h2{font:600 23px/1.15 "Cormorant Garamond",serif;margin-bottom:2px}
 .sheet p{color:var(--dim);font:500 13px/1.4 Inter;margin-bottom:16px}
 .big{font:600 34px/1 "Cormorant Garamond",serif;margin:6px 0 18px;font-variant-numeric:tabular-nums}
@@ -89,12 +92,12 @@ h1{font:600 27px/1 "Cormorant Garamond",serif}
 <div id="list"></div>
 
 <div class="scrim" id="scrim"></div>
-<div class="sheet" id="sheet">
+<div class="sheet" id="sheet"><div class="in">
   <h2 id="sName"></h2><p id="sSub"></p>
   <div class="big" id="sAmt"></div>
   <button class="btn" id="sOk">Mark paid</button>
   <button class="btn ghost" id="sNo">Not now</button>
-</div>
+</div></div>
 
 <nav class="tabs"><a href="#">Register</a><a class="on" href="#">Dues</a><a href="#">Money</a></nav>
 
