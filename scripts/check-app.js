@@ -182,7 +182,77 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
     const h = byId("root").innerHTML;
     assert(h.includes("Anu"), "the child who has not come was dropped from the register");
     assert(h.includes("Bala"), "the child who came is missing");
-    assert(h.includes("1 of 2 here"), "the present count is wrong: " + (h.match(/\d+ of \d+ here/) || ["none"])[0]);
+    assert(h.includes("1 of 2 in"), "the present count is wrong: " + (h.match(/\d+ of \d+ in/) || ["none"])[0]);
+  });
+
+  /* The filters he asked for by name. Two things must hold: the sheet
+     actually narrows, AND it says out loud that it is narrowed — ten
+     names on a sheet that should hold eighty is either a quiet Tuesday
+     or a filter left on, and those look identical. */
+  await check("the instrument and batch filters narrow the sheet, and it says so", async () => {
+    signIn();
+    api.S.ref = { batches: [{ id: 9, days: [1,2,3,4,5], short_name: "Weekdays" },
+                            { id: 10, days: [6], short_name: "Saturday" }],
+                  centres: [], instruments: [] };
+    nextBody = [
+      { member_name: "Guitar Kid", enrollment_id: 1, batch_id: 9, sport: "Guitar", present_days: 0, marks: {} },
+      { member_name: "Piano Kid",  enrollment_id: 2, batch_id: 9, sport: "Piano",  present_days: 0, marks: {} },
+      { member_name: "Sat Kid",    enrollment_id: 3, batch_id: 10, sport: "Piano", present_days: 0, marks: {} },
+    ];
+    api.S.tab = "register"; api.S.mode = "today"; api.S.q = "";
+    api.S.showOff = false; api.S.fIns = null; api.S.fBat = null;
+    api.S.day = "2026-08-19";                       // a Wednesday
+    api.enter(); await tick(); await tick();
+    let h = byId("root").innerHTML;
+    assert(/data-fi="Guitar"/.test(h), "there is no way to filter to an instrument");
+    assert(/data-fb="10"/.test(h), "there is no way to filter to a batch");
+    assert(h.includes("Guitar Kid") && h.includes("Piano Kid"), "the unfiltered sheet is already short");
+
+    /* circling an instrument */
+    onClick({ target: { closest: (q) => q === "[data-fi]"
+      ? { getAttribute: () => "Guitar" } : null } });
+    await tick();
+    h = byId("root").innerHTML;
+    assert(h.includes("Guitar Kid"), "the instrument filter hid the instrument it selected");
+    assert(!h.includes("Piano Kid"), "the instrument filter did not narrow anything");
+    assert(/Guitar only/.test(h), "a narrowed sheet does not say it is narrowed");
+
+    /* and back to everyone */
+    onClick({ target: { closest: (q) => q === "[data-fi]"
+      ? { getAttribute: () => "" } : null } });
+    await tick();
+    h = byId("root").innerHTML;
+    assert(h.includes("Piano Kid"), "there is no way back to the whole sheet");
+    assert(!/ only/.test(h), "the sheet still claims to be filtered");
+  });
+
+  /* Circling a batch nobody is in used to return early with a card
+     whose only button cleared the INSTRUMENT — so the batch stayed on
+     and the filter row that caused it was gone. A filter you cannot
+     see is a filter you cannot undo. */
+  await check("an empty result keeps the filter that caused it, and one tap clears both", async () => {
+    signIn();
+    api.S.ref = { batches: [{ id: 9, days: [1,2,3,4,5], short_name: "Weekdays" },
+                            { id: 10, days: [6], short_name: "Saturday" }],
+                  centres: [], instruments: [] };
+    nextBody = [
+      { member_name: "Guitar Kid", enrollment_id: 1, batch_id: 9, sport: "Guitar", present_days: 0, marks: {} },
+      { member_name: "Piano Kid",  enrollment_id: 2, batch_id: 9, sport: "Piano",  present_days: 0, marks: {} },
+    ];
+    api.S.tab = "register"; api.S.mode = "today"; api.S.q = "";
+    api.S.showOff = false; api.S.fIns = "Guitar"; api.S.fBat = 10;   // nobody is both
+    api.S.day = "2026-08-19";
+    api.enter(); await tick(); await tick();
+    let h = byId("root").innerHTML;
+    assert(/data-fi="Piano"/.test(h), "the filter row vanished with the list — no way to undo it");
+    assert(/data-clear/.test(h), "an empty sheet offers no way back to everyone");
+
+    onClick({ target: { closest: (q) => (q === "[data-clear]" ? {} : null) } });
+    await tick();
+    assert(api.S.fIns === null && api.S.fBat === null,
+      "the escape left a filter on: fIns=" + api.S.fIns + " fBat=" + api.S.fBat);
+    h = byId("root").innerHTML;
+    assert(h.includes("Guitar Kid") && h.includes("Piano Kid"), "clearing did not bring everyone back");
   });
 
   /* The day patterns arrive on a SECOND request, after the register has

@@ -8,7 +8,9 @@
 <link rel="icon" href="assets/img/favicon.png" />
 <link rel="apple-touch-icon" href="assets/img/icon-192.png" />
 <link rel="manifest" href="manifest.webmanifest" />
-<link rel="stylesheet" href="assets/css/app.css?v=20260820c" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" />
+<link rel="stylesheet" href="assets/css/app.css?v=20260820d" />
 </head>
 <body>
 <!-- ============================================================
@@ -483,6 +485,21 @@
     }).catch(fail);
   }
 
+  /* One filter word. The ring is drawn, not printed: the same
+     stroke-dashoffset trick as the tick, so choosing a filter looks
+     like circling something rather than a button lighting up.
+
+     The <svg> carries an explicit width. It is a REPLACED element, so
+     left+right do not stretch it — without a width it falls back to
+     its intrinsic viewBox size and the ring runs off the page. */
+  function word(val, label, on, attr, hue) {
+    return '<button class="' + (on ? "on" : "") + '" data-' + attr + '="' + val + '"' +
+      (hue ? ' style="--marker:' + hue + '"' : "") + ">" + label +
+      '<svg class="ring" viewBox="0 0 120 34" preserveAspectRatio="none" aria-hidden="true">' +
+      '<path d="M60 3 C 22 3, 3 9, 3 17 C 3 26, 26 31, 62 31 C 96 31, 117 26, 117 17 ' +
+      'C 117 9, 98 4, 57 3"/></svg></button>';
+  }
+
   function viewRegister() {
     var body = "";
     if (S.mode === "today") {
@@ -512,20 +529,28 @@
 
     var rows = S.register.rows;
 
-    /* THE FILTER ROW.
-       One line, scrollable sideways, and it is built from what is
-       actually in front of him — only the instruments with a student
-       on this list, so it is three chips on a quiet Tuesday and seven
-       on a Saturday rather than a fixed wall of eight.
+    /* THE FILTER, WRITTEN IN THE MARGIN AND CIRCLED.
 
-       What does it replace? The search box, most of the time. Finding
-       "the guitar children" meant typing g-u-i-t-a-r; now it is one
-       tap, and the search stays for finding one child by name. The
-       chips are 40px rather than the 48 this app holds itself to
-       everywhere else — a mis-tap on a filter shows the wrong list for
-       a second, where a mis-tap on the register marks a child absent.
-       Those two are not the same risk and should not cost the same
-       screen. */
+       A setlist does not have a row of buttons on it. It has words in
+       the margin with one of them circled, which is exactly what a
+       filter is. So the control is a line of small marker words and
+       the selection is a hand-drawn ring — the third ink mark on the
+       page, alongside the tick and the strike. Nothing new to learn:
+       whoever understands "struck out means away" already understands
+       "circled means that is what I am looking at".
+
+       Two groups on one line, split by a pencil slash:
+         · the INSTRUMENTS, built from who is actually in front of him
+           today — three words on a quiet Tuesday, seven on a Saturday,
+           never a fixed wall of eight
+         · the BATCH, weekday against Saturday, which is the one thing
+           the day cannot tell him in month view and the thing he asked
+           for by name
+
+       Each word is 40px tall rather than the 48 this app holds itself
+       to everywhere else. A mis-tap here shows the wrong list for a
+       second; a mis-tap on the register marks a child absent. Those
+       are not the same risk and should not cost the same screen. */
     var present = [];
     S.register.rows.forEach(function (r) {
       if (r.sport && present.indexOf(r.sport) < 0) present.push(r.sport);
@@ -533,19 +558,20 @@
     present.sort();
 
     var bats = (S.ref && S.ref.batches) || [];
-    if (present.length > 1 || (S.mode === "month" && bats.length > 1)) {
-      body += '<div class="filters"><div class="frow">' +
-        '<button class="chip' + (S.fIns ? "" : " on") + '" data-fi="">All</button>' +
-        present.map(function (n) {
-          var h = inst(n).hue;
-          return '<button class="chip' + (S.fIns === n ? " on" : "") + '" data-fi="' + esc(n) +
-                 '" style="--hue:' + h + '">' + esc(n) + "</button>";
-        }).join("") +
-        (S.mode === "month" && bats.length > 1
-          ? '<span class="fsep"></span>' +
-            bats.map(function (b) {
-              return '<button class="chip' + (S.fBat === b.id ? " on" : "") + '" data-fb="' + b.id +
-                     '">' + esc(b.short_name || b.name) + "</button>";
+    var showIns = present.length > 1, showBat = bats.length > 1;
+    var filterHtml = "";
+    if (showIns || showBat) {
+      filterHtml = '<div class="annot"><div class="row">' +
+        (showIns
+          ? word("", "Everyone", !S.fIns, "fi") +
+            present.map(function (n) {
+              return word(esc(n), esc(n), S.fIns === n, "fi", inst(n).hue);
+            }).join("")
+          : "") +
+        (showIns && showBat ? '<span class="sep"></span>' : "") +
+        (showBat
+          ? bats.map(function (b) {
+              return word(b.id, esc(batchWord(b)), S.fBat === b.id, "fb");
             }).join("")
           : "") +
       "</div></div>";
@@ -567,56 +593,173 @@
       return body + '<div class="card"><div class="note">No students yet.<br><br>' +
         '<button class="btn" data-add="1">Add the first student</button></div></div>';
     }
-    if (!rows.length) {
-      return body + '<div class="card"><div class="note">Nobody matches that.<br><br>' +
-        '<button class="btn ghost" data-fi="">Show everyone</button></div></div>';
-    }
+    /* NO early return for an empty result. Returning here dropped the
+       filter row along with the list, so circling a batch nobody is in
+       stranded him on a card whose only button cleared the instrument
+       and left the batch on. The empty state belongs INSIDE the sheet,
+       under the filter that caused it. */
 
     if (S.mode === "today") {
       var due = rows.filter(function (r) { return runsOn(r.batch_id, S.day); });
       var off = rows.filter(function (r) { return !runsOn(r.batch_id, S.day); });
-      body += due.length ? dayList(due)
-            : '<div class="card"><div class="note">No class today.</div></div>';
-      /* Never hide them behind a decision he has to remember: a makeup
-         lesson on an off day is a real thing, and it is one tap away. */
-      if (off.length) {
-        body += S.showOff
-          ? dayList(off, off.length + " not usually here today")
-          : '<button class="btn ghost" data-off="1" style="margin-bottom:12px">' +
-            "Someone came on an off day? Show " + off.length + " more</button>";
-      }
+      /* Never hide the off-day children behind a decision he has to
+         remember: a makeup lesson is a real thing, and it is one tap
+         away, on the same sheet. */
+      /* Circling "Saturday" on a Thursday would otherwise produce an
+         empty sheet and a dead end. It is really a request to see the
+         Saturday children — which is exactly the makeup-lesson case —
+         so open that set instead of showing him nothing. */
+      var openOff = S.showOff || (!!S.fBat && !due.length && off.length > 0);
+      body += setList(due, off, filterHtml, bats.length > 1, openOff);
     } else {
+      /* The month is still the old grid. The annotation goes on a torn
+         strip of the same paper so the filter is the one control in
+         both modes rather than two that look unrelated. */
+      if (filterHtml) body += '<div class="sheetwrap"><div class="setlist" ' +
+        'style="padding:8px 16px 4px">' + filterHtml + "</div></div>";
       body += monthGrid(rows);
     }
     body += '<button class="btn ghost" data-add="1" style="margin-top:6px">+ Add a student</button>';
     return body;
   }
 
-  function dayList(rows, heading) {
-    var marked = 0;
-    var html = rows.map(function (r) {
+  /* ============================================================
+     THE SETLIST
+
+     He is a performer. The thing he already knows how to read at a
+     glance, standing up, mid-lesson, is a setlist taped to a wall:
+     numbered names, grouped into sets, ticked as they happen and
+     struck out when they do not.
+
+     So the sets are the INSTRUMENTS — the noun this school is
+     organised around — and the marks are made by hand:
+
+       tick    they came
+       strike  they did not
+       nothing not yet, which is different from away and must look it
+
+     TAPPING THE LINE MARKS. The whole line is the target, ~52px of it,
+     because that is the gesture the sheet is for. Opening a child's
+     card is a separate, smaller reach at the right edge, so the common
+     act is the easy one and the rare act is the deliberate one.
+     ============================================================ */
+  function setList(due, off, filterHtml, showBatchTail, openOff) {
+    var n = 0, tailOn = false;
+
+    function line(r) {
+      n++;
       var st = r.marks && r.marks[S.day];
-      if (st === "present") marked++;
-      var cls = st === "present" ? "present" : st === "absent" ? "absent" : "";
-      var glyph = st === "present" ? "✓" : st === "absent" ? "✕" : "";
-      var ins = inst(r.sport);
-      return '<div class="srow key tuned" style="--hue:' + ins.hue + '" data-key="' + r.enrollment_id + '">' +
-        '<span class="ig">' + svgIcon(ins) + "</span>" +
-        '<button class="nm who" data-who="' + r.enrollment_id + '" data-mem="' + (r.member_id || "") +
+      var cls = st === "present" ? " present" : st === "absent" ? " absent" : "";
+      var bat = batchName(r.batch_id);
+      return '<div class="sl-ln' + cls + (S.busy[r.enrollment_id] ? " busy" : "") +
+          '" data-key="' + r.enrollment_id + '">' +
+        '<button class="mark" data-mark="' + r.enrollment_id + '"' +
+          ' data-batch="' + (r.batch_id || "") + '" data-note="' + inst(r.sport).note + '"' +
+          ' data-now="' + (st || "") + '" aria-label="' + esc(r.member_name) + '">' +
+          '<span class="no">' + n + '.</span>' +
+          /* drawn by hand, not a font glyph — a tick you make */
+          '<svg class="tk" viewBox="0 0 28 28" aria-hidden="true">' +
+            '<path d="M4.6 15 L10.7 21.4 L23.8 6"/></svg>' +
+          '<span class="who">' + esc(r.member_name) +
+            '<svg class="st" viewBox="0 0 300 22" preserveAspectRatio="none" aria-hidden="true">' +
+            '<path d="M2 12 C 70 6, 150 16, 298 9"/></svg></span>' +
+        "</button>" +
+        /* Only in the off-day set. Everyone in today's set runs today
+           by definition, so a batch label there is noise that collides
+           with the name it sits beside. */
+        (tailOn && showBatchTail && bat ? '<span class="tail">' + esc(bat) + "</span>" : "") +
+        '<button class="open" data-who="' + r.enrollment_id + '" data-mem="' + (r.member_id || "") +
           '" data-nm="' + esc(r.member_name) + '" data-sport="' + esc(r.sport || "") +
-          '" data-batch="' + (r.batch_id || "") + '">' +
-          "<b>" + esc(r.member_name) + "</b><span>" + esc(r.sport || "") + "</span>" +
-          '<u class="chev">\u203A</u></button>' +
-        '<button class="tick ' + cls + (S.busy[r.enrollment_id] ? " busy" : "") + '"' +
-          ' data-mark="' + r.enrollment_id + '" data-batch="' + (r.batch_id || "") + '"' +
-          ' data-note="' + ins.note + '"' +
-          ' data-now="' + (st || "") + '" aria-label="' + esc(r.member_name) + '">' + glyph + "</button>" +
+          '" data-batch="' + (r.batch_id || "") + '" aria-label="Open ' + esc(r.member_name) +
+          '">\u203A</button>' +
       "</div>";
-    }).join("");
-    return '<div class="card"><div class="rowline" style="margin-bottom:6px">' +
-        '<b style="font-size:15px">' + (heading || (marked + " of " + rows.length + " here")) + "</b>" +
-        '<span style="flex:1"></span><span class="muted">tap to mark</span>' +
-      "</div>" + html + "</div>";
+    }
+
+    /* One set per instrument, in the school's own order of the day. */
+    function sets(rows) {
+      var by = {}, order = [];
+      rows.forEach(function (r) {
+        var k = r.sport || "Other";
+        if (!by[k]) { by[k] = []; order.push(k); }
+        by[k].push(r);
+      });
+      order.sort();
+      return order.map(function (k) {
+        var g = by[k];
+        var inn = g.filter(function (r) {
+          return r.marks && r.marks[S.day] === "present";
+        }).length;
+        return '<div class="sl-set" style="--hue:' + inst(k).hue + '">' +
+          '<div class="sl-hd"><b>' + esc(k) + "</b>" +
+          "<i>" + g.length + (g.length > 1 ? " names" : " name") + "</i>" +
+          "<em>" + inn + " in</em></div>" +
+          g.map(line).join("") +
+        "</div>";
+      }).join("");
+    }
+
+    var marked = due.filter(function (r) { return r.marks && r.marks[S.day] === "present"; }).length;
+    var away   = due.filter(function (r) { return r.marks && r.marks[S.day] === "absent"; }).length;
+
+    var body = '<div class="sheetwrap"><div class="tape l"></div><div class="tape r"></div>' +
+      '<div class="setlist">' +
+      /* A filtered list must SAY it is filtered. Ten names on a sheet
+         that should hold eighty is either a quiet Tuesday or a filter
+         he forgot he left on, and those look identical. */
+      '<div class="sl-top"><b>' + (S.day === MZ.todayIso() ? "Today" : "That day") + "\u2019s set</b>" +
+        "<em>" + marked + " of " + due.length + " in</em></div>" +
+      filterHtml +
+      /* On its own line, not squeezed into the title — at 375px the
+         title, the note and the count fought and the note lost by
+         being clipped mid-word. */
+      (narrowedBy()
+        ? '<button class="sl-narrow" data-clear="1">showing ' + esc(narrowedBy()) +
+          " \u00d7</button>"
+        : "");
+
+    body += due.length ? sets(due)
+          : (narrowedBy() && !off.length
+              ? '<div class="sl-note">Nobody matches that.</div>'
+              : '<div class="sl-note">No class today' +
+                (S.fBat ? " for " + esc(batchName(S.fBat)) : "") + ".</div>");
+
+    tailOn = true;
+    if (off.length && openOff) {
+      body += '<div class="sl-set" style="--hue:var(--pencil)">' +
+        '<div class="sl-hd"><b>Not usually here today</b><i>' + off.length +
+        (off.length > 1 ? " names" : " name") + "</i></div>" + sets(off) + "</div>";
+    }
+
+    body += '<div class="sl-foot">' + marked + " ticked \u00b7 " + away +
+      " struck \u00b7 " + Math.max(0, due.length - marked - away) + " still to come";
+    if (off.length && !openOff) {
+      body += '<button class="more" data-off="1">Someone came on an off day? Show ' +
+              off.length + " more</button>";
+    }
+    body += "</div></div></div>";
+    return body;
+  }
+
+  /* What the sheet is currently narrowed to, in words. Empty when it
+     is showing everybody, so the line stays quiet in the normal case. */
+  function narrowedBy() {
+    var bits = [];
+    if (S.fIns) bits.push(S.fIns);
+    if (S.fBat) bits.push(batchName(S.fBat));
+    if (S.q)    bits.push('"' + S.q + '"');
+    return bits.length ? bits.filter(Boolean).join(" \u00b7 ") + " only" : "";
+  }
+
+  function batchName(id) {
+    var bs = (S.ref && S.ref.batches) || [];
+    for (var i = 0; i < bs.length; i++) if (bs[i].id === id) return batchWord(bs[i]);
+    return "";
+  }
+  /* A filter word has to be a WORD. "Mon-Fri 3-8pm" is the timetable,
+     which is a fine batch name and a terrible thing to circle. */
+  function batchWord(b) {
+    var n = b.short_name || b.name || "";
+    return n.split(/\s+|,/)[0].replace(/[:\-\u2013]$/, "") || n;
   }
 
   function monthGrid(rows) {
@@ -668,8 +811,11 @@
     /* The key presses. A row that visibly goes down is the clearest
        receipt there is for a tap, on a screen where a mis-tap marks a
        child absent. */
-    var row = btn.closest && btn.closest(".srow");
-    if (row && row.classList) {
+    /* The setlist gives its own receipt — the line lights under the
+       thumb and the tick DRAWS itself — so the key-press animation is
+       only for the old row. Both find their container the same way. */
+    var row = btn.closest && btn.closest(".sl-ln, .srow");
+    if (row && row.classList && row.classList.contains("srow")) {
       row.classList.add("pressed");
       setTimeout(function () { row.classList.remove("pressed"); }, 160);
     }
@@ -678,7 +824,10 @@
     else if (next === "absent")  tone(n - 17, 0.55);
     btn.classList.remove("strike"); void btn.offsetWidth; btn.classList.add("strike");
 
+    /* busy belongs on whichever container the CSS dims: .tick.busy for
+       the old row, .sl-ln.busy for the sheet. */
     S.busy[eid] = true; btn.classList.add("busy");
+    if (row && row.classList) row.classList.add("busy");
     MZ.mark(bid, S.day, eid, next).then(function () {
       delete S.busy[eid];
       var row = (S.register.rows || []).filter(function (r) { return r.enrollment_id === eid; })[0];
@@ -1162,6 +1311,7 @@
       S.month = n < 1 ? { y: S.month.y - 1, m: 12 } : n > 12 ? { y: S.month.y + 1, m: 1 } : { y: S.month.y, m: n };
       (S.tab === "money" ? loadMoney : loadRegister)(); render(); return;
     }
+    if (t.closest("[data-clear]")) { S.fIns = null; S.fBat = null; S.q = ""; render(); return; }
     var fi = t.closest("[data-fi]");
     if (fi) { var v = fi.getAttribute("data-fi"); S.fIns = v || null; S.q = ""; render(); return; }
     var fb = t.closest("[data-fb]");

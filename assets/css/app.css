@@ -565,8 +565,13 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
   position: fixed; inset: 0; z-index: 60;
   display: flex; align-items: flex-end; justify-content: center;
   padding: 16px calc(16px) calc(84px + env(safe-area-inset-bottom));
-  background: rgba(12,5,28,.55);
-  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  /* Deepened from .55. The attendance tab now puts a bright cream
+     sheet behind this veil, and at .55 the setlist read straight
+     through the card — every label on it fighting a handwritten name.
+     The photograph was always dark, so nothing had tested it against
+     a light surface. */
+  background: rgba(10,4,26,.76);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   animation: veilin .22s ease;
 }
 .sheet > .card {
@@ -755,3 +760,152 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
   .srow { padding: 14px 2px; }
   .tick { width: 54px; height: 54px; }
 }
+
+/* ============================================================
+   THE SETLIST — the attendance tab
+
+   A performer's own paper, not a database. It is a sheet laid on the
+   app's violet shell, so Dues and Money keep their glass and nothing
+   else had to be re-skinned to make this one tab work.
+
+   Three hand marks and nothing else to interpret:
+     · a TICK   — they came
+     · a STRIKE — they did not, the way a dropped song is struck out
+     · a RING   — the filter. Circling a word is what you actually do
+       to a setlist, so the filter speaks the same ink as the marking
+       instead of importing a row of buttons from another app.
+
+   Caveat is loaded from Google Fonts. If it fails — a music room on
+   bad wifi is the normal case, not the edge case — the stack falls
+   back to a system cursive and then to the app's own font. The sheet
+   loses its handwriting and keeps every one of its functions.
+   ============================================================ */
+:root { --hand: "Caveat", "Segoe Script", "Bradley Hand", cursive, var(--sans, system-ui); }
+
+.sheetwrap { position: relative; padding: 16px 4px 0; margin-bottom: 14px; }
+/* two strips of tape, because a setlist lives taped to something */
+.sheetwrap .tape {
+  position: absolute; top: 2px; width: 74px; height: 21px; z-index: 2;
+  background: rgba(255,252,240,.30);
+  border-left: 1px solid rgba(255,255,255,.22);
+  border-right: 1px solid rgba(255,255,255,.22);
+  box-shadow: 0 1px 4px rgba(10,4,26,.45);
+}
+.sheetwrap .tape.l { left: 20px; transform: rotate(-6deg); }
+.sheetwrap .tape.r { right: 20px; transform: rotate(5deg); }
+
+.setlist {
+  --paper: #F7F1E1; --pink: #22201C; --pencil: #7C7568;
+  --marker: #1D6B4A; --drop: #B23B2B; --pline: #DED3B8;
+  background: var(--paper); color: var(--pink);
+  transform: rotate(-.35deg);
+  box-shadow: 0 10px 30px rgba(12,4,32,.45), 0 2px 6px rgba(12,4,32,.35);
+  padding: 20px 18px 24px;
+  background-image: repeating-linear-gradient(180deg, transparent 0 33px, rgba(180,165,130,.13) 33px 34px);
+}
+
+.sl-top { display: flex; align-items: flex-end; gap: 10px;
+  border-bottom: 2.2px solid var(--pink); padding-bottom: 7px; }
+.sl-top b { font: 700 30px/.92 var(--hand); }
+.sl-top em { font-style: normal; margin-left: auto; font: 600 20px/1 var(--hand);
+  color: var(--marker); white-space: nowrap; }
+/* The note that says the sheet is narrowed IS the way back to the
+   whole sheet — the one place he is already looking when he wonders
+   where everybody went. */
+.sl-narrow { display: block; margin-left: auto; background: none; border: 0;
+  padding: 6px 2px; min-height: 34px; text-align: right; cursor: pointer;
+  font: 600 16px/1.2 var(--hand); color: var(--drop);
+  -webkit-tap-highlight-color: transparent; }
+.sl-narrow:active { opacity: .55; }
+
+/* ── the filter, written in the margin and circled ──────────────── */
+.annot { padding: 9px 0 0; }
+.annot .row { display: flex; flex-wrap: wrap; align-items: center; gap: 0 2px; }
+.annot .sep { width: 13px; flex: none; height: 22px; opacity: .5;
+  border-right: 2px solid var(--pline); transform: skewX(-16deg); margin: 0 8px; }
+.annot button {
+  position: relative; background: none; border: 0; padding: 7px 8px; margin: 0;
+  min-height: 38px;                      /* a mis-tap here costs a wrong list for
+                                            one second, not a child marked absent —
+                                            so it does not need the register's 48 */
+  font: 600 17.5px/1 var(--hand); color: var(--pencil); cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.annot button.on { color: var(--pink); }
+.annot .ring {
+  position: absolute; left: -3px; top: 50%; width: calc(100% + 6px); height: 34px;
+  transform: translateY(-17px); pointer-events: none; overflow: visible;
+}
+/* An <svg> is a REPLACED element — left+right will not stretch it, it
+   falls back to its intrinsic viewBox width. It needs a real width. */
+.annot .ring path {
+  fill: none; stroke: var(--marker); stroke-width: 2.4; stroke-linecap: round;
+  /* The ellipse is ~223 user units round. A dasharray SHORTER than the
+     path repeats, so every unselected word wore a leftover stub of ink.
+     Anything comfortably longer than the path hides it completely. */
+  stroke-dasharray: 420; stroke-dashoffset: 420;
+  transition: stroke-dashoffset .34s ease-out;
+}
+.annot button.on .ring path { stroke-dashoffset: 0; }
+.annot button.on[data-fb] .ring path { stroke: #7A4FB5; }
+
+/* ── one line of the set is one child ───────────────────────────── */
+.sl-set { margin-top: 15px; }
+.sl-hd { display: flex; align-items: baseline; gap: 9px; margin-bottom: 1px; }
+.sl-hd b { font: 700 23px/1 var(--hand); color: var(--hue, var(--pink)); }
+.sl-hd i { font-style: normal; font: 600 16px/1 var(--hand); color: var(--pencil); }
+.sl-hd em { font-style: normal; margin-left: auto; font: 600 16px/1 var(--hand); color: var(--marker); }
+
+.sl-ln { display: flex; align-items: center; gap: 8px; min-height: 52px; }
+.sl-ln .mark {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
+  background: none; border: 0; padding: 4px 2px; min-height: 52px; text-align: left;
+  -webkit-tap-highlight-color: transparent; cursor: pointer; color: inherit;
+}
+.sl-ln .mark:active { background: rgba(180,165,130,.18); }
+.sl-ln .no { width: 24px; flex: none; text-align: right;
+  font: 600 18px/1 var(--hand); color: var(--pencil); }
+.sl-ln .tk { width: 28px; height: 28px; flex: none; }
+.sl-ln .tk path {
+  fill: none; stroke: var(--marker); stroke-width: 3.4; stroke-linecap: round;
+  stroke-linejoin: round; stroke-dasharray: 44; stroke-dashoffset: 44;
+  transition: stroke-dashoffset .26s ease-out;
+}
+.sl-ln.present .tk path { stroke-dashoffset: 0; }
+.sl-ln .who {
+  position: relative; font: 600 26px/1.05 var(--hand); padding-right: 6px;
+  white-space: nowrap;                     /* NO overflow:hidden — Caveat's letters
+                                              lean past their advance width and the
+                                              last letter of every name gets eaten */
+  overflow: visible;
+}
+.sl-ln .st {
+  position: absolute; left: -5px; top: 50%; width: calc(100% + 9px); height: 22px;
+  transform: translateY(-11px); pointer-events: none;
+}
+.sl-ln .st path {
+  fill: none; stroke: var(--drop); stroke-width: 3; stroke-linecap: round;
+  stroke-dasharray: 300; stroke-dashoffset: 300;
+  transition: stroke-dashoffset .3s ease-out;
+}
+.sl-ln.absent .st path { stroke-dashoffset: 0; }
+.sl-ln.absent .who, .sl-ln.absent .no { color: #9A9082; }
+.sl-ln .tail { flex: none; margin-left: auto; font: 500 11.5px/1 var(--sans, inherit);
+  color: var(--pencil); letter-spacing: .04em; padding-left: 6px; }
+/* the card is a separate, deliberate reach — the LINE is the tick */
+.sl-ln .open {
+  flex: none; width: 44px; height: 48px; background: none; border: 0;
+  color: #B0A794; font-size: 22px; line-height: 1; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.sl-ln .open:active { color: var(--pink); }
+.sl-ln.busy .mark { opacity: .45; }
+
+.sl-foot { margin-top: 18px; padding-top: 9px; border-top: 1.5px solid var(--pline);
+  font: 600 18px/1.35 var(--hand); color: var(--pencil); }
+.sl-foot .more {
+  display: block; margin-top: 8px; background: none; border: 0; padding: 10px 0;
+  font: 600 18px/1 var(--hand); color: var(--marker); text-decoration: underline;
+  text-underline-offset: 4px; cursor: pointer;
+}
+.sl-note { font: 600 19px/1.4 var(--hand); color: var(--pencil); padding: 16px 2px 6px; }
