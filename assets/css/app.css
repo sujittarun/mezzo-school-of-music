@@ -47,8 +47,14 @@
      reads THROUGH the cards. The backdrop-filter blurs what is behind
      without touching the text on top, so this costs no legibility —
      the numbers stay on flat white as far as the eye is concerned. */
-  --card:    rgba(255,255,255,.60);
-  --card-2:  rgba(255,255,255,.50);
+  /* LIQUID GLASS. Thin enough that the instrument painted behind the
+     page is genuinely visible through it — which on a phone, where a
+     card covers the whole screen, is the only way it is visible at
+     all. What keeps the text readable is not opacity, it is the blur
+     and the saturation lift: everything behind goes soft and bright,
+     so a name sits on a wash with no edges in it to compete with. */
+  --card:    rgba(255,255,255,.30);
+  --card-2:  rgba(255,255,255,.22);
 
   --ok:      #1B8A55;  --ok-bg:   #E4F5EC;
   --no:      #C0392F;  --no-bg:   #FCEAE7;
@@ -99,10 +105,10 @@ body::after {
   opacity: 1; mix-blend-mode: multiply;
   transition: opacity .5s ease;
 }
-body[data-tab="register"] { --watermark: url(../img/w-piano.jpg?v=20260820b); }
-body[data-tab="dues"]     { --watermark: url(../img/w-violin.jpg?v=20260820b); }
-body[data-tab="money"]    { --watermark: url(../img/w-drum.jpg?v=20260820b); }
-body[data-tab="add"]      { --watermark: url(../img/w-violin.jpg?v=20260820b); }
+body[data-room="register"] { --watermark: url(../img/w-piano.jpg?v=20260820b); }
+body[data-room="dues"]     { --watermark: url(../img/w-violin.jpg?v=20260820b); }
+body[data-room="money"]    { --watermark: url(../img/w-drum.jpg?v=20260820b); }
+body[data-room="add"]      { --watermark: url(../img/w-violin.jpg?v=20260820b); }
 /* The sign-in has its own picture already. */
 body.signed-out::after { display: none; }
 h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
@@ -140,10 +146,16 @@ button { cursor: pointer; }
      the page reads as colour and shape through the card, but nothing
      behind it has an edge sharp enough to compete with a name or a
      number sitting on top. */
-  backdrop-filter: blur(18px) saturate(1.45);
-  -webkit-backdrop-filter: blur(18px) saturate(1.45);
-  border-radius: 16px; padding: 15px; margin-bottom: 12px;
-  box-shadow: 0 8px 26px rgba(75,63,114,.10);
+  backdrop-filter: blur(34px) saturate(1.9) brightness(1.07);
+  -webkit-backdrop-filter: blur(34px) saturate(1.9) brightness(1.07);
+  border-radius: 20px; padding: 15px; margin-bottom: 12px;
+  border: 1px solid rgba(255,255,255,.6);
+  /* The lit top edge and the soft under-shadow are what make it read
+     as a piece of glass lying on the page rather than a pale box. */
+  box-shadow:
+    0 10px 34px rgba(75,63,114,.13),
+    inset 0 1px 0 rgba(255,255,255,.85),
+    inset 0 -1px 0 rgba(255,255,255,.30);
 }
 .muted { color: var(--ink-3); font-size: 14px; }
 .rowline { display: flex; align-items: center; gap: 10px; }
@@ -174,9 +186,69 @@ button { cursor: pointer; }
    way a register of eighty names can tell him WHICH instrument at a
    glance, so it runs down the edge of the row, colours the label, and
    rims the tick. */
+/* ============================================================
+   THE REGISTER IS A KEYBOARD
+
+   A list of names stacked down the screen is a keyboard turned on its
+   side, so that is what it is: every child is a key. Flat where it
+   meets the spine, rounded at the free end, lit along the top edge,
+   sitting on a hairline of its own instrument's colour. Touching one
+   presses it — it moves INTO the keyboard, loses its lift, and sounds
+   that child's instrument.
+
+   It is not decoration: a row that visibly depresses is the clearest
+   possible receipt for a tap on a screen where a mis-tap marks a
+   child absent.
+   ============================================================ */
 .tuned { border-left: 3px solid var(--hue); padding-left: 11px; border-radius: 2px; }
 .srow.tuned .nm span { color: var(--hue); font-weight: 600; }
 .due.tuned { padding-left: 13px; }
+
+.srow.key {
+  position: relative;
+  background: linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.42));
+  border: 1px solid rgba(255,255,255,.5);
+  border-left: 4px solid var(--hue);
+  border-radius: 3px 14px 14px 3px;
+  margin-bottom: 7px; padding-left: 10px;
+  box-shadow: 0 2px 0 rgba(75,63,114,.13), inset 0 1px 0 rgba(255,255,255,.9);
+  transition: transform .11s ease, box-shadow .11s ease, background .16s ease;
+}
+/* A key goes down, and for a key lying on its side down is inward. */
+.srow.key.pressed {
+  transform: translateX(5px);
+  box-shadow: 0 0 0 rgba(75,63,114,0), inset 0 1px 0 rgba(255,255,255,.5);
+  background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,.3));
+}
+/* The instrument's own mark, on its own key. */
+.ig { flex: 0 0 auto; width: 26px; height: 26px; margin-right: 10px; color: var(--hue); }
+.ig svg { width: 26px; height: 26px; display: block; fill: none; stroke: currentColor;
+          stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Each key arrives a beat after the one above it, the way a hand runs
+   up a keyboard. Only on entering a tab, never on a re-render. */
+.fresh .srow.key { animation: keyin .34s cubic-bezier(.22,.7,.35,1) backwards; }
+.fresh .srow.key:nth-child(2)  { animation-delay: .02s }
+.fresh .srow.key:nth-child(3)  { animation-delay: .05s }
+.fresh .srow.key:nth-child(4)  { animation-delay: .08s }
+.fresh .srow.key:nth-child(5)  { animation-delay: .11s }
+.fresh .srow.key:nth-child(6)  { animation-delay: .14s }
+.fresh .srow.key:nth-child(7)  { animation-delay: .17s }
+.fresh .srow.key:nth-child(8)  { animation-delay: .20s }
+.fresh .srow.key:nth-child(n+9){ animation-delay: .23s }
+@keyframes keyin {
+  from { opacity: 0; transform: translateX(-22px) }
+  to   { opacity: 1; transform: none }
+}
+/* The whole panel slides in when a tab changes. */
+.fresh .card { animation: cardin .38s cubic-bezier(.22,.7,.35,1) backwards; }
+@keyframes cardin {
+  from { opacity: 0; transform: translateY(14px) scale(.985) }
+  to   { opacity: 1; transform: none }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fresh .srow.key, .fresh .card { animation: none; }
+}
 
 /* The tick is a drum head: round, rimmed in the instrument's colour,
    and it takes a strike. */
