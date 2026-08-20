@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" />
-<link rel="stylesheet" href="assets/css/app.css?v=20260820d" />
+<link rel="stylesheet" href="assets/css/app.css?v=20260820f" />
 </head>
 <body>
 <!-- ============================================================
@@ -92,6 +92,7 @@
     pay: null,                // the payment being taken: {enrollment,name,amount,months,mode}
     picker: null,             // the student list, when choosing who paid
     who: null,                // the student card: {enrollment,member,name,sport,batch,phone}
+    pulse: null,              // {sport, kind} — the section to play after the next paint
     fIns: null,               // instrument filter, null = all
     fBat: null,               // batch filter, null = all
     showOff: false,
@@ -146,15 +147,28 @@
   var I_VOCAL  = '<rect x="9.2" y="2.4" width="5.6" height="10" rx="2.8"/><path d="M5.8 11.2a6.2 6.2 0 0 0 12.4 0"/><path d="M12 17.4V21M9 21h6"/>';
   var I_FLUTE  = '<path d="M3.4 15.6 20.6 8.4"/><circle cx="8.2" cy="13.6" r=".9"/><circle cx="11.6" cy="12.2" r=".9"/><circle cx="15" cy="10.8" r=".9"/>';
 
+  /* THE EIGHT HUES, re-cut for paper.
+     These were pastels — lifted right up because they sat on dark
+     violet. On cream every one of them washed out, and two of them
+     were the same colour: Guitar #F5B25E and Drums #EDA05C are 19.8
+     apart in RGB, which is not a difference, it is a rounding error.
+     Two section headings on one sheet cannot be that close.
+
+     Re-cut dark enough for cream (every one measured 4.0:1 or better
+     against #F9F4E7) and spread properly round the wheel — the
+     closest pair is now Violin/Vocals at 37.1, nearly double the old
+     worst case. Drums went slate on purpose: it is hardware, and a
+     neutral is the one thing guaranteed not to collide with the six
+     warm-to-cool instruments either side of it. */
   var INSTRUMENT = {
-    Piano:    { hue: "#A493FF", note: 60, icon: I_PIANO },
-    Keyboard: { hue: "#4FD8D8", note: 62, icon: I_KEYB },
-    Guitar:   { hue: "#F5B25E", note: 64, icon: I_GUITAR },
-    Violin:   { hue: "#FF8A8D", note: 67, icon: I_VIOLIN },
-    Ukulele:  { hue: "#FFA184", note: 69, icon: I_UKE },
-    Drums:    { hue: "#EDA05C", note: 48, icon: I_DRUM },
-    Vocals:   { hue: "#FF93CE", note: 72, icon: I_VOCAL },
-    Flute:    { hue: "#AEDB98", note: 71, icon: I_FLUTE }
+    Piano:    { hue: "#4A46B8", note: 60, icon: I_PIANO },
+    Keyboard: { hue: "#0E7C86", note: 62, icon: I_KEYB },
+    Guitar:   { hue: "#9A6B12", note: 64, icon: I_GUITAR },
+    Violin:   { hue: "#B0344A", note: 67, icon: I_VIOLIN },
+    Ukulele:  { hue: "#C25A17", note: 69, icon: I_UKE },
+    Drums:    { hue: "#4F5B66", note: 48, icon: I_DRUM },
+    Vocals:   { hue: "#A8306E", note: 72, icon: I_VOCAL },
+    Flute:    { hue: "#2E7D46", note: 71, icon: I_FLUTE }
   };
   function inst(name) {
     return INSTRUMENT[name] || { hue: "#6B5CA5", note: 65, icon: '<circle cx="12" cy="12" r="7"/>' };
@@ -276,6 +290,162 @@
     } catch (e) { /* a sign-in must never fail because of a sound */ }
   }
 
+  /* ============================================================
+     THE SOUND OF THE APP
+
+     Every sound is synthesised — there is no audio file in this repo,
+     so nothing to download, nothing to fail on a bad connection, and
+     nothing that needs a licence.
+
+     The rule that decides what each sound IS: a sound should be the
+     sound of the ACT, not a notification about it.
+
+       Attendance is paper.  He is ticking names on a sheet, so the
+                             mark sounds like graphite: a short bright
+                             scratch, two strokes for a tick, one long
+                             drag for a strike-off, a soft brush to
+                             rub one out. The instrument's own note
+                             sits UNDER it, quiet, so the section is
+                             still audible without the register
+                             turning into a xylophone.
+       Dues is the tuner.    Collecting glides a flat note up into
+                             true — the same idea as the tuner screen,
+                             in the ear instead of the eye.
+       Money is wood.        A ledger stamp: low, short, done.
+
+     Nothing here is louder than 0.3 peak except a deliberate accent,
+     and everything is under 700ms. This is used between students, in
+     a room with a child in it.
+     ============================================================ */
+  var NOISE = null;
+  function ac() {
+    try {
+      var C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return null;
+      if (!AC) AC = new C();
+      if (AC.state === "suspended") AC.resume();
+      return AC;
+    } catch (e) { return null; }
+  }
+  /* One second of white noise, made once and replayed at different
+     speeds and through different filters. Every paper sound in the app
+     comes out of this one buffer. */
+  function noiseBuf(a) {
+    if (NOISE) return NOISE;
+    var n = a.sampleRate, b = a.createBuffer(1, n, a.sampleRate), d = b.getChannelData(0);
+    for (var i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    return (NOISE = b);
+  }
+  /* One stroke of something rough across something dry.
+     dur   how long the stroke takes
+     hz    where the grain sits — graphite is bright, paper is dull
+     peak  loudness
+     rate  playback speed, varied per call so two ticks in a row are
+           never the same stroke twice. A pencil is never identical. */
+  function stroke(dur, hz, peak, rate, delay) {
+    var a = ac(); if (!a) return;
+    var t = a.currentTime + (delay || 0);
+    var src = a.createBufferSource(); src.buffer = noiseBuf(a);
+    src.playbackRate.value = rate || (0.85 + Math.random() * 0.4);
+    var bp = a.createBiquadFilter(); bp.type = "bandpass";
+    bp.frequency.value = hz; bp.Q.value = 0.8;
+    var hp = a.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = hz * 0.4;
+    var g = a.createGain();
+    /* ramp UP then down: that is what makes it a drag rather than a
+       click. A click is an envelope with no rise. */
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(peak, t + dur * 0.34);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(bp); bp.connect(hp); hp.connect(g); g.connect(a.destination);
+    src.start(t); src.stop(t + dur + 0.02);
+  }
+  /* A tick is TWO strokes — a short one down, a long one up — and it
+     is the double stroke that makes it read as a tick rather than as
+     a scratch. */
+  function pencilTick() { stroke(0.055, 3200, 0.22); stroke(0.115, 4200, 0.26, null, 0.052); }
+  /* Struck off: one drag, longer and lower, pressed harder. */
+  function pencilStrike() { stroke(0.20, 1900, 0.30, 0.7); }
+  /* Rubbed out: dull, quiet, no grain. */
+  function paperBrush() { stroke(0.13, 900, 0.13, 0.55); }
+  /* Circling a word on the sheet is also a pencil act. */
+  function pencilRing() { stroke(0.17, 2600, 0.17, 0.8); }
+  /* A page turning: a sweep rather than a stroke. */
+  function pageTurn() {
+    var a = ac(); if (!a) return;
+    var t = a.currentTime;
+    var src = a.createBufferSource(); src.buffer = noiseBuf(a); src.playbackRate.value = 0.6;
+    var bp = a.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = 1.1;
+    bp.frequency.setValueAtTime(700, t);
+    bp.frequency.exponentialRampToValueAtTime(3400, t + 0.26);
+    var g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.16, t + 0.07);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.30);
+    src.connect(bp); bp.connect(g); g.connect(a.destination);
+    src.start(t); src.stop(t + 0.34);
+  }
+  /* A plucked string: a bright transient that dies fast, through a
+     filter that closes as it decays — which is what a real string
+     does and what a plain sine never does. */
+  function pluck(midi, level) {
+    var a = ac(); if (!a) return;
+    level = level === undefined ? 1 : level;
+    var t = a.currentTime, f = 440 * Math.pow(2, (midi - 69) / 12);
+    var o = a.createOscillator(); o.type = "sawtooth"; o.frequency.value = f;
+    var lp = a.createBiquadFilter(); lp.type = "lowpass";
+    lp.frequency.setValueAtTime(f * 7, t);
+    lp.frequency.exponentialRampToValueAtTime(Math.max(f * 1.2, 200), t + 0.42);
+    var g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.26 * level, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.62);
+    o.connect(lp); lp.connect(g); g.connect(a.destination);
+    o.start(t); o.stop(t + 0.7);
+    stroke(0.03, 5200, 0.05 * level);      /* the nail on the string */
+  }
+  /* A bowed swell: slow in, slow out, no transient. */
+  function bow(midi, level) {
+    var a = ac(); if (!a) return;
+    level = level === undefined ? 1 : level;
+    var t = a.currentTime, f = 440 * Math.pow(2, (midi - 69) / 12);
+    [[1, 0.16], [2, 0.05], [3.01, 0.02]].forEach(function (h) {
+      var o = a.createOscillator(); o.type = "sine"; o.frequency.value = f * h[0];
+      var g = a.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(h[1] * level, t + 0.13);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.62);
+      o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.68);
+    });
+  }
+  /* Flat, and then true. The tuner's whole idea, in the ear. */
+  function intoTune(midi, cents, level) {
+    var a = ac(); if (!a) return;
+    var t = a.currentTime, f = 440 * Math.pow(2, (midi - 69) / 12);
+    var o = a.createOscillator(); o.type = "triangle";
+    o.frequency.setValueAtTime(f * Math.pow(2, -cents / 1200), t);
+    o.frequency.exponentialRampToValueAtTime(f, t + 0.46);
+    var g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.20 * (level || 1), t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.95);
+  }
+  /* The ledger stamp. Low, wooden, over before you notice it. */
+  function woodThunk(level) {
+    var a = ac(); if (!a) return;
+    level = level === undefined ? 1 : level;
+    var t = a.currentTime;
+    var o = a.createOscillator(); o.type = "sine";
+    o.frequency.setValueAtTime(190, t);
+    o.frequency.exponentialRampToValueAtTime(96, t + 0.11);
+    var g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.26 * level, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.26);
+    stroke(0.035, 1400, 0.10 * level, 0.5);
+  }
+
   function gate() {
     tabs.hidden = true;
     root.innerHTML =
@@ -395,7 +565,12 @@
         var now = +new Date();
         if (now - lastPluck > 55) {
           lastPluck = now;
-          tone(PLUCK[em.value.length % PLUCK.length], 0.42);
+          /* Was tone(..., 0.42) — a bare sine at under half level,
+             which under a guitar-string animation was barely there.
+             A pluck has a transient and a filter that closes as it
+             dies, so it carries at a fraction of the loudness a sine
+             needs, and it is the sound the band is drawing. */
+          pluck(PLUCK[em.value.length % PLUCK.length], 0.95);
         }
       };
     }
@@ -457,7 +632,14 @@
        until somebody answers, and a drum head seen face-on is also
        the shape of a coin. */
     var ICON = {
-      register: '<svg viewBox="0 0 24 24"><path d="M9.2 2.6h5.6l3.4 18.8H5.8z"/><path d="M7.4 13h9.2"/><path d="M15.6 5.4 9.6 17.4"/><circle cx="9.5" cy="17.6" r="1.4"/></svg>',
+      /* Was a metronome, and at 26px a metronome is a triangle with a
+         line through it — it said "music", not "attendance", and the
+         tab already says Attendance in words underneath. This is the
+         thing he actually does: a sheet with staff lines and a tick
+         struck across the corner of it. */
+      register: '<svg viewBox="0 0 24 24"><path d="M14.6 3.2H6.2a1.8 1.8 0 0 0-1.8 1.8v14a1.8 1.8 0 0 0 1.8 1.8h7.6"/>' +
+                '<path d="M7.6 8.4h6.6M7.6 12h6.6M7.6 15.6h3.4"/>' +
+                '<path d="M12.9 16.6 15.8 19.6 21.2 12.4" stroke-width="2.1"/></svg>',
       dues:     '<svg viewBox="0 0 24 24"><path d="M12 3.2a6.6 6.6 0 0 1 6.6 6.6c0 4 1.2 5.6 2.2 6.6H3.2c1-1 2.2-2.6 2.2-6.6A6.6 6.6 0 0 1 12 3.2z"/><path d="M10 19.4a2.1 2.1 0 0 0 4 0"/><path d="M12 3.2V1.6"/></svg>',
       money:    '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.6"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21"/></svg>'
     };
@@ -689,8 +871,15 @@
         var inn = g.filter(function (r) {
           return r.marks && r.marks[S.day] === "present";
         }).length;
+        /* SYMBOL AND WORD, not symbol instead of word. At 22px a
+           guitar and a ukulele are the same two circles and a neck,
+           and piano and keyboard are the same row of keys — he would
+           be identifying his own sections by guessing. The symbol
+           earns its place by being the thing that MOVES when a child
+           in that section is marked in; the word is what he reads. */
         return '<div class="sl-set" style="--hue:' + inst(k).hue + '">' +
-          '<div class="sl-hd"><b>' + esc(k) + "</b>" +
+          '<div class="sl-hd"><span class="ig" data-ig="' + esc(k) + '">' +
+            svgIcon(inst(k)) + "</span><b>" + esc(k) + "</b>" +
           "<i>" + g.length + (g.length > 1 ? " names" : " name") + "</i>" +
           "<em>" + inn + " in</em></div>" +
           g.map(line).join("") +
@@ -803,11 +992,14 @@
     if (S.busy[eid]) return;
     var next = now === "present" ? "absent" : now === "absent" ? null : "present";
 
-    /* A struck head, and the note of the instrument that child plays.
-       Present is that note; absent is the same note a fourth below and
-       duller; clearing says nothing at all. He will learn the sound of
-       his own register, which means a mis-tap is something he hears
-       before he has to look for it. */
+    /* PAPER FIRST, INSTRUMENT UNDER IT.
+       He is ticking names on a sheet, so the mark sounds like a
+       pencil: two strokes for a tick, one long pressed drag for a
+       strike-off, a dull brush to rub one out. The child's own
+       instrument still speaks underneath at a fifth of the level —
+       enough that he learns the sound of his own register and a
+       mis-tap is something he HEARS before he looks for it, not
+       enough to turn a register into a xylophone. */
     /* The key presses. A row that visibly goes down is the clearest
        receipt there is for a tap, on a screen where a mis-tap marks a
        child absent. */
@@ -820,14 +1012,21 @@
       setTimeout(function () { row.classList.remove("pressed"); }, 160);
     }
     var n = +btn.getAttribute("data-note") || 65;
-    if (next === "present")      tone(n, 0.85);
-    else if (next === "absent")  tone(n - 17, 0.55);
+    if (next === "present")     { pencilTick();   tone(n, 0.20); }
+    else if (next === "absent")  { pencilStrike(); tone(n - 17, 0.14); }
+    else                           paperBrush();
     btn.classList.remove("strike"); void btn.offsetWidth; btn.classList.add("strike");
 
     /* busy belongs on whichever container the CSS dims: .tick.busy for
        the old row, .sl-ln.busy for the sheet. */
     S.busy[eid] = true; btn.classList.add("busy");
     if (row && row.classList) row.classList.add("busy");
+    /* Which section to sound once the paint lands. The sheet is
+       re-rendered wholesale on every mark, so the element that should
+       move does not exist yet at the moment we decide it should. */
+    var mrow = (S.register.rows || []).filter(function (r) { return r.enrollment_id === eid; })[0];
+    if (mrow && next) S.pulse = { sport: mrow.sport, kind: next };
+
     MZ.mark(bid, S.day, eid, next).then(function () {
       delete S.busy[eid];
       var row = (S.register.rows || []).filter(function (r) { return r.enrollment_id === eid; })[0];
@@ -1272,7 +1471,32 @@
     var fresh = S.fresh; S.fresh = false;
     root.innerHTML = header(sub) + '<div class="wrap' + (fresh ? " fresh" : "") + '">' +
       (S.err ? '<div class="err">' + esc(S.err) + "</div>" : "") + inner + "</div>";
+    playSection();
   }
+
+  /* THE SECTION PLAYS ITSELF.
+     Marking a drummer in makes the drum on that section's heading get
+     hit; a guitarist makes the strings wobble; a pianist presses a
+     key. Each is the gesture that instrument actually makes, ~450ms,
+     a few pixels of travel, and only ever ONE of them at a time —
+     the section he just touched. Anything more on a screen he uses
+     between students is decoration he will learn to ignore. */
+  var PLAY = {
+    Drums: "drum", Piano: "key", Keyboard: "key",
+    Guitar: "string", Ukulele: "string", Violin: "string",
+    Vocals: "voice", Flute: "wind"
+  };
+  function playSection() {
+    var p = S.pulse; S.pulse = null;
+    if (!p || !p.sport) return;
+    var el = root.querySelector('[data-ig="' + cssq(p.sport) + '"]');
+    if (!el) return;
+    el.classList.add("play-" + (PLAY[p.sport] || "key"),
+                     p.kind === "absent" ? "play-off" : "play-on");
+  }
+  /* A section name goes into a CSS selector, and "Vocals" is safe but
+     nothing guarantees the next instrument is. */
+  function cssq(v) { return String(v).replace(/["\\]/g, "\\$&"); }
 
   /* ---------- one delegated click handler ---------- */
   /* EVERYTHING YOU TOUCH SOUNDS.
@@ -1280,18 +1504,30 @@
      this screen and nothing else should compete with it. A filter
      chip plays its own instrument, which is the nicest of these: tap
      Violin and you hear one. */
-  var TAB_NOTE = { register: 60, dues: 64, money: 67, add: 69 };
+  /* Each control sounds like the thing it does, and the three tabs
+     each announce their own room. Nothing here is a generic beep. */
+  var TAB_SOUND = {
+    register: function () { pageTurn(); },                 /* a sheet turning over */
+    dues:     function () { bow(64, 0.55); },              /* the tuner, bowed */
+    money:    function () { woodThunk(0.7); },             /* the ledger stamp */
+    add:      function () { pluck(69, 0.5); }
+  };
   function clickTone(t) {
     if (!t.closest) return;
     var el;
-    if ((el = t.closest("[data-tab]")))  return tone(TAB_NOTE[el.getAttribute("data-tab")] || 62, 0.4);
-    if ((el = t.closest("[data-fi]")))   { var v = el.getAttribute("data-fi");
-                                           return tone(v ? inst(v).note : 60, 0.4); }
-    if (t.closest("[data-fb]"))          return tone(59, 0.35);
-    if (t.closest("[data-mode]"))        return tone(64, 0.32);
-    if (t.closest("[data-day],[data-mon]")) return tone(57, 0.28);
-    if (t.closest(".acts .paid"))        return tone(72, 0.5);
-    if (t.closest(".btn, .acts a"))      return tone(65, 0.35);
+    if ((el = t.closest("[data-tab]"))) {
+      var f = TAB_SOUND[el.getAttribute("data-tab")];
+      return f ? f() : pageTurn();
+    }
+    /* Circling a word on the sheet is a pencil act too — the ring is
+       drawn on screen, so it is drawn in the ear as well. */
+    if (t.closest("[data-fi],[data-fb],[data-clear]")) return pencilRing();
+    if (t.closest("[data-mode]"))           return pageTurn();
+    if (t.closest("[data-day],[data-mon]")) return stroke(0.09, 1500, 0.13, 0.62);
+    if (t.closest(".acts .paid"))           return intoTune(72, 42, 1);   /* flat, then true */
+    if (t.closest("#exSave"))               return woodThunk(0.9);
+    if (t.closest(".acts a"))               return bow(67, 0.5);          /* the ask goes out */
+    if (t.closest(".btn"))                  return pluck(65, 0.6);
   }
 
   document.addEventListener("click", function (e) {

@@ -31,38 +31,63 @@
    IDENTITY IS THE INSTRUMENT'S OWN HUE. Present and absent also keep
    a tick and a cross, so they never rely on colour alone.
    ============================================================ */
+/* ============================================================
+   ONE MATERIAL, NOT TWO
+
+   This app was a warm opaque PAPER sheet sitting on a cool
+   translucent GLASS shell, and no amount of hue-matching fixes that,
+   because they are not two colours that clash — they are two
+   materials with opposite premises:
+
+     glass  you look THROUGH it. Depth is blur and refraction.
+     paper  you look AT it. Depth is shadow and grain.
+
+   Holding both means every screen has to answer "through or at?" and
+   the answer changed per tab. That is why it read as broken rather
+   than as eclectic.
+
+   So: paper wins, everywhere. Not a preference — the three designs
+   that got chosen (the setlist, the tuner, the roll) are all ink on
+   cream, the subject matter is printed music, and glass is a system-
+   chrome idiom in an app that is 95% content.
+
+   THE PALETTE, and why each value is the value it is. Every ratio
+   below was measured, not judged.
+
+     room   #E8E0CF   the board a sheet is pinned to
+     sheet  #F9F4E7   the sheet. One step lighter, so it lifts
+     ink    #221F1A   14.95:1 on sheet
+     ink-2  #5A5348    6.91:1  — labels
+     ink-3  #736B5C    4.80:1  — was #8A8274 at 3.46, under AA. The
+                       muted tone carries counts and instrument names
+                       and it was the first thing to go
+     brand  #5B3FA8    7.03:1  — the logo violet, DARKENED for cream.
+                       It is now an accent, not the field. That is the
+                       whole colour fix: violet was doing a job (a
+                       ground) that violet is bad at next to cream
+     ok     #1D6B4A    5.88:1
+     no     #B23B2B    5.38:1
+     warn   #8F6317    4.82:1  — was #B8801F at 3.11
+   ============================================================ */
 :root {
-  --brand:   #B9A7FF;        /* lifted right up: it sits on violet now */
-  --brand-d: #4B3F72;
-  --brand-l: rgba(185,167,255,.20);
-  --gold:    #F0C784;
+  --brand:   #5B3FA8;
+  --brand-d: #3E2A76;
+  --brand-l: rgba(91,63,168,.10);
+  --gold:    #8F6317;
 
-  --ink:     #FBF8F4;
-  /* Lifted. These carry the dates, the counts and the instrument
-     names, and they were the first things to disappear. */
-  --ink-2:   #E7E0F2;
-  --ink-3:   #CCC2E0;
+  --ink:     #221F1A;
+  --ink-2:   #5A5348;
+  --ink-3:   #736B5C;
 
-  --line:    rgba(255,255,255,.20);
-  --bg:      #2A1E47;
-  /* TINTED DOWN, NOT UP.
-     This was a WHITE film, and that was the bug. A white tint lightens
-     whatever is behind it, so over a bright patch of the photograph
-     the card rose to meet the white text on it and the muted lines —
-     dates, counts, "5 payments" — washed out. It only ever looked
-     right because most of the picture behind it happens to be dark.
+  --line:    rgba(34,31,26,.14);
+  --rule:    #DCD2BB;
+  --bg:      #E8E0CF;
+  --card:    #F9F4E7;
+  --card-2:  #F3ECDA;
 
-     Dark-theme glass darkens. The card now always pulls the backdrop
-     AWAY from the type instead of toward it, so legibility no longer
-     depends on which part of a guitar is behind a given row. The
-     specular sheen on top is what still reads as glass; the tint
-     underneath is what makes it readable. */
-  --card:    rgba(20,10,42,.46);
-  --card-2:  rgba(16,8,36,.38);
-
-  --ok:      #5FD79A;  --ok-bg:   rgba(95,215,154,.20);
-  --no:      #FF8A83;  --no-bg:   rgba(255,138,131,.20);
-  --warn:    #F5C77A;  --warn-bg: rgba(245,199,122,.20);
+  --ok:      #1D6B4A;  --ok-bg:   rgba(29,107,74,.13);
+  --no:      #B23B2B;  --no-bg:   rgba(178,59,43,.13);
+  --warn:    #8F6317;  --warn-bg: rgba(143,99,23,.15);
   --tap:     52px;
 
   --lx: 34%;  --ly: 6%;
@@ -84,28 +109,23 @@ body {
    A liquid violet surface, fixed behind everything, drifting a little
    against the glass so the two sit at different depths. Everything
    above it is thin enough to see it through. */
+/* THE ROOM. A warm board with a paper grain, and the tab's instrument
+   as a faint watermark printed INTO it — multiply, not screen, because
+   on a light ground screen erases and multiply prints. */
 body::before {
   content: ""; position: fixed; inset: -6%; z-index: -2;
-  /* A scrim over the photograph, not instead of it. The detail has to
-     survive — a pane of glass over a smooth gradient has nothing to
-     bend, and the bezel only reads because there are strings and
-     frets and sheet music behind it to distort. The scrim just takes
-     it down far enough for white type to sit on. */
   background:
-    linear-gradient(rgba(26,12,50,.66), rgba(20,9,42,.74)),
-    url(../img/bg-instruments.jpg?v=20260820d) center / cover no-repeat,
+    radial-gradient(120% 80% at 50% 0%, rgba(255,252,244,.55), rgba(255,252,244,0) 60%),
+    repeating-linear-gradient(94deg, rgba(120,102,70,.030) 0 2px, rgba(120,102,70,0) 2px 4px),
     var(--bg);
   transform: translate3d(calc(var(--bgx) * .45), calc(var(--bgy) * .45), 0);
   transition: transform .6s cubic-bezier(.22,.7,.35,1);
 }
-/* The tab's instrument, over the violet. SCREEN, not multiply: on a
-   dark ground multiply would bury it, screen lets the paint glow
-   through as light. */
 body::after {
   content: ""; position: fixed; z-index: -1; pointer-events: none;
-  inset: 4vh 0 2vh 0;
+  inset: 6vh 0 8vh 0;
   background: var(--watermark, none) no-repeat center / contain;
-  opacity: .16; mix-blend-mode: screen;
+  opacity: .07; mix-blend-mode: multiply;
   transform: translate3d(var(--bgx), var(--bgy), 0);
   transition: transform .6s cubic-bezier(.22,.7,.35,1), opacity .5s ease;
 }
@@ -122,17 +142,16 @@ button { cursor: pointer; }
 /* ---------- header ---------- */
 /* The header keeps the card's own purple rather than the lifted one —
    it is a filled band, so it can be as deep as the card is. */
+/* The header is the one place the violet is allowed to be a field
+   rather than an accent — brand at the top, paper below. */
 .top {
-  background: linear-gradient(118deg, rgba(40,26,74,.72) 0%, rgba(76,48,124,.62) 55%, rgba(108,60,120,.58) 100%);
-  backdrop-filter: blur(24px) saturate(1.5); -webkit-backdrop-filter: blur(24px) saturate(1.5);
-  border-bottom: 1px solid rgba(255,255,255,.16);
+  background: linear-gradient(118deg, #3E2A76 0%, #5B3FA8 58%, #6E3F8C 100%);
+  border-bottom: 1px solid rgba(0,0,0,.14);
   color: #fff;
   padding: calc(14px + env(safe-area-inset-top)) 16px 14px;
   display: flex; align-items: center; gap: 12px;
+  box-shadow: 0 2px 14px rgba(40,24,80,.20);
 }
-/* The mark is a line drawing, not a tile: it sits directly on the purple
-   with no white plate behind it, and keeps the violin's own tall
-   proportion rather than being squeezed into a square. */
 .top img { height: 40px; width: auto; display: block; }
 .top .t { flex: 1; min-width: 0; }
 .top .t b { display: block; font-size: 17px; line-height: 1.2; }
@@ -146,93 +165,23 @@ button { cursor: pointer; }
 .wrap { max-width: 860px; margin: 0 auto; padding: 14px 12px 24px; }
 /* Glass, not paper. The room shows through just enough to say the app
    is sitting in it. */
+/* ---------- the sheet ----------
+   Opaque, warm, one hairline edge and a soft shadow that says it is
+   lying ON the board rather than floating in front of it. */
 .card {
-  background: var(--card); border: 1px solid var(--line);
-  /* Heavy blur is what buys the translucency. The instrument behind
-     the page reads as colour and shape through the card, but nothing
-     behind it has an edge sharp enough to compete with a name or a
-     number sitting on top. */
-  --sx: 34%; --sy: 0%;
-  /* A specular sheen, in this pane's own coordinates, following the
-     light. This is what makes it a surface rather than a tint. */
-  background-image:
-    radial-gradient(130% 95% at var(--sx) var(--sy),
-      /* .14, not .20: the hot centre of the sheen is the worst place
-         on the card for contrast, and at .20 it lifted the surface
-         under the faintest text to a measured 3.39 against it. */
-      rgba(255,255,255,.14) 0%, rgba(255,255,255,.04) 38%, rgba(255,255,255,0) 66%);
-  /* THE MIDDLE IS NEARLY CLEAR.
-     A pane of glass is not frosted all over — you can see straight
-     through the middle of one, and all its thickness shows at the
-     EDGE, where the light bends. A uniform 30px blur is a sheet of
-     tracing paper, which is what this looked like. So the body of the
-     card barely blurs at all, and the bezel below does the work. */
-  /* 7px, not 2.5: the reference sits over a smooth sky, this sits
-     over frets and sheet music, and a name has to win against that.
-     Still a quarter of what it was, so the bezel still reads. */
-  backdrop-filter: blur(7px) saturate(1.5);
-  -webkit-backdrop-filter: blur(7px) saturate(1.5);
-  border-radius: 22px; padding: 15px; margin-bottom: 12px;
-  border: 1px solid rgba(255,255,255,.55);
-  /* Three things at once: the shadow falls AWAY from the light, the
-     rim lights on the side facing it, and the far rim goes dark.
-     Together they are what a pane of glass does; separately each one
-     is a box-shadow. */
-  box-shadow:
-    var(--shx) var(--shy) 40px rgba(18,8,40,.36),
-    inset calc(var(--shx) * -0.14) 1.5px 0 rgba(255,255,255,.55),
-    inset calc(var(--shx) * 0.10) -1.5px 0 rgba(0,0,0,.18);
-  transition: box-shadow .5s cubic-bezier(.22,.7,.35,1);
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 14px; padding: 15px; margin-bottom: 12px;
+  box-shadow: 0 1px 0 rgba(255,255,255,.7) inset,
+              var(--shx) 4px 14px rgba(74,60,32,.10),
+              0 1px 2px rgba(74,60,32,.08);
 }
-
-/* WHERE THE BACKDROP CAN REALLY BE BENT, BEND IT.
-   With url() support the displacement filter does the refraction for
-   real and the faked bevel below is switched off — two bezels stacked
-   on each other read as a smudge. */
-.has-refraction .card {
-  /* Only ever set where it renders. Everywhere else the plain blur
-     above stands, untouched — never a filter list that a browser will
-     parse happily and then throw away whole. */
-  backdrop-filter: url(#mz-glass) blur(3px) saturate(1.5);
-}
-.has-refraction .card::before { display: none; }
-
-/* THE BEZEL — the refractive band around the rim.
-   Painted into a ring by masking the pseudo-element to its own
-   padding box, so ONLY the outer 15px is drawn. That ring carries a
-   heavy blur and a brightness lift of its own, which is what makes
-   the background appear to bend and pile up at the edge of the pane
-   the way it does through real glass.
-
-   HONEST LIMIT: this is a bevel, not refraction. Real liquid glass
-   displaces the pixels behind it, which on the web needs an SVG
-   feDisplacementMap fed into backdrop-filter — and Safari does not
-   support that. He is on an iPad, so a technique that only works in
-   Chrome would look right in my preview and wrong in his hand. This
-   is the closest thing that survives the journey. */
-.card::before {
-  content: ""; position: absolute; inset: 0; pointer-events: none;
-  border-radius: inherit; padding: 15px;
-  backdrop-filter: blur(13px) saturate(1.8) brightness(1.12);
-  -webkit-backdrop-filter: blur(13px) saturate(1.8) brightness(1.12);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-          mask-composite: exclude;
-}
-
-/* DISPERSION — the colour a real bezel splits out of white light.
-   A cool fringe on the side facing the light, a warm one opposite.
-   It is two inset shadows and it is most of what separates "glass"
-   from "translucent grey box". */
-.card::after {
-  content: ""; position: absolute; inset: 0; pointer-events: none;
-  border-radius: inherit;
-  box-shadow:
-    inset 1.5px 1.5px 0 rgba(150,220,255,.42),
-    inset -1.5px -1.5px 0 rgba(255,168,214,.34),
-    inset 0 0 22px rgba(255,255,255,.10);
-}
+/* The bezel, the dispersion rim and the feDisplacementMap refraction
+   are all GONE. They were the three things that made the card read as
+   glass, and glass is what we just stopped being. Nothing replaced
+   them: a sheet of paper needs a shadow and an edge, and that is all
+   it needs. */
 .muted { color: var(--ink-3); font-size: 14px; }
 .rowline { display: flex; align-items: center; gap: 10px; }
 
@@ -282,23 +231,19 @@ button { cursor: pointer; }
 
 .srow.key {
   position: relative;
-  /* A DARK tint, not a light one, and NO backdrop-filter of its own.
-     Nesting a backdrop-filter inside a card that already has one
-     composites very differently in WebKit than in Blink: on a real
-     iPad these keys came out near-white and the children's names —
-     white text — all but vanished. The card is the glass; a key is
-     just a tinted panel lying on it, and its own darkness is what
-     guarantees the name on top of it can be read on any engine. */
-  background: linear-gradient(180deg, rgba(48,29,88,.34), rgba(34,18,66,.24));
-  border: 1px solid rgba(255,255,255,.16);
+  /* A piano key is IVORY. It was only ever a dark violet tint because
+     it had to survive being read through glass — and once WebKit
+     composited a nested backdrop-filter differently, the names on it
+     nearly vanished on a real iPad. On paper the key can just be a
+     key: cream, with a lip along the bottom edge that collapses when
+     it goes down. */
+  background: linear-gradient(180deg, #FFFDF8, #F6F0E1);
+  border: 1px solid var(--rule);
+  border-bottom: 3px solid #D8CDB6;
   border-left: 4px solid var(--hue);
-  border-radius: 3px 14px 14px 3px;
-  margin-bottom: 7px; padding-left: 10px;
-  box-shadow:
-    calc(var(--shx) * .18) 2px 0 rgba(18,8,40,.24),
-    inset calc(var(--shx) * -.08) 1px 0 rgba(255,255,255,.42),
-    inset 1px 1px 0 rgba(150,220,255,.24),
-    inset -1px -1px 0 rgba(255,168,214,.20);
+  border-radius: 3px 12px 12px 3px;
+  margin-bottom: 6px; padding-left: 10px;
+  box-shadow: 0 1px 0 rgba(255,255,255,.9) inset, 0 2px 5px rgba(74,60,32,.09);
   /* Springy: a key that overshoots very slightly on the way back up
      feels sprung rather than animated. */
   transition: transform .16s cubic-bezier(.34,1.6,.52,1), box-shadow .16s ease, background .16s ease;
@@ -306,8 +251,9 @@ button { cursor: pointer; }
 /* A key goes down, and for a key lying on its side down is inward. */
 .srow.key.pressed {
   transform: translateX(5px);
-  box-shadow: 0 0 0 rgba(0,0,0,0), inset 0 1px 0 rgba(255,255,255,.22);
-  background: linear-gradient(180deg, rgba(30,17,58,.52), rgba(22,11,46,.40));
+  border-bottom-width: 1px;
+  box-shadow: inset 0 3px 6px rgba(80,64,38,.20);
+  background: linear-gradient(180deg, #EFE7D4, #E9E0CB);
 }
 /* The instrument's own mark, on its own key. */
 .ig { flex: 0 0 auto; width: 26px; height: 26px; margin-right: 10px; color: var(--hue); }
@@ -344,7 +290,7 @@ button { cursor: pointer; }
 .tick {
   position: relative; overflow: hidden;
   width: 46px; height: 46px; flex: 0 0 46px; border-radius: 50%;
-  border: 2px solid var(--hue, var(--line)); background: rgba(255,255,255,.13);
+  border: 2px solid var(--hue, var(--line)); background: #FFFDF6;
   font-size: 22px; line-height: 1; display: flex; align-items: center; justify-content: center;
   transition: background .12s, border-color .12s;
 }
@@ -415,21 +361,21 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
 .field span { display: block; font-size: 13.5px; color: var(--ink-2); margin-bottom: 5px; font-weight: 600; }
 .field input, .field select {
   width: 100%; min-height: var(--tap); border: 1px solid var(--line);
-  border-radius: 11px; padding: 0 13px; background: var(--card); font-size: 16px;
+  border-radius: 11px; padding: 0 13px; background: #FFFDF6; font-size: 16px;
 }
 .field input:focus, .field select:focus { outline: 2px solid var(--brand); border-color: var(--brand); }
 .btn {
   width: 100%; min-height: var(--tap); border: 0; border-radius: 12px;
   background: var(--brand); color: #fff; font-size: 16.5px; font-weight: 700;
 }
-.btn.ghost { background: rgba(255,255,255,.09); color: var(--brand); border: 1.5px solid rgba(185,167,255,.55); }
+.btn.ghost { background: #FFFDF6; color: var(--brand); border: 1.5px solid rgba(91,63,168,.38); }
 .btn:disabled { opacity: .5; }
 
 /* ---------- tabs: always there, never nested ---------- */
 .tabs {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-  display: flex; background: rgba(30,20,58,.62); backdrop-filter: blur(24px) saturate(1.5);
-  -webkit-backdrop-filter: blur(18px); border-top: 1px solid var(--line);
+  display: flex; background: #F3ECDA; border-top: 1px solid var(--rule);
+  box-shadow: 0 -2px 12px rgba(74,60,32,.10);
   padding-bottom: env(safe-area-inset-bottom);
 }
 .tabs button {
@@ -471,7 +417,7 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
   content: ""; position: absolute; inset: 5px; border-radius: 50%;
   border: 1.5px dashed var(--hue, var(--line)); opacity: .38;
 }
-.tick.present::before, .tick.absent::before { border-color: rgba(255,255,255,.55); opacity: .5; }
+.tick.present::before, .tick.absent::before { border-color: rgba(255,255,255,.72); opacity: .55; }
 
 /* One day / Whole month are two piano keys. The chosen one is pressed:
    it sits 1px lower and loses its shadow, the way a key does. */
@@ -500,7 +446,7 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
   flex: 0 0 auto; height: 40px; padding: 0 16px;
   border-radius: 46% 46% 44% 44% / 30% 30% 70% 70%;
   border: 1.5px solid var(--line);
-  background: rgba(255,255,255,.10); color: var(--ink-2);
+  background: #FFFDF6; color: var(--ink-2);
   font-size: 14px; font-weight: 600; white-space: nowrap;
   transition: background .16s, color .16s, border-color .16s;
 }
@@ -512,16 +458,11 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
 }
 .fsep { flex: 0 0 auto; width: 1px; height: 22px; background: var(--line); margin: 0 3px; }
 
-/* Text on glass needs a floor.
-   The whole point of this material is that a bright streak in the
-   background can pass behind a name — so every piece of type that
-   matters gets a shadow dark enough to hold it against the worst
-   case, and light enough to be invisible against the usual one. This
-   is what buys the transparency; without it the card would have to be
-   opaque and there would be nothing to see through. */
-.srow .nm b, .due .hd b, .due .hd em, .fig b, .card h3,
-.daybar .d b, .rowline b, .tot { text-shadow: 0 1px 3px rgba(16,6,38,.55); }
-.srow .nm span, .muted, .daybar .d span, .due .sub { text-shadow: 0 1px 2px rgba(16,6,38,.45); }
+/* Text on glass needed a floor. GONE. Every piece of type used to carry a dark halo so it could
+   survive a bright streak of photograph passing behind it. On an
+   opaque sheet there is nothing passing behind anything, and the
+   halo stops being invisible and starts being a smudge under every
+   heading. Type on paper is just ink. */
 
 /* The name is the way into a student, so it has to look pressable —
    a chevron and nothing else. No new control on the row: the name was
@@ -551,7 +492,7 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
 /* A recorded payment can be taken back. Quiet, because it is rare. */
 .undo {
   flex: 0 0 auto; min-height: 40px; padding: 0 14px; border-radius: 100px;
-  border: 1px solid var(--line); background: rgba(255,255,255,.08);
+  border: 1px solid var(--rule); background: #FFFDF6;
   color: var(--ink-2); font-size: 13.5px; font-weight: 600;
 }
 .srow.voided { opacity: .5; }
@@ -565,13 +506,9 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
   position: fixed; inset: 0; z-index: 60;
   display: flex; align-items: flex-end; justify-content: center;
   padding: 16px calc(16px) calc(84px + env(safe-area-inset-bottom));
-  /* Deepened from .55. The attendance tab now puts a bright cream
-     sheet behind this veil, and at .55 the setlist read straight
-     through the card — every label on it fighting a handwritten name.
-     The photograph was always dark, so nothing had tested it against
-     a light surface. */
-  background: rgba(10,4,26,.76);
-  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  /* On a light app the veil is a dimmed room, not a smoked pane. */
+  background: rgba(46,36,20,.44);
+  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
   animation: veilin .22s ease;
 }
 .sheet > .card {
@@ -786,20 +723,20 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
 /* two strips of tape, because a setlist lives taped to something */
 .sheetwrap .tape {
   position: absolute; top: 2px; width: 74px; height: 21px; z-index: 2;
-  background: rgba(255,252,240,.30);
-  border-left: 1px solid rgba(255,255,255,.22);
-  border-right: 1px solid rgba(255,255,255,.22);
-  box-shadow: 0 1px 4px rgba(10,4,26,.45);
+  background: rgba(214,198,160,.42);
+  border-left: 1px solid rgba(255,255,255,.5);
+  border-right: 1px solid rgba(255,255,255,.5);
+  box-shadow: 0 1px 3px rgba(74,60,32,.22);
 }
 .sheetwrap .tape.l { left: 20px; transform: rotate(-6deg); }
 .sheetwrap .tape.r { right: 20px; transform: rotate(5deg); }
 
 .setlist {
-  --paper: #F7F1E1; --pink: #22201C; --pencil: #7C7568;
+  --paper: #FFFCF2; --pink: #22201C; --pencil: #7C7568;
   --marker: #1D6B4A; --drop: #B23B2B; --pline: #DED3B8;
   background: var(--paper); color: var(--pink);
   transform: rotate(-.35deg);
-  box-shadow: 0 10px 30px rgba(12,4,32,.45), 0 2px 6px rgba(12,4,32,.35);
+  box-shadow: 0 6px 18px rgba(74,60,32,.16), 0 1px 3px rgba(74,60,32,.14);
   padding: 20px 18px 24px;
   background-image: repeating-linear-gradient(180deg, transparent 0 33px, rgba(180,165,130,.13) 33px 34px);
 }
@@ -851,7 +788,9 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
 
 /* ── one line of the set is one child ───────────────────────────── */
 .sl-set { margin-top: 15px; }
-.sl-hd { display: flex; align-items: baseline; gap: 9px; margin-bottom: 1px; }
+/* align-items:center, not baseline — an icon has no baseline, so on
+   baseline it floated above the word it belongs to. */
+.sl-hd { display: flex; align-items: center; gap: 8px; margin-bottom: 1px; }
 .sl-hd b { font: 700 23px/1 var(--hand); color: var(--hue, var(--pink)); }
 .sl-hd i { font-style: normal; font: 600 16px/1 var(--hand); color: var(--pencil); }
 .sl-hd em { font-style: normal; margin-left: auto; font: 600 16px/1 var(--hand); color: var(--marker); }
@@ -909,3 +848,88 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
   text-underline-offset: 4px; cursor: pointer;
 }
 .sl-note { font: 600 19px/1.4 var(--hand); color: var(--pencil); padding: 16px 2px 6px; }
+
+/* ============================================================
+   THE SECTION PLAYS ITSELF
+
+   Each instrument's mark makes the gesture that instrument makes, for
+   about 450ms, over a few pixels. The rules are:
+
+     · ONE at a time — only the section he just touched
+     · nothing moves on a re-render, only on a mark
+     · no colour change, no scale-up, no glow. The motion IS the
+       feedback; adding a second channel makes it a notification
+     · prefers-reduced-motion turns all of it off and nothing else
+       changes, because none of it carries information the marks and
+       the counts do not already carry
+
+   Each keyframe is damped — the second swing is smaller than the
+   first — because an undamped oscillation is a wobble and a damped
+   one is a struck object coming to rest.
+   ============================================================ */
+.sl-hd .ig { flex: 0 0 auto; width: 25px; height: 25px; color: var(--hue); }
+.sl-hd .ig svg { width: 25px; height: 25px; display: block; fill: none; stroke: currentColor;
+  stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
+  transform-origin: 50% 62%; }
+
+/* a struck head: down hard, up, down less, rest */
+@keyframes ig-drum {
+  0%   { transform: translateY(0) }
+  14%  { transform: translateY(3.2px) scaleY(.90) }
+  34%  { transform: translateY(-1.6px) scaleY(1.04) }
+  56%  { transform: translateY(1.4px) scaleY(.97) }
+  78%  { transform: translateY(-.5px) }
+  100% { transform: none }
+}
+/* a key: straight down, and it does not bounce, because a key does not */
+@keyframes ig-key {
+  0%   { transform: translateY(0) }
+  22%  { transform: translateY(2.6px) }
+  62%  { transform: translateY(2.2px) }
+  100% { transform: none }
+}
+/* a plucked string: sideways, damped */
+@keyframes ig-string {
+  0%   { transform: skewX(0deg) }
+  16%  { transform: skewX(-5deg) }
+  38%  { transform: skewX(3.4deg) }
+  58%  { transform: skewX(-2deg) }
+  78%  { transform: skewX(1deg) }
+  100% { transform: none }
+}
+/* a breath */
+@keyframes ig-voice {
+  0%   { transform: scale(1) }
+  30%  { transform: scale(1.13) }
+  100% { transform: scale(1) }
+}
+/* air moving down the tube */
+@keyframes ig-wind {
+  0%   { transform: translateX(0) }
+  30%  { transform: translateX(2.4px) }
+  60%  { transform: translateX(-1.2px) }
+  100% { transform: none }
+}
+.ig.play-drum   svg { animation: ig-drum   .52s cubic-bezier(.24,.8,.36,1); }
+.ig.play-key    svg { animation: ig-key    .40s cubic-bezier(.3,.9,.4,1); }
+.ig.play-string svg { animation: ig-string .58s cubic-bezier(.24,.8,.36,1); }
+.ig.play-voice  svg { animation: ig-voice  .46s cubic-bezier(.3,1.4,.5,1); }
+.ig.play-wind   svg { animation: ig-wind   .48s cubic-bezier(.3,.9,.4,1); }
+/* struck off, not played: the same gesture, half the travel and grey,
+   so "away" never reads as a small celebration */
+.ig.play-off svg { animation-duration: .34s; opacity: .55; }
+
+/* On entering the tab the sections arrive in order, like a score being
+   read down the page. Once only — .fresh is cleared after one render,
+   so marking twenty children does not replay it twenty times. */
+.fresh .sl-set { animation: setin .34s cubic-bezier(.22,.7,.35,1) backwards; }
+.fresh .sl-set:nth-of-type(2) { animation-delay: .05s }
+.fresh .sl-set:nth-of-type(3) { animation-delay: .10s }
+.fresh .sl-set:nth-of-type(4) { animation-delay: .15s }
+.fresh .sl-set:nth-of-type(5) { animation-delay: .20s }
+.fresh .sl-set:nth-of-type(n+6) { animation-delay: .25s }
+@keyframes setin { from { opacity: 0; transform: translateY(9px) } to { opacity: 1; transform: none } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ig svg, .fresh .sl-set { animation: none !important; }
+}
