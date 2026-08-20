@@ -460,6 +460,22 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
       "it sent a phone it had never read: " + JSON.stringify(mem[0].body));
   });
 
+  /* The other half of that guard: a number he TYPES must still be
+     saved, even though the read never came back. Otherwise a student
+     whose record has no phone could never be given one. */
+  await check("a phone he types is saved even if the read failed", async () => {
+    signIn(); fetchLog.length = 0; nextBody = {};
+    api.S.who = { enrollment: 7, member: 3, name: "Deepak", sport: "Drums",
+                  batch: 1, phone: "", loaded: false, asked: true, confirmStop: false };
+    byId("whName").value  = "Deepak";
+    byId("whPhone").value = "98000 12345";
+    onClick({ target: { closest: (s) => (s === "#whSave" ? {} : null) } });
+    await tick(); await tick(); await tick();
+    const mem = calls("/members").filter((c) => c.method === "PATCH");
+    assert(mem[0].body.phone === "9800012345",
+      "a typed number was dropped: " + JSON.stringify(mem[0].body));
+  });
+
   await check("a payment can be taken back through void_payment", async () => {
     signIn(); fetchLog.length = 0; nextBody = {};
     onClick({ target: { closest: (s) => (s === "[data-void]"

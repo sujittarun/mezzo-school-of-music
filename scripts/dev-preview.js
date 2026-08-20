@@ -73,6 +73,11 @@ const fixtures = {
     { id: 2, category: "General", detail: "Electricity",    amount: 2400, mode: "UPI",  on_date: T },
     { id: 3, category: "General", detail: "Piano tuning",   amount: 1800, mode: "Cash", on_date: T }
   ],
+  members: STUDENTS.map((s, i) => ({
+    id: i + 1, name: s[0], phone: "90000001" + (10 + i),
+    parent_name: "Parent " + s[0], parent_phone: "90000001" + (10 + i),
+    enrollments: [{ id: i + 1, sport: s[1], batch_id: 1, status: "active" }]
+  })),
   centres: [{ id: 1, code: "main", name: "Thadagam Road", short_name: "Main", sort: 1 }],
   batches: [{ id: 1, code: "weekday", name: "Mon–Fri 3–8pm", days: [1,2,3,4,5],
               start_time: "15:00", end_time: "20:00", sort: 1 },
@@ -110,6 +115,7 @@ window.fetch = function (url) {
   else if (url.indexOf("reminder_queue") > -1) body = FIX.dues;
   else if (url.indexOf("/payments") > -1)     body = FIX.payments;
   else if (url.indexOf("/expenses") > -1)     body = FIX.expenses;
+  else if (url.indexOf("/members") > -1)      body = FIX.members;
   else if (url.indexOf("/centres") > -1)      body = FIX.centres;
   else if (url.indexOf("/batches") > -1)      body = FIX.batches;
   else if (url.indexOf("/sports") > -1)       body = FIX.sports;

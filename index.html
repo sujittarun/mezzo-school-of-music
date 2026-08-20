@@ -964,7 +964,7 @@
         '<input id="whName" value="' + esc(w.name) + '" /></label>' +
       '<label class="field"><span>Parent\u2019s phone</span>' +
         '<input id="whPhone" type="tel" inputmode="numeric"' +
-        (w.loaded ? ' placeholder="10 digits"' : ' disabled placeholder="Loading\u2026"') +
+        (w.asked ? ' placeholder="10 digits"' : ' disabled placeholder="Loading\u2026"') +
         ' value="' + esc(w.phone || "") + '" /></label>' +
       '<label class="field"><span>Instrument</span><select id="whIns">' +
         ins.map(function (i) {
@@ -1014,11 +1014,19 @@
     /* And the phone number is not in the register's data at all. */
     if (want.member) {
       MZ.student(want.member).then(function (m) {
-        if (S.who !== want || !m) return;
-        S.who.phone = m.phone || m.parent_phone || "";
-        S.who.loaded = true;
+        if (S.who !== want) return;
+        S.who.phone  = (m && (m.phone || m.parent_phone)) || "";
+        S.who.loaded = !!m;
+        /* Even when the read came back with nothing, unlock the box —
+           a field stuck on "Loading…" for ever is worse than one he
+           can type into, and saveWho() still refuses to send an empty
+           one it never read. */
+        S.who.asked  = true;
         render();
-      }).catch(function () { /* leave it locked rather than blank-and-writable */ });
+      }).catch(function () {
+        if (S.who !== want) return;
+        S.who.asked = true; render();
+      });
     }
     render();
   }
@@ -1032,9 +1040,12 @@
     /* undefined, not "", when the number has not loaded: editStudent
        skips a field it is not given, and writing an empty box over a
        real number would silently cut that family off from reminders. */
-    var phone = w.loaded
-      ? ((document.getElementById("whPhone") || {}).value || "").replace(/\D/g, "")
-      : undefined;
+    /* Send it if we read it (so a deliberate clear works), or if he
+       typed one (so a missing number can be added). Never send an
+       empty box we never read — that is the case that wipes a real
+       number and takes the family's reminders with it. */
+    var typed = ((document.getElementById("whPhone") || {}).value || "").replace(/\D/g, "");
+    var phone = (w.loaded || typed) ? typed : undefined;
     MZ.editStudent(w.member, { name: name, phone: phone })
       .then(function () {
         return MZ.moveEnrollment(w.enrollment, {
