@@ -1,0 +1,199 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The Tuner — Mezzo</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+ --paper:#FAF6EE; --ink:#1B1712; --dim:#8C8375; --rule:#D9D0BF;
+ --green:#2E6B44; --amber:#C98A2E; --red:#A63A2A;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--paper);color:var(--ink);font:16px/1.45 Inter,sans-serif;
+ padding-bottom:104px;-webkit-font-smoothing:antialiased;user-select:none}
+header{padding:20px 20px 2px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+h1{font:600 27px/1 "Cormorant Garamond",serif}
+.mv{font:italic 400 16px/1 "Cormorant Garamond",serif;color:var(--dim)}
+.cnt{margin-left:auto;font:600 11px/1 Inter;letter-spacing:.16em;text-transform:uppercase;color:var(--red)}
+.hint{padding:4px 20px 14px;color:var(--dim);font:500 13px/1.4 Inter}
+
+.sect{padding:6px 20px 2px;font:600 10px/1 Inter;letter-spacing:.18em;
+ text-transform:uppercase;color:var(--dim);margin-top:10px}
+
+/* ── one row is one tuner ───────────────────────────────────────── */
+.row{display:flex;align-items:center;gap:12px;padding:11px 20px;min-height:64px;
+ border-bottom:1px solid var(--rule);position:relative}
+.row:active{background:rgba(0,0,0,.035)}
+.note{width:38px;height:38px;flex:none;border:1.6px solid currentColor;border-radius:50%;
+ display:flex;align-items:center;justify-content:center;
+ font:600 17px/1 "Cormorant Garamond",serif}
+.who{flex:none;width:96px}
+.who b{display:block;font:600 15px/1.2 Inter}
+.who span{display:block;font:500 11px/1.3 Inter;color:var(--dim)}
+
+/* the meter: ticks, a centre gate, and a needle */
+.meter{flex:1;height:40px;position:relative;min-width:90px}
+.ticks{position:absolute;inset:0}
+.tk{position:absolute;top:12px;width:1px;height:9px;background:var(--rule)}
+.tk.mid{top:6px;height:21px;width:1.6px;background:var(--rule)}
+.gate{position:absolute;left:50%;top:4px;width:26px;height:25px;margin-left:-13px;
+ border:1.4px solid var(--rule);border-radius:4px}
+.ndl{position:absolute;top:2px;width:2.4px;height:29px;margin-left:-1.2px;border-radius:2px;
+ transition:left .62s cubic-bezier(.22,1.4,.36,1),background .4s}
+.cents{position:absolute;left:0;right:0;bottom:-1px;text-align:center;
+ font:600 9px/1 Inter;letter-spacing:.1em;color:var(--dim)}
+.amt{flex:none;width:74px;text-align:right}
+.amt b{display:block;font:600 15px/1.2 Inter;font-variant-numeric:tabular-nums}
+.amt span{display:block;font:500 11px/1.3 Inter;color:var(--dim)}
+
+/* out of tune wavers, very slightly. In tune is perfectly still —
+   which is what makes stillness read as "settled" at a glance. */
+@keyframes waver{0%,100%{transform:translateX(-1.4px)}50%{transform:translateX(1.4px)}}
+.ndl.off{animation:waver 1.1s ease-in-out infinite}
+
+.done .who b,.done .amt b{color:var(--dim)}
+.done .note{color:var(--green)}
+
+/* ── the collect sheet ──────────────────────────────────────────── */
+.scrim{position:fixed;inset:0;background:rgba(20,16,10,.42);opacity:0;pointer-events:none;
+ transition:opacity .22s;z-index:8}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:9;background:var(--paper);
+ border-top:1.6px solid var(--rule);border-radius:18px 18px 0 0;padding:20px 20px 30px;
+ transform:translateY(102%);transition:transform .3s cubic-bezier(.3,1,.4,1);
+ padding-bottom:calc(30px + env(safe-area-inset-bottom))}
+.sheet.on{transform:none}
+.sheet h2{font:600 23px/1.15 "Cormorant Garamond",serif;margin-bottom:2px}
+.sheet p{color:var(--dim);font:500 13px/1.4 Inter;margin-bottom:16px}
+.big{font:600 34px/1 "Cormorant Garamond",serif;margin:6px 0 18px;font-variant-numeric:tabular-nums}
+.btn{display:block;width:100%;border:0;border-radius:12px;background:var(--green);color:#fff;
+ font:600 15px/1 Inter;letter-spacing:.03em;padding:17px 0;margin-bottom:9px}
+.btn.ghost{background:none;color:var(--dim);border:1.4px solid var(--rule)}
+
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--paper);
+ border-top:1.4px solid var(--rule);padding-bottom:env(safe-area-inset-bottom);z-index:5}
+.tabs a{flex:1;text-align:center;padding:15px 0 17px;text-decoration:none;color:var(--dim);
+ font:600 11px/1 Inter;letter-spacing:.18em;text-transform:uppercase}
+.tabs a.on{color:var(--red)}
+</style></head><body>
+
+<header><h1>Mezzo</h1><span class="mv">Dues</span><span class="cnt" id="c"></span></header>
+<div class="hint">Tap a name to hear where they sit · collect, and the note comes into tune</div>
+<div id="list"></div>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet">
+  <h2 id="sName"></h2><p id="sSub"></p>
+  <div class="big" id="sAmt"></div>
+  <button class="btn" id="sOk">Mark paid</button>
+  <button class="btn ghost" id="sNo">Not now</button>
+</div>
+
+<nav class="tabs"><a href="#">Register</a><a class="on" href="#">Dues</a><a href="#">Money</a></nav>
+
+<script src="data.js"></script>
+<script>
+addEventListener('DOMContentLoaded',function(){ if(!window.MZDEMO){document.body.innerHTML=
+ '<div style="padding:34px;font:16px/1.6 system-ui;color:#A63A2A"><b>This prototype could not load its data.</b><br>data.js did not load — a missing file, not a broken design.</div>';}});
+</script>
+<script>
+var D=window.MZDEMO;
+
+/* Each instrument sounds its own open string / home note. The letter in
+   the ring is the note you are tuning, exactly as a tuner shows it. */
+var NOTE={ Piano:{n:'C',m:60}, Keyboard:{n:'E',m:64}, Guitar:{n:'E',m:52},
+           Violin:{n:'A',m:69}, Ukulele:{n:'G',m:67}, Vocals:{n:'A',m:57},
+           Drums:{n:'D',m:50} };
+
+var AC=null;
+function ctx(){ try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} return AC; }
+/* A flat student sounds FLAT. That is the whole idea: the pitch you hear
+   is the size of the problem, before you have read a single number. */
+function ring(midi,centsFlat,glide){
+ var a=ctx(); if(!a) return;
+ var f=function(c){ return 440*Math.pow(2,(midi-69)/12)*Math.pow(2,c/1200); };
+ var o=a.createOscillator(), g=a.createGain();
+ o.type='triangle'; o.frequency.setValueAtTime(f(-centsFlat),a.currentTime);
+ if(glide) o.frequency.exponentialRampToValueAtTime(f(0),a.currentTime+.55);
+ g.gain.setValueAtTime(.0001,a.currentTime);
+ g.gain.exponentialRampToValueAtTime(.16,a.currentTime+.02);
+ g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+(glide?1.05:.7));
+ o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime+1.15);
+}
+
+/* days late → how far off the needle sits, capped so that a month late
+   and three months late do not look the same. */
+function offOf(s){ return s.late<=0?0:Math.min(1,Math.pow(s.late/26,.72)); }
+function hue(off){ return off<.12?'var(--green)':off<.5?'var(--amber)':'var(--red)'; }
+
+function rupee(n){ return '₹'+n.toLocaleString('en-IN'); }
+
+function draw(){
+ var owed=D.students.filter(function(s){return s.due>0});
+ owed.sort(function(a,b){ return b.late-a.late; });
+ var settled=D.students.filter(function(s){return s.due===0});
+ var total=owed.reduce(function(t,s){return t+s.due},0);
+ document.getElementById('c').textContent =
+   owed.length ? owed.length+' out of tune · '+rupee(total) : 'the whole school is in tune';
+
+ var h='';
+ if(owed.length) h+='<div class="sect">Flat — '+owed.length+'</div>'+owed.map(rowHTML).join('');
+ h+='<div class="sect">In tune — '+settled.length+'</div>'+settled.map(rowHTML).join('');
+ document.getElementById('list').innerHTML=h;
+}
+
+function rowHTML(s){
+ var i=D.students.indexOf(s), off=offOf(s), col=hue(off);
+ /* left of centre is flat. 50% is dead centre; 7% is as flat as it draws. */
+ var left=(50-off*43).toFixed(1)+'%';
+ var ticks=''; for(var t=0;t<11;t++)
+   ticks+='<i class="tk'+(t===5?' mid':'')+'" style="left:'+(t*10)+'%"></i>';
+ return '<div class="row'+(s.due?'':' done')+'" data-i="'+i+'">'+
+   '<div class="note" style="color:'+col+'">'+NOTE[s.inst].n+'</div>'+
+   '<div class="who"><b>'+s.name+'</b><span>'+s.inst+'</span></div>'+
+   '<div class="meter"><div class="ticks">'+ticks+'<div class="gate"></div></div>'+
+     '<div class="ndl'+(off>.12?' off':'')+'" style="left:'+left+';background:'+col+'"></div>'+
+     '<div class="cents">'+(s.late>0?s.late+(s.late>1?' days':' day')+' flat':'true')+'</div></div>'+
+   '<div class="amt"><b>'+(s.due?rupee(s.due):'—')+'</b><span>'+
+     (s.months?s.months+(s.months>1?' months':' month'):'settled')+'</span></div>'+
+ '</div>';
+}
+
+/* ── interaction. pointerdown, because iOS will not fire click here ── */
+var cur=null;
+document.getElementById('list').addEventListener('pointerdown',function(e){
+ var r=e.target.closest('[data-i]'); if(!r) return;
+ var s=D.students[+r.dataset.i];
+ ring(NOTE[s.inst].m, offOf(s)*46, false);      /* hear how flat they are */
+ if(!s.due) return;                              /* settled: just the note */
+ cur=s;
+ document.getElementById('sName').textContent=s.name;
+ document.getElementById('sSub').textContent=s.inst+' · '+s.months+
+   (s.months>1?' months':' month')+' behind · '+s.late+(s.late>1?' days':' day')+' flat';
+ document.getElementById('sAmt').textContent=rupee(s.due);
+ document.getElementById('sheet').classList.add('on');
+ document.getElementById('scrim').classList.add('on');
+});
+function close(){ document.getElementById('sheet').classList.remove('on');
+ document.getElementById('scrim').classList.remove('on'); }
+document.getElementById('sNo').addEventListener('pointerdown',close);
+document.getElementById('scrim').addEventListener('pointerdown',close);
+document.getElementById('sOk').addEventListener('pointerdown',function(){
+ if(!cur) return;
+ var s=cur, was=offOf(s)*46;
+ /* Move the needle FIRST and let it glide into the gate, so the change
+    is something you watch happen rather than a list that has re-sorted. */
+ var row=document.querySelector('[data-i="'+D.students.indexOf(s)+'"]');
+ if(row){ var n=row.querySelector('.ndl');
+   n.classList.remove('off'); n.style.left='50%'; n.style.background='var(--green)';
+   row.querySelector('.note').style.color='var(--green)';
+   row.querySelector('.cents').textContent='true';
+ }
+ ring(NOTE[s.inst].m, was, true);                /* flat, gliding into tune */
+ s.due=0; s.months=0; s.late=0;
+ close();
+ setTimeout(draw,700);
+});
+
+draw();
+</script></body></html>

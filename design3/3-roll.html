@@ -1,0 +1,186 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The Roll — Mezzo</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+ --paper:#FAF6EE; --roll:#F2E8D5; --ink:#1B1712; --dim:#8C8375; --rule:#D9D0BF;
+ --green:#2E6B44; --amber:#C98A2E; --red:#A63A2A; --hole:#241E16;
+ --cw:36px; --rh:42px; --lw:104px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--paper);color:var(--ink);font:16px/1.45 Inter,sans-serif;
+ padding-bottom:100px;-webkit-font-smoothing:antialiased;user-select:none}
+header{padding:20px 20px 2px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+h1{font:600 27px/1 "Cormorant Garamond",serif}
+.mv{font:italic 400 16px/1 "Cormorant Garamond",serif;color:var(--dim)}
+.cnt{margin-left:auto;font:600 11px/1 Inter;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.hint{padding:4px 20px 12px;color:var(--dim);font:500 13px/1.4 Inter}
+
+/* ── the roll itself ────────────────────────────────────────────── */
+.wrap{position:relative;margin:0 0 8px}
+.scroll{overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch}
+.roll{display:inline-block;min-width:100%;background:var(--roll);
+ border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);
+ box-shadow:inset 0 6px 12px -8px rgba(60,42,16,.35),inset 0 -6px 12px -8px rgba(60,42,16,.35)}
+
+/* the tractor-feed perforations that make it a ROLL and not a table */
+.perf{height:13px;display:flex;align-items:center;gap:0;padding-left:var(--lw);
+ border-bottom:1px solid rgba(160,140,105,.28)}
+.perf.b{border-bottom:0;border-top:1px solid rgba(160,140,105,.28)}
+.perf i{width:var(--cw);flex:none;display:block;text-align:center}
+.perf i::before{content:"";display:inline-block;width:4px;height:4px;border-radius:50%;
+ background:var(--paper);box-shadow:inset 0 1px 1px rgba(60,42,16,.5)}
+
+.hd{display:flex;padding-left:var(--lw);height:26px;align-items:center}
+.hd i{width:var(--cw);flex:none;text-align:center;font:600 9px/1.15 Inter;color:var(--dim);
+ font-style:normal}
+.hd i b{display:block;font:600 10px/1.15 Inter;color:var(--ink)}
+.hd i.shut{opacity:.32}
+
+.grp{display:flex;height:24px;align-items:center;
+ background:rgba(160,140,105,.09)}
+/* The label has to be sticky, not the band. The roll opens scrolled to
+   today, so a label at padding-left:14px starts life off-screen. */
+.grp span{position:sticky;left:14px;padding-right:14px;
+ font:600 9px/1 Inter;letter-spacing:.17em;text-transform:uppercase;color:var(--dim)}
+
+.tr{display:flex;height:var(--rh);align-items:center;position:relative}
+.nm{width:var(--lw);flex:none;padding-left:14px;position:sticky;left:0;z-index:2;
+ background:linear-gradient(90deg,var(--roll) 84%,rgba(242,232,213,0));height:100%;
+ display:flex;flex-direction:column;justify-content:center}
+.nm b{font:600 13px/1.15 Inter}
+.nm span{font:500 9.5px/1.2 Inter;color:var(--dim)}
+.cell{width:var(--cw);flex:none;height:100%;display:flex;align-items:center;justify-content:center}
+.cell.today{background:rgba(201,138,46,.13)}
+.hd i.today b{color:var(--amber)}
+.cell.shut{background:repeating-linear-gradient(-45deg,transparent 0 4px,rgba(160,140,105,.13) 4px 8px)}
+
+/* a hole is PUNCHED — it shows the page under the roll, with the
+   shadow of a cut edge. That is the whole illusion. */
+.pn{width:15px;height:20px;border-radius:8px;background:var(--hole);
+ box-shadow:inset 0 2px 2px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.5);
+ transition:transform .16s cubic-bezier(.3,1.6,.5,1)}
+.cell:active .pn{transform:scale(.82)}
+.ab{width:15px;height:20px;display:flex;align-items:center;justify-content:center}
+.ab::before{content:"";width:14px;height:2.4px;background:var(--red);
+ border-radius:2px;transform:rotate(-32deg)}
+.bl{width:15px;height:20px;border-radius:8px;border:1.2px dashed rgba(160,140,105,.5)}
+
+/* today's column, and the edge of what has happened */
+.now{position:absolute;top:0;bottom:0;width:2px;background:var(--amber);opacity:.85;z-index:3;
+ pointer-events:none}
+
+.rate{width:64px;flex:none;padding-left:8px;position:sticky;right:0;z-index:2;
+ background:linear-gradient(270deg,var(--roll) 76%,rgba(242,232,213,0));height:100%;
+ display:flex;flex-direction:column;justify-content:center}
+.rate b{font:600 12px/1.15 Inter;font-variant-numeric:tabular-nums}
+.rate .bar{height:3px;border-radius:2px;background:rgba(160,140,105,.32);margin-top:3px;width:40px}
+.rate .bar i{display:block;height:100%;border-radius:2px;background:var(--green)}
+
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--paper);
+ border-top:1.4px solid var(--rule);padding-bottom:env(safe-area-inset-bottom);z-index:5}
+.tabs a{flex:1;text-align:center;padding:15px 0 17px;text-decoration:none;color:var(--dim);
+ font:600 11px/1 Inter;letter-spacing:.18em;text-transform:uppercase}
+.tabs a.on{color:var(--red)}
+</style></head><body>
+
+<header><h1>Mezzo</h1><span class="mv">August</span><span class="cnt" id="c"></span></header>
+<div class="hint">The month as a piano roll · tap to punch present, again for absent, again to clear</div>
+
+<div class="wrap"><div class="scroll" id="sc"><div class="roll" id="roll"></div></div></div>
+
+<nav class="tabs"><a class="on" href="#">Register</a><a href="#">Dues</a><a href="#">Money</a></nav>
+
+<script src="data.js"></script>
+<script>
+addEventListener('DOMContentLoaded',function(){ if(!window.MZDEMO){document.body.innerHTML=
+ '<div style="padding:34px;font:16px/1.6 system-ui;color:#A63A2A"><b>This prototype could not load its data.</b><br>data.js did not load — a missing file, not a broken design.</div>';}});
+</script>
+<script>
+var D=window.MZDEMO, TODAY=20;
+var ORDER=["Vocals","Violin","Ukulele","Guitar","Keyboard","Piano","Drums"];
+var NOTE={ Piano:60, Keyboard:64, Guitar:52, Violin:69, Ukulele:67, Vocals:57, Drums:50 };
+var DAYS=D.days.filter(function(x){return x.d<=TODAY});
+
+var AC=null;
+function ctx(){ try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} return AC; }
+/* Punching a hole sounds the note. A pianola roll is not a spreadsheet —
+   the hole IS the note, so the register plays as you fill it in. */
+function pluck(midi,up){
+ var a=ctx(); if(!a) return;
+ var o=a.createOscillator(), g=a.createGain();
+ o.type='triangle'; o.frequency.value=440*Math.pow(2,((up?midi:midi-5)-69)/12);
+ g.gain.setValueAtTime(.0001,a.currentTime);
+ g.gain.exponentialRampToValueAtTime(.13,a.currentTime+.008);
+ g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+.42);
+ o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime+.5);
+}
+
+function rateOf(s){
+ var p=0,t=0; DAYS.forEach(function(dy){ var m=s.month[dy.d];
+  if(m==='present'){p++;t++} else if(m==='absent'){t++} });
+ return t?Math.round(p/t*100):0;
+}
+
+function draw(){
+ var perf=''; DAYS.forEach(function(){ perf+='<i></i>'; });
+ var hd=''; DAYS.forEach(function(dy){
+  hd+='<i class="'+(dy.open?'':'shut')+(dy.d===TODAY?' today':'')+'"><b>'+dy.d+'</b>'+dy.w+'</i>'; });
+
+ var body='';
+ ORDER.forEach(function(inst){
+  var mine=D.students.filter(function(s){return s.inst===inst});
+  if(!mine.length) return;
+  body+='<div class="grp"><span>'+inst+'</span></div>';
+  mine.forEach(function(s){
+   var i=D.students.indexOf(s), r=rateOf(s);
+   body+='<div class="tr"><div class="nm"><b>'+s.name+'</b><span>'+r+'% in</span></div>';
+   DAYS.forEach(function(dy){
+    if(!dy.open){ body+='<div class="cell shut"></div>'; return; }
+    var m=s.month[dy.d];
+    body+='<div class="cell'+(dy.d===TODAY?' today':'')+'" data-i="'+i+'" data-d="'+dy.d+'">'+
+      (m==='present'?'<span class="pn"></span>':m==='absent'?'<span class="ab"></span>':'<span class="bl"></span>')+
+      '</div>';
+   });
+   body+='<div class="rate"><b>'+r+'%</b><div class="bar"><i style="width:'+r+'%"></i></div></div></div>';
+  });
+ });
+
+ document.getElementById('roll').innerHTML=
+   '<div class="perf">'+perf+'</div>'+
+   '<div class="hd">'+hd+'</div>'+
+   body+
+   '<div class="perf b">'+perf+'</div>';
+
+ var tot=0,pres=0;
+ D.students.forEach(function(s){ DAYS.forEach(function(dy){ var m=s.month[dy.d];
+  if(m==='present'){pres++;tot++} else if(m==='absent'){tot++} }); });
+ document.getElementById('c').textContent = tot?Math.round(pres/tot*100)+'% attendance · '+D.students.length+' students':'';
+}
+
+/* punch: blank → present → absent → blank. null is a real state that
+   CLEARS the mark; it is not "unset present". */
+document.getElementById('roll').addEventListener('pointerdown',function(e){
+ var c=e.target.closest('[data-d]'); if(!c) return;
+ var s=D.students[+c.dataset.i], d=+c.dataset.d, m=s.month[d];
+ var next = m==null ? 'present' : m==='present' ? 'absent' : null;
+ s.month[d]=next;
+ c.innerHTML = next==='present'?'<span class="pn"></span>':
+               next==='absent' ?'<span class="ab"></span>':'<span class="bl"></span>';
+ pluck(NOTE[s.inst], next==='present');
+ /* only the touched row's rate and the header change */
+ var tr=c.closest('.tr'), r=rateOf(s);
+ tr.querySelector('.nm span').textContent=r+'% in';
+ tr.querySelector('.rate b').textContent=r+'%';
+ tr.querySelector('.rate .bar i').style.width=r+'%';
+ var tot=0,pres=0; D.students.forEach(function(x){ DAYS.forEach(function(dy){ var mm=x.month[dy.d];
+   if(mm==='present'){pres++;tot++} else if(mm==='absent'){tot++} }); });
+ document.getElementById('c').textContent=Math.round(pres/tot*100)+'% attendance · '+D.students.length+' students';
+});
+
+draw();
+/* open on today, not on the 1st — the day you are marking is the point */
+var sc=document.getElementById('sc'); sc.scrollLeft=sc.scrollWidth;
+</script></body></html>

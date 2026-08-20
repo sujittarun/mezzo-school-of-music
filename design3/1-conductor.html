@@ -1,0 +1,174 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Conductor's Score — Mezzo</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   THE CONDUCTOR'S SCORE — the Score, fixed for eighty children.
+
+   The first version gave every four children a fresh stave, so
+   eighty children meant twenty identical systems and nothing to
+   navigate by. This is how a real orchestral score is laid out
+   instead: ONE STAVE PER INSTRUMENT, braced, named down the left.
+
+   Three things fall out of that, and all three were problems:
+
+     · it stops growing. Eight instruments is eight staves whether
+       he teaches twenty children or two hundred;
+     · you find a child by going to their instrument, which is how
+       he already thinks of them;
+     · position along the stave is no longer decoration — it is
+       the TIME they come, so the score doubles as the afternoon's
+       timetable and the bar he is in is the hour it is now.
+
+   And the gesture is the conductor's: sweep a finger along a
+   stave to bring that whole section in at once.
+   ============================================================ */
+:root{--paper:#FBF8F1;--ink:#16130E;--rule:#16130E;--red:#A63A2A;--green:#2E6B44;
+      --dim:#8C8474;--now:#C98A2E}
+*{box-sizing:border-box;margin:0;padding:0;touch-action:manipulation}
+body{background:var(--paper);color:var(--ink);font:16px/1.45 Inter,sans-serif;padding-bottom:96px;
+ -webkit-font-smoothing:antialiased;user-select:none}
+header{padding:20px 20px 4px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+h1{font:600 27px/1 "Cormorant Garamond",serif}
+.mv{font:italic 400 16px/1 "Cormorant Garamond",serif;color:var(--dim);white-space:nowrap}
+.cnt{margin-left:auto;font:600 11px/1 Inter;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
+.hint{padding:4px 20px 10px;color:var(--dim);font:500 13px/1.4 Inter}
+svg{width:100%;height:auto;display:block}
+.ln{stroke:var(--rule);stroke-width:1;opacity:.7}
+.bar{stroke:var(--rule);stroke-width:1.3;opacity:.55}
+.brace{stroke:var(--rule);stroke-width:2.2;fill:none}
+.inst{font:600 11px/1 Inter;letter-spacing:.1em;text-transform:uppercase;fill:var(--ink)}
+.sec{font:500 9px/1 Inter;fill:var(--dim)}
+.hr{font:500 9px/1 Inter;fill:var(--dim);text-anchor:middle}
+.nm{font:500 9.6px/1 Inter;fill:var(--ink);text-anchor:middle}
+.nowline{stroke:var(--now);stroke-width:1.6;opacity:.85}
+.sweep{fill:var(--green);opacity:.10}
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--paper);
+ border-top:1.4px solid var(--rule);padding-bottom:env(safe-area-inset-bottom)}
+.tabs a{flex:1;text-align:center;padding:15px 0 17px;text-decoration:none;color:var(--dim);
+ font:600 11px/1 Inter;letter-spacing:.18em;text-transform:uppercase}
+.tabs a.on{color:var(--red)}
+</style></head><body>
+<header><h1>Mezzo</h1><span class="mv" id="d"></span><span class="cnt" id="c"></span></header>
+<div class="hint">Tap a note to mark · sweep along a stave to bring the whole section in</div>
+<div id="score"></div>
+<nav class="tabs"><a class="on" href="#">Register</a><a href="#">Dues</a><a href="#">Money</a></nav>
+<script src="data.js"></script>
+<script>
+addEventListener('DOMContentLoaded',function(){ if(!window.MZDEMO){document.body.innerHTML=
+ '<div style="padding:34px;font:16px/1.6 system-ui;color:#A63A2A"><b>This prototype could not load its data.</b><br>data.js did not load — a missing file, not a broken design.</div>';}});
+</script>
+<script>
+var D=window.MZDEMO, NOW=5.6;
+var ORDER=["Vocals","Violin","Ukulele","Guitar","Keyboard","Piano","Drums"];
+var GAP=5, SH=GAP*8, ROW=SH+56, LEFT=112, RIGHT=14, TOP=26;
+document.getElementById('d').textContent=D.day;
+
+function xAt(t,W){ return LEFT + (t-3)/5 * (W-LEFT-RIGHT); }
+function count(){
+ var p=D.students.filter(function(s){return s.mark==='present'}).length;
+ document.getElementById('c').textContent=p+' of '+D.students.length+' present';
+}
+function draw(){
+ var W=Math.max(340,document.body.clientWidth-8);
+ var H=TOP+ORDER.length*ROW+8;
+ var s='<svg viewBox="0 0 '+W+' '+H+'">';
+ /* the brace that binds the whole score together */
+ s+='<path class="brace" d="M'+(LEFT-100)+' '+TOP+' q-9 '+(ORDER.length*ROW/2)+' 0 '+(ORDER.length*ROW)+'"/>';
+ /* the hour ruler across the top */
+ for(var h=3;h<=8;h++){ var hx=xAt(h,W);
+  s+='<text class="hr" x="'+hx+'" y="'+(TOP-10)+'">'+h+(h===8?' pm':'')+'</text>'; }
+ ORDER.forEach(function(inst,r){
+  var y0=TOP+r*ROW, mid=y0+SH/2;
+  for(var l=0;l<5;l++) s+='<line class="ln" x1="'+LEFT+'" y1="'+(y0+l*GAP*2)+'" x2="'+(W-RIGHT)+'" y2="'+(y0+l*GAP*2)+'"/>';
+  /* a barline on every hour: the score is also the timetable */
+  for(var h=3;h<=8;h++){ var bx=xAt(h,W);
+   s+='<line class="bar" x1="'+bx+'" y1="'+y0+'" x2="'+bx+'" y2="'+(y0+SH)+'"/>'; }
+  var mine=D.students.filter(function(s2){return s2.inst===inst});
+  var inCnt=mine.filter(function(s2){return s2.mark==='present'}).length;
+  /* The label needs its own column. At LEFT-44 the longer names —
+     KEYBOARD, UKULELE — ran straight over the stave lines. */
+  s+='<text class="inst" x="'+(LEFT-14)+'" y="'+(mid-1)+'" text-anchor="end">'+inst+'</text>';
+  s+='<text class="sec" x="'+(LEFT-14)+'" y="'+(mid+12)+'" text-anchor="end">'+inCnt+'/'+mine.length+' in</text>';
+  /* the whole stave is a sweep target */
+  s+='<rect class="sw" data-inst="'+inst+'" x="'+LEFT+'" y="'+(y0-6)+'" width="'+(W-LEFT-RIGHT)+
+     '" height="'+(SH+12)+'" fill="transparent"/>';
+  /* TWO CHILDREN AT THE SAME HOUR MUST NOT SHARE A PIXEL.
+     Without this the noteheads sit on top of each other and the
+     names run together — "GowriSanjay" — which is worse than a
+     plain list, not better. They fan out around their slot. */
+  var slots={};
+  mine.forEach(function(s2){ (slots[s2.at]=slots[s2.at]||[]).push(s2); });
+  /* Place every child first, THEN pack the labels. Staggering on the
+     slot index was wrong: Karthi at 3.0 and Bharath at 3.3 are each
+     alone in their slot, so both took baseline 0 and read as
+     "KarthiBharath". Only the x positions know who is adjacent. */
+  var placed=mine.map(function(st){
+   var grp=slots[st.at], k=grp.indexOf(st), n=grp.length;
+   return { st:st, cx:xAt(st.at,W)+(k-(n-1)/2)*22 };
+  }).sort(function(a,b){ return a.cx-b.cx; });
+  /* Two baselines, filled greedily left to right: a name goes on the
+     upper one unless it would touch the last name already there. */
+  var endOf=[-1e9,-1e9];
+  placed.forEach(function(pl){
+   var half=pl.st.name.length*2.75+5;          /* .nm is 9.6px/char ~5.5 wide */
+   var row = (pl.cx-half > endOf[0]) ? 0 : 1;
+   endOf[row]=pl.cx+half; pl.row=row;
+  });
+  placed.forEach(function(pl){
+   var st=pl.st;
+   var i=D.students.indexOf(st), cx=pl.cx, cy=mid;
+   var f=st.mark==='present'?'#2E6B44':st.mark==='absent'?'none':'none';
+   /* NOT 'k' — that is the fan-out index three lines up, and
+      shadowing it made every name's y NaN, which SVG draws at 0. */
+   var ink=st.mark==='present'?'#2E6B44':st.mark==='absent'?'#A63A2A':'#B6AE9E';
+   if(st.mark==='absent'){
+    s+='<g class="hd" data-i="'+i+'"><path transform="translate('+(cx-4.4)+','+(cy-10)+') scale(.5)" fill="#A63A2A" d="M7 0c4 6 9 10 9 16 0 5-5 9-9 13 6 3 11 7 11 13 0 7-6 11-11 16 3-2 5-5 5-8 0-6-7-8-13-8-5 0-9 3-9 8 0 8 8 14 14 20-5-5-11-11-11-18 0-6 5-10 10-14-5-4-10-8-10-14 0-6 5-10 10-14-3 2-4 4-4 7 0 5 6 7 11 7 4 0 8-2 8-6 0-7-7-12-11-18z"/>';
+   } else {
+    s+='<g class="hd" data-i="'+i+'"><ellipse cx="'+cx+'" cy="'+cy+'" rx="6.6" ry="4.9" transform="rotate(-18 '+cx+' '+cy+')" fill="'+f+'" stroke="'+ink+'" stroke-width="1.7"/>'+
+       '<line x1="'+(cx+6.3)+'" y1="'+(cy-1.6)+'" x2="'+(cx+6.3)+'" y2="'+(cy-27)+'" stroke="'+ink+'" stroke-width="1.5"/>';
+   }
+   /* Fanning the NOTES apart is not enough — a name is four times
+      wider than a notehead, so two of them still ran together into
+      "GowriSanjay". The packer above gave this one its baseline. */
+   var ny = y0+SH+15 + pl.row*13;
+   s+='<text class="nm" x="'+cx+'" y="'+ny+'">'+st.name+'</text>';
+   s+='<circle cx="'+cx+'" cy="'+cy+'" r="21" fill="transparent"/></g>';
+  });
+ });
+ /* where we are in the afternoon */
+ var nx=xAt(NOW,W);
+ s+='<line class="nowline" x1="'+nx+'" y1="'+(TOP-4)+'" x2="'+nx+'" y2="'+(TOP+ORDER.length*ROW-30)+'"/>';
+ s+='<text class="hr" x="'+nx+'" y="'+(TOP+ORDER.length*ROW-16)+'" style="fill:#C98A2E;font-weight:700">NOW</text>';
+ document.getElementById('score').innerHTML=s+'</svg>';
+ count();
+}
+/* tap one note */
+document.addEventListener('pointerdown',function(e){
+ var g=e.target.closest&&e.target.closest('.hd'); if(!g) return;
+ e.preventDefault();
+ var i=+g.getAttribute('data-i'), m=D.students[i].mark;
+ D.students[i].mark = m==='present'?'absent':m==='absent'?null:'present';
+ draw();
+});
+/* THE CONDUCTOR'S SWEEP — one gesture brings a whole section in.
+   Marking a piano class of fourteen is one movement of the hand
+   rather than fourteen taps, which is the difference between a
+   register he keeps and one he stops keeping. */
+var sweeping=null, sx=0;
+document.addEventListener('pointerdown',function(e){
+ var r=e.target.closest&&e.target.closest('.sw'); if(!r) return;
+ if(e.target.closest('.hd')) return;
+ sweeping=r.getAttribute('data-inst'); sx=e.clientX;
+});
+document.addEventListener('pointerup',function(e){
+ if(!sweeping) return;
+ if(Math.abs(e.clientX-sx)>60){
+  D.students.forEach(function(s){ if(s.inst===sweeping) s.mark='present'; });
+  draw();
+ }
+ sweeping=null;
+});
+addEventListener('resize',draw); draw();
+</script></body></html>
