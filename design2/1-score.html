@@ -46,7 +46,25 @@ svg{width:100%;height:auto;display:block;touch-action:manipulation}
 <span><b style="background:#B03A2B"></b>Away</span>
 <span><b style="border:1.5px solid #8B8578"></b>Not marked</span></div>
 <nav class="tabs"><a class="on" href="#">Register</a><a href="#">Dues</a><a href="#">Money</a></nav>
-<script src="_data.js"></script><script>
+<script src="data.js"></script>
+<script>
+/* IF THE DATA IS MISSING, SAY SO.
+   This page shipped blank for a day because data.js was named
+   _data.js, and GitHub Pages runs Jekyll, which silently drops every
+   file whose name begins with an underscore. The script 404'd, the
+   render threw, and the page showed NOTHING — no error, no clue.
+   A blank screen is the worst possible failure: it looks like a
+   design that does not work rather than a file that is not there. */
+addEventListener('DOMContentLoaded', function () {
+  if (window.MZDEMO) return;
+  document.body.innerHTML =
+    '<div style="padding:34px;font:16px/1.6 system-ui,sans-serif;color:#B4472F">' +
+    '<b style="font-size:20px">This prototype could not load its data.</b><br><br>' +
+    'data.js did not load, so there is nothing to draw. This is a missing file, ' +
+    'not a broken design.</div>';
+});
+</script>
+<script>
 var D=window.MZDEMO, PER=4, GAP=6, TOP=42, H=176;
 /* each instrument sings at its own pitch, low to high */
 var PITCH={Drums:-7,Piano:-5,Keyboard:-3,Guitar:-1,Violin:1,Ukulele:3,Vocals:5};
