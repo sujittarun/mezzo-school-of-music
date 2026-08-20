@@ -25,7 +25,7 @@ h1{font:800 21px/1 Inter;letter-spacing:-.02em}
 .day{font:600 14px/1 Inter;color:var(--dim)}
 .here{margin-left:auto;font:800 15px/1 Inter}
 .plan{padding:6px 14px 0}
-svg{width:100%;height:auto;display:block}
+svg{width:100%;height:auto;display:block;touch-action:manipulation}
 .station{fill:#fff;stroke:#DCD3C6;stroke-width:2}
 .label{font:600 8.5px/1 Inter;letter-spacing:.14em;fill:var(--dim);text-anchor:middle}
 .kid{cursor:pointer}
@@ -74,7 +74,12 @@ function draw(){
      st.name.slice(0,3)+'</text><circle cx="'+cx+'" cy="'+cy+'" r="26" fill="transparent"/></g>';});
  document.getElementById('plan').innerHTML=s+'</svg>';
 }
-document.addEventListener('click',function(e){
+/* POINTERDOWN, NOT CLICK.
+   iOS Safari does not reliably raise a click from a tap on an SVG
+   element — which is every target in this prototype. On a desktop it
+   worked and on the iPad nothing happened at all, which is exactly
+   the report. pointerdown fires on both, and it fires sooner. */
+document.addEventListener('pointerdown',function(e){
  var g=e.target.closest&&e.target.closest('.kid'); if(!g)return;
  var i=+g.getAttribute('data-i'), m=D.students[i].mark;
  D.students[i].mark=m==='present'?'absent':m==='absent'?null:'present'; draw();});

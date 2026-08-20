@@ -97,7 +97,12 @@ function draw(){
   return s+'</svg>';
  }).join('');
 }
-document.addEventListener('click',function(e){
+/* POINTERDOWN, NOT CLICK.
+   iOS Safari does not reliably raise a click from a tap on an SVG
+   element — which is every target in this prototype. On a desktop it
+   worked and on the iPad nothing happened at all, which is exactly
+   the report. pointerdown fires on both, and it fires sooner. */
+document.addEventListener('pointerdown',function(e){
  var g=e.target.closest&&e.target.closest('.hd'); if(!g) return;
  var i=+g.getAttribute('data-i'), m=D.students[i].mark;
  D.students[i].mark = m==='present'?'absent':m==='absent'?null:'present';

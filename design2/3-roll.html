@@ -37,7 +37,7 @@ tbody tr{height:44px}
 tbody tr:nth-child(odd) td{background:rgba(255,255,255,.017)}
 td{width:26px;min-width:26px;border-right:1px solid rgba(255,255,255,.045);padding:0}
 td.sun{background:rgba(255,255,255,.05)!important}
-.cell{display:block;height:26px;margin:9px 3px;border-radius:4px;cursor:pointer}
+.cell{display:block;height:26px;margin:9px 3px;border-radius:4px;cursor:pointer;touch-action:manipulation}
 .cell.p{box-shadow:inset 0 0 0 1px rgba(255,255,255,.16)}
 .cell.a{background:repeating-linear-gradient(45deg,#E5484D 0 3px,#7C2427 3px 6px)}
 .cell.n{background:rgba(255,255,255,.055)}
@@ -74,11 +74,36 @@ var body='<tbody>'+D.students.map(function(s,r){
  var n=G[r].filter(function(v){return v==='p'}).length;
  var cells=G[r].map(function(v,k){
   if(v==='x') return '<td class="sun"></td>';
-  var st=v==='p'?'<span class="cell p" style="background:'+hue+'"></span>'
-       :v==='a'?'<span class="cell a"></span>':'<span class="cell n"></span>';
+  var at=' data-r="'+r+'" data-d="'+k+'"';
+  var st=v==='p'?'<span class="cell p"'+at+' style="background:'+hue+'"></span>'
+       :v==='a'?'<span class="cell a"'+at+'></span>':'<span class="cell n"'+at+'></span>';
   return '<td>'+st+'</td>';}).join('');
  return '<tr><th class="key"><span class="n">'+s.name+'</span>'+
         '<span class="i" style="color:'+hue+'">'+s.inst+' · '+n+' days</span></th>'+cells+
         '</tr>';}).join('')+'</tbody>';
 t.innerHTML=head+body;
+
+/* THE CELLS ARE THE POINT, AND THEY WERE DEAD.
+   This prototype shipped with no listener on it at all — you could
+   look at the pattern and not touch it, which is not a register.
+
+   The cell is mutated IN PLACE rather than redrawing the table: a
+   redraw would throw away the horizontal scroll position, and on a
+   31-day month that means being thrown back to the 1st every time
+   he marks somebody. */
+var CYCLE={p:'a', a:'n', n:'p'};
+function paint(el,v,hue){
+ el.className='cell '+v;
+ el.style.background = v==='p' ? hue : (v==='n' ? 'rgba(255,255,255,.055)' : '');
+}
+t.addEventListener('pointerdown',function(e){
+ var el=e.target.closest && e.target.closest('.cell'); if(!el) return;
+ var r=+el.getAttribute('data-r'), d=+el.getAttribute('data-d');
+ var hue=HUE[D.students[r].inst]||'#888';
+ var v=CYCLE[G[r][d]]||'p'; G[r][d]=v;
+ paint(el,v,hue);
+ var n=G[r].filter(function(x){return x==='p'}).length;
+ var lbl=t.querySelectorAll('tbody .i')[r];
+ if(lbl) lbl.textContent=D.students[r].inst+' \u00b7 '+n+' days';
+});
 </script></body></html>
