@@ -734,6 +734,10 @@
 
   /* ---------- render ---------- */
   function render() {
+    /* Which instrument is painted behind the page. The stylesheet keys
+       off this; nothing else reads it. */
+    document.body.setAttribute("data-tab", S.tab);
+    document.body.classList.toggle("signed-out", !MZ.signedIn());
     if (!MZ.signedIn()) return gate();
     drawTabs();
     var sub = S.tab === "register" ? "Attendance register"

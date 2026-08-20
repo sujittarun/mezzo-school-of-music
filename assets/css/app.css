@@ -43,8 +43,12 @@
 
   --line:    rgba(75,63,114,.13);
   --bg:      #FAF6F0;
-  --card:    rgba(255,255,255,.84);
-  --card-2:  rgba(255,255,255,.62);
+  /* Translucent enough that the instrument painted behind the page
+     reads THROUGH the cards. The backdrop-filter blurs what is behind
+     without touching the text on top, so this costs no legibility —
+     the numbers stay on flat white as far as the eye is concerned. */
+  --card:    rgba(255,255,255,.60);
+  --card-2:  rgba(255,255,255,.50);
 
   --ok:      #1B8A55;  --ok-bg:   #E4F5EC;
   --no:      #C0392F;  --no-bg:   #FCEAE7;
@@ -77,11 +81,30 @@ body::before {
     radial-gradient(60% 46% at 6% 97%,   rgba(226,101,170,.22) 0%, rgba(226,101,170,0) 62%),
     var(--bg);
 }
+/* THE PAGE IS AN INSTRUMENT.
+   Each tab is watermarked with a watercolour of one — the piano
+   behind the register, the violin behind the dues, the drums behind
+   the money — painted on white paper and composited with multiply,
+   so the paper vanishes into the parchment and only the paint stays.
+   It sits low and to the right where the lists never reach, at a
+   sixth of its strength: he should notice it on the third day, not
+   the first, and never while reading a number. */
 body::after {
-  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-  background: url(../img/bg.jpg) center / cover no-repeat;
-  opacity: .10; mix-blend-mode: multiply;
+  content: ""; position: fixed; z-index: -1; pointer-events: none;
+  inset: 4vh 0 2vh 0;
+  background: var(--watermark, none) no-repeat center / contain;
+  /* Full strength, because the artwork itself was lightened rather
+     than the layer being faded — fading a watercolour turns it grey,
+     lightening it keeps the hue. */
+  opacity: 1; mix-blend-mode: multiply;
+  transition: opacity .5s ease;
 }
+body[data-tab="register"] { --watermark: url(../img/w-piano.jpg?v=20260820b); }
+body[data-tab="dues"]     { --watermark: url(../img/w-violin.jpg?v=20260820b); }
+body[data-tab="money"]    { --watermark: url(../img/w-drum.jpg?v=20260820b); }
+body[data-tab="add"]      { --watermark: url(../img/w-violin.jpg?v=20260820b); }
+/* The sign-in has its own picture already. */
+body.signed-out::after { display: none; }
 h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 button, input, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
@@ -113,7 +136,12 @@ button { cursor: pointer; }
    is sitting in it. */
 .card {
   background: var(--card); border: 1px solid var(--line);
-  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  /* Heavy blur is what buys the translucency. The instrument behind
+     the page reads as colour and shape through the card, but nothing
+     behind it has an edge sharp enough to compete with a name or a
+     number sitting on top. */
+  backdrop-filter: blur(18px) saturate(1.45);
+  -webkit-backdrop-filter: blur(18px) saturate(1.45);
   border-radius: 16px; padding: 15px; margin-bottom: 12px;
   box-shadow: 0 8px 26px rgba(75,63,114,.10);
 }
@@ -257,6 +285,48 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
 .tabs button.on { color: var(--brand); }
 .tabs button.on .ic svg { stroke-width: 1.8; }
 
+/* ============================================================
+   THE SHAPES
+
+   Every one of these is a real piece of an instrument, used where its
+   geometry already fits the job — not stamped on a control because
+   the app is about music. A guitar-shaped button is a bad button;
+   a plectrum is a small rounded triangle and a filter chip is already
+   a small rounded triangle's worth of space, so that one is free.
+
+     tick        a drum head, with the tension ring inside the rim
+     filter chip a plectrum
+     day toggle  two piano keys, one of them pressed
+     card        an f-hole, watermarked into the corner
+   ============================================================ */
+
+/* A card is the body of an instrument, so it gets the hole the sound
+   comes out of. Ten per cent opacity: texture, not decoration. */
+.card { position: relative; overflow: hidden; }
+.card::after {
+  content: ""; position: absolute; top: -14px; right: 14px;
+  width: 46px; height: 124px; pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%27210%20462%2092%20248%27%3E%3Cpath%20d%3D%27M272%20477c16%200%2024%2015%2016%2027-8%2016-20%2036-22%2066-2%2030-14%2050-22%2070-8%2016-4%2028%206%2032%2016%206%2018%2022%204%2026-18%204-32-8-30-24%202-18%2014-34%2020-54%206-24%2014-42%2014-64%200-22-12-36-18-48-8-14%2010-34%2032-31z%27%20fill%3D%27%25234B3F72%27%2F%3E%3C%2Fsvg%3E") no-repeat center / contain;
+  opacity: .07; transform: rotate(-8deg);
+}
+
+/* The tick is a drum head: the rim is the hoop, the dashed ring inside
+   it is the tension rods. */
+.tick::before {
+  content: ""; position: absolute; inset: 5px; border-radius: 50%;
+  border: 1.5px dashed var(--hue, var(--line)); opacity: .38;
+}
+.tick.present::before, .tick.absent::before { border-color: rgba(255,255,255,.55); opacity: .5; }
+
+/* One day / Whole month are two piano keys. The chosen one is pressed:
+   it sits 1px lower and loses its shadow, the way a key does. */
+.sub-toggle button {
+  border-radius: 4px 4px 9px 9px;
+  box-shadow: 0 3px 0 rgba(75,63,114,.16);
+  transition: transform .1s, box-shadow .1s, background .16s, color .16s;
+}
+.sub-toggle button.on { transform: translateY(2px); box-shadow: 0 1px 0 rgba(75,63,114,.18); }
+
 /* ---------- the filter row ----------
    Subtle by construction: one line, no panel, no modal, no label. It
    scrolls sideways rather than wrapping, so it is always exactly one
@@ -268,9 +338,13 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
   padding-bottom: 2px; scrollbar-width: none;
 }
 .frow::-webkit-scrollbar { display: none; }
+/* A plectrum: wide and round across the top, tapering to a soft point
+   underneath. At this size it is the one instrument shape that costs
+   a control nothing. */
 .chip {
-  flex: 0 0 auto; height: 40px; padding: 0 15px;
-  border-radius: 100px; border: 1.5px solid var(--line);
+  flex: 0 0 auto; height: 40px; padding: 0 16px;
+  border-radius: 46% 46% 44% 44% / 30% 30% 70% 70%;
+  border: 1.5px solid var(--line);
   background: rgba(255,255,255,.72); color: var(--ink-2);
   font-size: 14px; font-weight: 600; white-space: nowrap;
   transition: background .16s, color .16s, border-color .16s;
