@@ -32,34 +32,29 @@
    a tick and a cross, so they never rely on colour alone.
    ============================================================ */
 :root {
-  --brand:   #5A4A93;
-  --brand-d: #3B3160;
-  --brand-l: #EFEAFB;
-  --gold:    #C08A2E;
+  --brand:   #B9A7FF;        /* lifted right up: it sits on violet now */
+  --brand-d: #4B3F72;
+  --brand-l: rgba(185,167,255,.20);
+  --gold:    #F0C784;
 
-  --ink:     #241F35;
-  --ink-2:   #5C5570;
-  --ink-3:   #8B8399;
+  --ink:     #FBF8F4;
+  --ink-2:   #D8CFE6;
+  --ink-3:   #A99CC4;
 
-  --line:    rgba(75,63,114,.13);
-  --bg:      #FAF6F0;
-  /* Translucent enough that the instrument painted behind the page
-     reads THROUGH the cards. The backdrop-filter blurs what is behind
-     without touching the text on top, so this costs no legibility —
-     the numbers stay on flat white as far as the eye is concerned. */
-  /* LIQUID GLASS. Thin enough that the instrument painted behind the
-     page is genuinely visible through it — which on a phone, where a
-     card covers the whole screen, is the only way it is visible at
-     all. What keeps the text readable is not opacity, it is the blur
-     and the saturation lift: everything behind goes soft and bright,
-     so a name sits on a wash with no edges in it to compete with. */
-  --card:    rgba(255,255,255,.30);
-  --card-2:  rgba(255,255,255,.22);
+  --line:    rgba(255,255,255,.20);
+  --bg:      #2A1E47;
+  /* Thin. The whole point is to see the violet through it. */
+  --card:    rgba(255,255,255,.11);
+  --card-2:  rgba(255,255,255,.07);
 
-  --ok:      #1B8A55;  --ok-bg:   #E4F5EC;
-  --no:      #C0392F;  --no-bg:   #FCEAE7;
-  --warn:    #96601A;  --warn-bg: #FBF0DC;
+  --ok:      #5FD79A;  --ok-bg:   rgba(95,215,154,.20);
+  --no:      #FF8A83;  --no-bg:   rgba(255,138,131,.20);
+  --warn:    #F5C77A;  --warn-bg: rgba(245,199,122,.20);
   --tap:     52px;
+
+  --lx: 34%;  --ly: 6%;
+  --shx: 0px; --shy: 12px;
+  --bgx: 0px; --bgy: 0px;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; padding: 0; }
@@ -72,45 +67,33 @@ body {
 /* The room, behind everything. A fixed pseudo-element rather than
    background-attachment: fixed, which iOS Safari has never handled
    without tearing — and this is an iPad app first. */
-/* THE LIGHT IN THE ROOM.
-   Four washes in the instruments' own colours, bled into the corners
-   where nothing is ever read, plus the photograph of a violin's
-   interior at a tenth of its strength for grain. It is colour and it
-   is a background image, and neither of them ever sits under a number
-   he has to read. */
+/* THE BACKGROUND IS THE VIOLET.
+   A liquid violet surface, fixed behind everything, drifting a little
+   against the glass so the two sit at different depths. Everything
+   above it is thin enough to see it through. */
 body::before {
-  content: ""; position: fixed; inset: 0; z-index: -2;
-  background:
-    radial-gradient(62% 46% at 10% 6%,   rgba(124,106,224,.26) 0%, rgba(124,106,224,0) 62%),
-    radial-gradient(58% 42% at 92% 3%,   rgba(214,150,58,.30)  0%, rgba(214,150,58,0)  62%),
-    radial-gradient(66% 52% at 86% 94%,  rgba(31,178,178,.24)  0%, rgba(31,178,178,0)  64%),
-    radial-gradient(60% 46% at 6% 97%,   rgba(226,101,170,.22) 0%, rgba(226,101,170,0) 62%),
-    var(--bg);
+  content: ""; position: fixed; inset: -6%; z-index: -2;
+  background: url(../img/bg-violet.jpg?v=20260820c) center / cover no-repeat, var(--bg);
+  transform: translate3d(calc(var(--bgx) * .45), calc(var(--bgy) * .45), 0);
+  transition: transform .6s cubic-bezier(.22,.7,.35,1);
 }
-/* THE PAGE IS AN INSTRUMENT.
-   Each tab is watermarked with a watercolour of one — the piano
-   behind the register, the violin behind the dues, the drums behind
-   the money — painted on white paper and composited with multiply,
-   so the paper vanishes into the parchment and only the paint stays.
-   It sits low and to the right where the lists never reach, at a
-   sixth of its strength: he should notice it on the third day, not
-   the first, and never while reading a number. */
+/* The tab's instrument, over the violet. SCREEN, not multiply: on a
+   dark ground multiply would bury it, screen lets the paint glow
+   through as light. */
 body::after {
   content: ""; position: fixed; z-index: -1; pointer-events: none;
   inset: 4vh 0 2vh 0;
   background: var(--watermark, none) no-repeat center / contain;
-  /* Full strength, because the artwork itself was lightened rather
-     than the layer being faded — fading a watercolour turns it grey,
-     lightening it keeps the hue. */
-  opacity: 1; mix-blend-mode: multiply;
-  transition: opacity .5s ease;
+  opacity: .16; mix-blend-mode: screen;
+  transform: translate3d(var(--bgx), var(--bgy), 0);
+  transition: transform .6s cubic-bezier(.22,.7,.35,1), opacity .5s ease;
 }
 body[data-room="register"] { --watermark: url(../img/w-piano.jpg?v=20260820b); }
 body[data-room="dues"]     { --watermark: url(../img/w-violin.jpg?v=20260820b); }
 body[data-room="money"]    { --watermark: url(../img/w-drum.jpg?v=20260820b); }
 body[data-room="add"]      { --watermark: url(../img/w-violin.jpg?v=20260820b); }
-/* The sign-in has its own picture already. */
 body.signed-out::after { display: none; }
+
 h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 button, input, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
@@ -119,7 +102,9 @@ button { cursor: pointer; }
 /* The header keeps the card's own purple rather than the lifted one —
    it is a filled band, so it can be as deep as the card is. */
 .top {
-  background: linear-gradient(118deg, #4B3F72 0%, #6A4E9C 48%, #8C5B9B 82%, #A9663F 132%);
+  background: linear-gradient(118deg, rgba(40,26,74,.72) 0%, rgba(76,48,124,.62) 55%, rgba(108,60,120,.58) 100%);
+  backdrop-filter: blur(24px) saturate(1.5); -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  border-bottom: 1px solid rgba(255,255,255,.16);
   color: #fff;
   padding: calc(14px + env(safe-area-inset-top)) 16px 14px;
   display: flex; align-items: center; gap: 12px;
@@ -146,16 +131,26 @@ button { cursor: pointer; }
      the page reads as colour and shape through the card, but nothing
      behind it has an edge sharp enough to compete with a name or a
      number sitting on top. */
-  backdrop-filter: blur(34px) saturate(1.9) brightness(1.07);
-  -webkit-backdrop-filter: blur(34px) saturate(1.9) brightness(1.07);
-  border-radius: 20px; padding: 15px; margin-bottom: 12px;
-  border: 1px solid rgba(255,255,255,.6);
-  /* The lit top edge and the soft under-shadow are what make it read
-     as a piece of glass lying on the page rather than a pale box. */
+  --sx: 34%; --sy: 0%;
+  /* A specular sheen, in this pane's own coordinates, following the
+     light. This is the part that makes it read as a surface rather
+     than a tint. */
+  background-image:
+    radial-gradient(130% 95% at var(--sx) var(--sy),
+      rgba(255,255,255,.30) 0%, rgba(255,255,255,.07) 36%, rgba(255,255,255,0) 64%);
+  backdrop-filter: blur(30px) saturate(1.7);
+  -webkit-backdrop-filter: blur(30px) saturate(1.7);
+  border-radius: 22px; padding: 15px; margin-bottom: 12px;
+  border: 1px solid rgba(255,255,255,.55);
+  /* Three things at once: the shadow falls AWAY from the light, the
+     rim lights on the side facing it, and the far rim goes dark.
+     Together they are what a pane of glass does; separately each one
+     is a box-shadow. */
   box-shadow:
-    0 10px 34px rgba(75,63,114,.13),
-    inset 0 1px 0 rgba(255,255,255,.85),
-    inset 0 -1px 0 rgba(255,255,255,.30);
+    var(--shx) var(--shy) 40px rgba(18,8,40,.36),
+    inset calc(var(--shx) * -0.14) 1.5px 0 rgba(255,255,255,.55),
+    inset calc(var(--shx) * 0.10) -1.5px 0 rgba(0,0,0,.18);
+  transition: box-shadow .5s cubic-bezier(.22,.7,.35,1);
 }
 .muted { color: var(--ink-3); font-size: 14px; }
 .rowline { display: flex; align-items: center; gap: 10px; }
@@ -206,19 +201,23 @@ button { cursor: pointer; }
 
 .srow.key {
   position: relative;
-  background: linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.42));
-  border: 1px solid rgba(255,255,255,.5);
+  background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.07));
+  border: 1px solid rgba(255,255,255,.18);
   border-left: 4px solid var(--hue);
   border-radius: 3px 14px 14px 3px;
   margin-bottom: 7px; padding-left: 10px;
-  box-shadow: 0 2px 0 rgba(75,63,114,.13), inset 0 1px 0 rgba(255,255,255,.9);
-  transition: transform .11s ease, box-shadow .11s ease, background .16s ease;
+  box-shadow:
+    calc(var(--shx) * .18) 2px 0 rgba(18,8,40,.24),
+    inset calc(var(--shx) * -.08) 1px 0 rgba(255,255,255,.42);
+  /* Springy: a key that overshoots very slightly on the way back up
+     feels sprung rather than animated. */
+  transition: transform .16s cubic-bezier(.34,1.6,.52,1), box-shadow .16s ease, background .16s ease;
 }
 /* A key goes down, and for a key lying on its side down is inward. */
 .srow.key.pressed {
   transform: translateX(5px);
-  box-shadow: 0 0 0 rgba(75,63,114,0), inset 0 1px 0 rgba(255,255,255,.5);
-  background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,.3));
+  box-shadow: 0 0 0 rgba(0,0,0,0), inset 0 1px 0 rgba(255,255,255,.22);
+  background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.04));
 }
 /* The instrument's own mark, on its own key. */
 .ig { flex: 0 0 auto; width: 26px; height: 26px; margin-right: 10px; color: var(--hue); }
@@ -255,7 +254,7 @@ button { cursor: pointer; }
 .tick {
   position: relative; overflow: hidden;
   width: 46px; height: 46px; flex: 0 0 46px; border-radius: 50%;
-  border: 2px solid var(--hue, var(--line)); background: #fff;
+  border: 2px solid var(--hue, var(--line)); background: rgba(255,255,255,.13);
   font-size: 22px; line-height: 1; display: flex; align-items: center; justify-content: center;
   transition: background .12s, border-color .12s;
 }
@@ -333,13 +332,13 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
   width: 100%; min-height: var(--tap); border: 0; border-radius: 12px;
   background: var(--brand); color: #fff; font-size: 16.5px; font-weight: 700;
 }
-.btn.ghost { background: rgba(255,255,255,.7); color: var(--brand); border: 1.5px solid var(--brand); }
+.btn.ghost { background: rgba(255,255,255,.09); color: var(--brand); border: 1.5px solid rgba(185,167,255,.55); }
 .btn:disabled { opacity: .5; }
 
 /* ---------- tabs: always there, never nested ---------- */
 .tabs {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-  display: flex; background: rgba(255,255,255,.88); backdrop-filter: blur(18px);
+  display: flex; background: rgba(30,20,58,.62); backdrop-filter: blur(24px) saturate(1.5);
   -webkit-backdrop-filter: blur(18px); border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -417,7 +416,7 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
   flex: 0 0 auto; height: 40px; padding: 0 16px;
   border-radius: 46% 46% 44% 44% / 30% 30% 70% 70%;
   border: 1.5px solid var(--line);
-  background: rgba(255,255,255,.72); color: var(--ink-2);
+  background: rgba(255,255,255,.10); color: var(--ink-2);
   font-size: 14px; font-weight: 600; white-space: nowrap;
   transition: background .16s, color .16s, border-color .16s;
 }
@@ -428,6 +427,17 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
   background: var(--hue, var(--brand)); color: #fff;
 }
 .fsep { flex: 0 0 auto; width: 1px; height: 22px; background: var(--line); margin: 0 3px; }
+
+/* Text on glass needs a floor.
+   The whole point of this material is that a bright streak in the
+   background can pass behind a name — so every piece of type that
+   matters gets a shadow dark enough to hold it against the worst
+   case, and light enough to be invisible against the usual one. This
+   is what buys the transparency; without it the card would have to be
+   opaque and there would be nothing to see through. */
+.srow .nm b, .due .hd b, .due .hd em, .fig b, .card h3,
+.daybar .d b, .rowline b, .tot { text-shadow: 0 1px 3px rgba(16,6,38,.55); }
+.srow .nm span, .muted, .daybar .d span, .due .sub { text-shadow: 0 1px 2px rgba(16,6,38,.45); }
 
 /* ---------- misc ---------- */
 .sub-toggle { display: flex; gap: 6px; margin-bottom: 12px; }

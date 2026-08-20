@@ -108,6 +108,7 @@ window.fetch = function (url) {
 };
 </script>
 <script src="assets/js/cloud.js"></script>
+<script src="assets/js/glass.js"></script>
 <script>${app}</script>
 </body></html>`;
 
