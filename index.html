@@ -89,6 +89,7 @@
     fresh: false,             // true for exactly one render, after a tab change
     pay: null,                // the payment being taken: {enrollment,name,amount,months,mode}
     picker: null,             // the student list, when choosing who paid
+    who: null,                // the student card: {enrollment,member,name,sport,batch,phone}
     fIns: null,               // instrument filter, null = all
     fBat: null,               // batch filter, null = all
     showOff: false,
@@ -601,7 +602,11 @@
       var ins = inst(r.sport);
       return '<div class="srow key tuned" style="--hue:' + ins.hue + '" data-key="' + r.enrollment_id + '">' +
         '<span class="ig">' + svgIcon(ins) + "</span>" +
-        '<div class="nm"><b>' + esc(r.member_name) + "</b><span>" + esc(r.sport || "") + "</span></div>" +
+        '<button class="nm who" data-who="' + r.enrollment_id + '" data-mem="' + (r.member_id || "") +
+          '" data-nm="' + esc(r.member_name) + '" data-sport="' + esc(r.sport || "") +
+          '" data-batch="' + (r.batch_id || "") + '">' +
+          "<b>" + esc(r.member_name) + "</b><span>" + esc(r.sport || "") + "</span>" +
+          '<u class="chev">\u203A</u></button>' +
         '<button class="tick ' + cls + (S.busy[r.enrollment_id] ? " busy" : "") + '"' +
           ' data-mark="' + r.enrollment_id + '" data-batch="' + (r.batch_id || "") + '"' +
           ' data-note="' + ins.note + '"' +
@@ -793,9 +798,13 @@
           '<div class="muted" style="margin-bottom:8px">' + S.money.paid.length + " payment" +
           (S.money.paid.length === 1 ? "" : "s") + "</div>" +
           S.money.paid.slice(0, 30).map(function (p) {
-            return '<div class="srow"><div class="nm"><b>' + inr(p.amount) + "</b><span>" +
+            var dead = p.status === "void";
+            return '<div class="srow' + (dead ? " voided" : "") + '">' +
+              '<div class="nm"><b>' + inr(p.amount) + "</b><span>" +
               new Date(p.on_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) +
-              " · " + esc(p.mode || "") + "</span></div></div>";
+              " · " + esc(p.mode || "") + (dead ? " · cancelled" : "") + "</span></div>" +
+              (dead ? "" : '<button class="undo" data-void="' + p.id + '">Undo</button>') +
+            "</div>";
           }).join("") + "</div>"
         : "");
   }
@@ -928,6 +937,133 @@
     return body + '<button class="btn ghost" id="pkCancel" style="margin-top:10px">Cancel</button></div></div>';
   }
 
+  /* ============================================================
+     ONE STUDENT
+
+     Everything about a child that is not "were they here today" lives
+     on one sheet, reached by tapping their name. Nothing was added to
+     the row to make this possible — the name was already there, and a
+     name is the obvious thing to press when you want the person.
+
+     It is also the only place anything can be UNDONE, which is why it
+     exists at all: before this there was no way to fix a wrong phone
+     number, no way to move a child from guitar to piano, and no way
+     to stop a child who had left. They stayed on the register and in
+     the dues list for ever.
+     ============================================================ */
+  function viewWho() {
+    var w = S.who;
+    var ins = (S.ref && S.ref.instruments) || [];
+    var bs  = (S.ref && S.ref.batches) || [];
+    return '<div class="sheet"><div class="card">' +
+      '<div class="rowline" style="margin-bottom:14px">' +
+        '<span class="ig" style="--hue:' + inst(w.sport).hue + '">' + svgIcon(inst(w.sport)) + "</span>" +
+        '<h3 style="font-size:19px;flex:1">' + esc(w.name) + "</h3></div>" +
+
+      '<label class="field"><span>Name</span>' +
+        '<input id="whName" value="' + esc(w.name) + '" /></label>' +
+      '<label class="field"><span>Parent\u2019s phone</span>' +
+        '<input id="whPhone" type="tel" inputmode="numeric"' +
+        (w.loaded ? ' placeholder="10 digits"' : ' disabled placeholder="Loading\u2026"') +
+        ' value="' + esc(w.phone || "") + '" /></label>' +
+      '<label class="field"><span>Instrument</span><select id="whIns">' +
+        ins.map(function (i) {
+          return '<option value="' + esc(i.name) + '"' +
+                 (i.name === w.sport ? " selected" : "") + ">" + esc(i.name) + "</option>";
+        }).join("") + "</select></label>" +
+      '<label class="field"><span>Comes on</span><select id="whBatch">' +
+        bs.map(function (b) {
+          return '<option value="' + b.id + '"' +
+                 (b.id === w.batch ? " selected" : "") + ">" + esc(b.name) + "</option>";
+        }).join("") + "</select></label>" +
+
+      '<button class="btn" id="whSave">Save changes</button>' +
+      '<button class="btn ghost" id="whPay" style="margin-top:8px">Record a payment</button>' +
+      '<button class="btn ghost" id="whCancel" style="margin-top:8px">Close</button>' +
+
+      /* Last, separated, and it says what it does rather than "delete".
+         Nothing is deleted: the child and every mark they ever earned
+         stay exactly where they are. */
+      '<div class="danger">' +
+        (w.confirmStop
+          ? '<p class="muted" style="margin-bottom:10px">' + esc(w.name) +
+            " will come off the register and out of the fees list. " +
+            "Nothing already recorded is deleted.</p>" +
+            '<button class="btn stop" id="whStopYes">Yes, ' + esc(w.name) + " has stopped</button>" +
+            '<button class="btn ghost" id="whStopNo" style="margin-top:8px">No, keep them</button>'
+          : '<button class="btn ghost stop-link" id="whStop">' + esc(w.name) +
+            " has stopped coming</button>") +
+      "</div>" +
+    "</div></div>";
+  }
+
+  function openWho(el) {
+    S.who = {
+      enrollment: +el.getAttribute("data-who") || null,
+      member: +el.getAttribute("data-mem") || null,
+      name: el.getAttribute("data-nm") || "",
+      sport: el.getAttribute("data-sport") || "",
+      batch: +el.getAttribute("data-batch") || null,
+      phone: "", loaded: false,
+      confirmStop: false
+    };
+    var want = S.who;
+    /* The instrument and batch pickers need the reference data, which
+       may not have arrived yet on a cold open. */
+    if (!S.ref) MZ.reference().then(function (r) { S.ref = r; render(); }).catch(function () {});
+    /* And the phone number is not in the register's data at all. */
+    if (want.member) {
+      MZ.student(want.member).then(function (m) {
+        if (S.who !== want || !m) return;
+        S.who.phone = m.phone || m.parent_phone || "";
+        S.who.loaded = true;
+        render();
+      }).catch(function () { /* leave it locked rather than blank-and-writable */ });
+    }
+    render();
+  }
+
+  function saveWho() {
+    var w = S.who;
+    var b = document.getElementById("whSave");
+    if (b) { b.disabled = true; b.textContent = "Saving…"; }
+    var name  = (document.getElementById("whName") || {}).value;
+    var insEl = document.getElementById("whIns"), batEl = document.getElementById("whBatch");
+    /* undefined, not "", when the number has not loaded: editStudent
+       skips a field it is not given, and writing an empty box over a
+       real number would silently cut that family off from reminders. */
+    var phone = w.loaded
+      ? ((document.getElementById("whPhone") || {}).value || "").replace(/\D/g, "")
+      : undefined;
+    MZ.editStudent(w.member, { name: name, phone: phone })
+      .then(function () {
+        return MZ.moveEnrollment(w.enrollment, {
+          instrument: insEl && insEl.value, batch: batEl && +batEl.value
+        });
+      })
+      .then(function () {
+        toast("Saved"); S.who = null; loadRegister(); render();
+      })
+      .catch(function (e) {
+        if (b) { b.disabled = false; b.textContent = "Save changes"; }
+        fail(e);
+      });
+  }
+
+  function stopWho() {
+    var w = S.who;
+    var b = document.getElementById("whStopYes");
+    if (b) { b.disabled = true; b.textContent = "Stopping…"; }
+    MZ.stopStudent(w.member, "stopped coming")
+      .then(function () {
+        toast(w.name + " is off the register"); S.who = null; loadRegister(); render();
+      })
+      .catch(function (e) {
+        if (b) { b.disabled = false; b.textContent = "Yes, " + w.name + " has stopped"; }
+        fail(e);
+      });
+  }
+
   /* ---------- add a student ---------- */
   function viewAdd() {
     var ins = (S.ref && S.ref.instruments) || [], bs = (S.ref && S.ref.batches) || [];
@@ -967,6 +1103,7 @@
               : S.tab === "dues" ? viewDues() : viewMoney();
     /* The sheets sit ON the tab, so cancelling always returns him to
        exactly where he was rather than to some remembered screen. */
+    if (S.who)    inner += viewWho();
     if (S.picker) inner += viewPicker();
     if (S.pay)    inner += viewPay();
     /* Read and clear: the entrance animation belongs to the render
@@ -1057,6 +1194,30 @@
       return;
     }
     if (t.closest("#pkCancel")) { S.picker = null; render(); return; }
+
+    var who = t.closest("[data-who]");
+    if (who) { openWho(who); return; }
+    if (t.closest("#whCancel")) { S.who = null; S.err = ""; render(); return; }
+    if (t.closest("#whSave"))   { saveWho(); return; }
+    if (t.closest("#whStop"))   { S.who.confirmStop = true; render(); return; }
+    if (t.closest("#whStopNo")) { S.who.confirmStop = false; render(); return; }
+    if (t.closest("#whStopYes")){ stopWho(); return; }
+    if (t.closest("#whPay")) {
+      var w = S.who; S.who = null;
+      openPay(w.enrollment, w.name, w.sport, null);
+      return;
+    }
+
+    /* Undoing a payment. void_payment() also recomputes the months it
+       had covered, so the family's next due date goes back to what it
+       was — which a status flip on the row would not do. */
+    var vd = t.closest("[data-void]");
+    if (vd) {
+      var id = +vd.getAttribute("data-void");
+      if (!window.confirm("Cancel this payment? The family's next due date goes back to what it was.")) return;
+      MZ.voidPayment(id).then(function () { toast("Payment cancelled"); loadMoney(); }).catch(fail);
+      return;
+    }
     var pm = t.closest("[data-paymonths]");
     if (pm) { S.pay.months = +pm.getAttribute("data-paymonths"); repriceAndRender(); return; }
     var pmo = t.closest("[data-paymode]");

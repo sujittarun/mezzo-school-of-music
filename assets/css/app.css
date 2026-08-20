@@ -507,6 +507,40 @@ table.reg tbody tr { border-top: 1px solid var(--line); }
 .daybar .d b, .rowline b, .tot { text-shadow: 0 1px 3px rgba(16,6,38,.55); }
 .srow .nm span, .muted, .daybar .d span, .due .sub { text-shadow: 0 1px 2px rgba(16,6,38,.45); }
 
+/* The name is the way into a student, so it has to look pressable —
+   a chevron and nothing else. No new control on the row: the name was
+   already there and it is the obvious thing to press. */
+.nm.who {
+  flex: 1; min-width: 0; text-align: left; background: none; border: 0;
+  padding: 0; display: flex; flex-direction: column; align-items: flex-start;
+  position: relative; padding-right: 20px; color: inherit;
+}
+.nm.who .chev {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  text-decoration: none; font-style: normal; font-size: 20px;
+  color: var(--ink-3); opacity: .6;
+}
+.nm.who:active .chev { opacity: 1; transform: translateY(-50%) translateX(2px); }
+
+/* Stopping a child is the one destructive thing in the app, so it is
+   last, it is separated by a rule, it says what it does rather than
+   "delete", and it asks twice. */
+.danger { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.btn.stop-link {
+  color: var(--no); border-color: rgba(220,102,96,.45); background: transparent;
+  font-weight: 600;
+}
+.btn.stop { background: var(--no); color: #fff; }
+
+/* A recorded payment can be taken back. Quiet, because it is rare. */
+.undo {
+  flex: 0 0 auto; min-height: 40px; padding: 0 14px; border-radius: 100px;
+  border: 1px solid var(--line); background: rgba(255,255,255,.08);
+  color: var(--ink-2); font-size: 13.5px; font-weight: 600;
+}
+.srow.voided { opacity: .5; }
+.srow.voided .nm b { text-decoration: line-through; }
+
 /* ---------- the sheets ----------
    A sheet sits on top of the tab that opened it, so cancelling always
    puts him back exactly where he was. It is the only modal surface in

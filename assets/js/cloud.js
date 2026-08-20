@@ -180,6 +180,16 @@
                "&select=id,name,phone,parent_name,parent_phone,status,joined," +
                "enrollments(id,sport,batch_id,centre_id,status,renewal_on,plan_months)");
   }
+  /* One student's own record. attendance_month() does not return a
+     phone number — it has no reason to — so the card has to ask for
+     it, and until it arrives the app must not write the field back.
+     An empty box saved over a real number is how a family loses its
+     WhatsApp reminders without anybody noticing. */
+  function student(memberId) {
+    return get("/members?" + T + "&id=eq." + memberId +
+               "&select=id,name,phone,parent_name,parent_phone")
+      .then(function (rows) { return (rows && rows[0]) || null; });
+  }
   function addStudent(a) {
     /* Two writes, deliberately in order: the member, then the enrolment
        that carries the instrument. The instrument is what prices them —
@@ -201,10 +211,46 @@
       }).then(function () { report("student_added", {}); return m; });
     });
   }
-  function stopStudent(memberId) {
-    return patch("/members?" + T + "&id=eq." + memberId,
-                 { status: "discontinued", discontinued_on: todayIso() })
-      .then(function (r) { report("student_stopped", {}); return r; });
+  /* STOPPING A STUDENT IS AN RPC, NOT A PATCH.
+     This used to set members.status itself and leave the enrolments
+     alone — and reminder_queue() reads ENROLMENTS, so a child who had
+     left would have gone on appearing in the dues list and gone on
+     being chased for fees by WhatsApp. discontinue_member() closes
+     every live spell as well as the member, which is the whole
+     difference. It is what MPP already calls. */
+  function stopStudent(memberId, reason) {
+    return rpc("discontinue_member", {
+      p_tenant: TENANT, p_member: memberId, p_on_date: todayIso(),
+      p_reason: reason || null
+    }).then(function (r) { report("student_stopped", {}); return r; });
+  }
+  /* Fixing a name or a phone number. The instrument and the time
+     window live on the enrolment, not the member, so they are a
+     separate write — that split is the schema's, not a choice. */
+  function editStudent(memberId, a) {
+    var body = {};
+    if (a.name != null)   body.name = String(a.name).trim();
+    if (a.phone != null)  { body.phone = a.phone || null; body.parent_phone = a.phone || null; }
+    if (a.parentName != null) body.parent_name = a.parentName || null;
+    if (!Object.keys(body).length) return Promise.resolve(null);
+    if (body.name === "") return Promise.reject(new Error("A name is needed."));
+    return patch("/members?" + T + "&id=eq." + memberId, body)
+      .then(function (r) { report("student_edited", {}); return r; });
+  }
+  function moveEnrollment(enrollmentId, a) {
+    var body = {};
+    if (a.instrument) body.sport = a.instrument;
+    if (a.batch)      body.batch_id = a.batch;
+    if (!Object.keys(body).length) return Promise.resolve(null);
+    return patch("/enrollments?" + T + "&id=eq." + enrollmentId, body)
+      .then(function (r) { report("enrollment_changed", {}); return r; });
+  }
+  /* Reversing a payment. void_payment() also recomputes which months
+     the money had covered, which a status flip on the row would not. */
+  function voidPayment(paymentId, reason) {
+    return rpc("void_payment", {
+      p_tenant: TENANT, p_payment: paymentId, p_reason: reason || "corrected in the app"
+    }).then(function (r) { report("payment_voided", {}); return r; });
   }
 
   /* ---------------- attendance ----------------
@@ -303,7 +349,8 @@
     TENANT: TENANT, VER: APP_VER,
     session: session, signedIn: signedIn, signIn: signIn, signOut: signOut,
     report: report, reference: reference,
-    students: students, addStudent: addStudent, stopStudent: stopStudent,
+    students: students, student: student, addStudent: addStudent, stopStudent: stopStudent,
+    editStudent: editStudent, moveEnrollment: moveEnrollment, voidPayment: voidPayment,
     mark: mark, register: register,
     feeFor: feeFor, takePayment: takePayment, payments: payments,
     expenses: expenses, addExpense: addExpense,

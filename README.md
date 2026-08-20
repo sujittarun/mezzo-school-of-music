@@ -50,6 +50,35 @@ turned an intentional `null` back into a present.
 Add a case whenever something breaks. A conclusion defended only by
 reading the source has been wrong here before.
 
+## Fixing things
+
+Tapping a student's name opens their card. Nothing was added to the
+row to make that possible — the name was already there, and it is the
+obvious thing to press when you want the person.
+
+From it: correct a name or a phone, move a child from guitar to piano
+or from weekdays to Saturday, record a payment, or mark that they have
+stopped coming.
+
+Two things about it are load-bearing:
+
+- **Stopping a child is `discontinue_member()`, not a status flip.**
+  That RPC closes every live enrolment as well as the member, and
+  `reminder_queue()` reads enrolments — so setting `members.status`
+  alone would leave a child who had left being chased for fees by
+  WhatsApp for ever.
+- **The phone field is locked until it has been read.**
+  `attendance_month()` returns `member_id` but no phone number, so the
+  card fetches it. Until it arrives the box is empty, and an empty box
+  written back over a real number cuts that family off from every
+  reminder with nothing on screen to say so. An unloaded phone is
+  simply not sent.
+
+A recorded payment can be taken back from the Money tab. That goes
+through `void_payment()`, which also recomputes which months the money
+had covered — a status flip on the row would leave the family's next
+due date wrong.
+
 ## Taking money
 
 A payment asks three things: how much, how many months, and cash or

@@ -396,6 +396,84 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
       "the amount was not priced by the database for a student who is not overdue");
   });
 
+  /* ---- 4. fixing things ---- */
+  await check("stopping a student goes through discontinue_member", async () => {
+    signIn(); fetchLog.length = 0; nextBody = {};
+    api.S.who = { enrollment: 7, member: 3, name: "Deepak", sport: "Drums",
+                  batch: 1, phone: "", confirmStop: true };
+    onClick({ target: { closest: (s) => (s === "#whStopYes" ? {} : null) } });
+    await tick(); await tick();
+    assert(calls("discontinue_member").length === 1,
+      "it did not call discontinue_member");
+    /* THE POINT OF THAT RPC. It closes every live enrolment as well as
+       the member. reminder_queue() reads enrolments, so a PATCH that
+       only set members.status would leave a child who has left being
+       chased for fees by WhatsApp for ever. */
+    assert(calls("/members").filter((c) => c.method === "PATCH").length === 0,
+      "it patched members directly, which leaves the enrolment open and the family still billed");
+    assert(calls("discontinue_member")[0].body.p_member === 3,
+      "wrong member: " + JSON.stringify(calls("discontinue_member")[0].body));
+  });
+
+  await check("editing a student writes the member and the enrolment", async () => {
+    signIn(); fetchLog.length = 0; nextBody = {};
+    api.S.who = { enrollment: 7, member: 3, name: "Deepak", sport: "Drums",
+                  batch: 1, phone: "9000000123", loaded: true, confirmStop: false };
+    byId("whName").value  = "Deepak S";
+    byId("whPhone").value = "90000 00123";
+    byId("whIns").value   = "Piano";
+    byId("whBatch").value = "2";
+    onClick({ target: { closest: (s) => (s === "#whSave" ? {} : null) } });
+    await tick(); await tick(); await tick();
+
+    const mem = calls("/members").filter((c) => c.method === "PATCH");
+    assert(mem.length === 1, "the member was not updated");
+    assert(mem[0].body.name === "Deepak S", "the name did not change");
+    /* Typed with a space; the database must get digits only, or the
+       WhatsApp link built from it goes nowhere. */
+    assert(mem[0].body.phone === "9000000123",
+      "the phone was stored unclean: " + mem[0].body.phone);
+
+    const enr = calls("/enrollments").filter((c) => c.method === "PATCH");
+    assert(enr.length === 1, "the enrolment was not updated");
+    assert(enr[0].body.sport === "Piano" && enr[0].body.batch_id === 2,
+      "instrument or time window did not move: " + JSON.stringify(enr[0].body));
+  });
+
+  /* THE ONE THAT COST A FAMILY ITS REMINDERS.
+     attendance_month() returns member_id but NOT a phone number, so
+     the card has to fetch it. Until that arrives the field is empty —
+     and an empty field written back over a real number silently cuts
+     that family off from every WhatsApp reminder, with nothing on
+     screen to say so. So an unloaded phone is not sent at all. */
+  await check("an unloaded phone is never written over a real one", async () => {
+    signIn(); fetchLog.length = 0; nextBody = {};
+    api.S.who = { enrollment: 7, member: 3, name: "Deepak", sport: "Drums",
+                  batch: 1, phone: "", loaded: false, confirmStop: false };
+    byId("whName").value  = "Deepak";
+    byId("whPhone").value = "";
+    onClick({ target: { closest: (s) => (s === "#whSave" ? {} : null) } });
+    await tick(); await tick(); await tick();
+    const mem = calls("/members").filter((c) => c.method === "PATCH");
+    assert(mem.length === 1, "the member was not updated at all");
+    assert(!("phone" in mem[0].body),
+      "it sent a phone it had never read: " + JSON.stringify(mem[0].body));
+  });
+
+  await check("a payment can be taken back through void_payment", async () => {
+    signIn(); fetchLog.length = 0; nextBody = {};
+    onClick({ target: { closest: (s) => (s === "[data-void]"
+      ? { getAttribute: () => "42" } : null) } });
+    await tick(); await tick();
+    const v = calls("void_payment");
+    assert(v.length === 1, "Undo made " + v.length + " calls to void_payment");
+    assert(v[0].body.p_payment === 42, "wrong payment: " + JSON.stringify(v[0].body));
+    /* Never a status flip on the row: void_payment also recomputes
+       which months the money had covered. */
+    assert(calls("/payments").filter((c) => c.method === "PATCH").length === 0,
+      "it flipped the payment row directly and left the coverage wrong");
+  });
+
   await check("an expense is amount + what + save, and nothing else", async () => {
     signIn(); fetchLog.length = 0; nextBody = [];
     byId("exAmt").value = "450"; byId("exWhat").value = "Guitar strings";
