@@ -1,0 +1,59 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ledger — Mezzo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   LEDGER — the book he already keeps.
+   It replaces a paper attendance register, so it looks like one:
+   ruled cream paper, a red margin rule, ink-blue handwriting for
+   what is written by hand and typewriter capitals for what was
+   printed. Marks are struck, not filled.
+   ============================================================ */
+:root{--paper:#FBF7EC;--rule:#D8CDB4;--red:#B4472F;--ink:#1F3A63;--black:#2A2620;--sage:#4E6B4A}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--black);font:16px/1.5 Spectral,Georgia,serif;
+ padding-bottom:86px;-webkit-font-smoothing:antialiased;
+ background-image:repeating-linear-gradient(180deg,transparent 0 47px,var(--rule) 47px 48px)}
+.top{padding:22px 20px 14px 62px;border-bottom:2px solid var(--black);position:relative;background:var(--paper)}
+.top:before{content:"";position:fixed;left:44px;top:0;bottom:0;width:1.5px;background:var(--red);opacity:.5;z-index:0}
+h1{font:700 13px/1 "Courier Prime",monospace;letter-spacing:.28em;text-transform:uppercase}
+.sub{font-style:italic;color:#6B6355;margin-top:5px;font-size:15px}
+.wrap{padding:0 20px 0 62px;position:relative;z-index:1}
+.daybar{display:flex;align-items:baseline;gap:12px;padding:18px 0 6px}
+.daybar h2{font:600 25px/1.4 Spectral,serif}
+.count{margin-left:auto;font:400 13px/1 "Courier Prime",monospace;letter-spacing:.1em;color:#6B6355}
+table{width:100%;border-collapse:collapse}
+th{font:700 10.5px/48px "Courier Prime",monospace;letter-spacing:.2em;text-transform:uppercase;
+ color:#8A8069;text-align:left;border-bottom:1.5px solid var(--black)}
+th.c{text-align:center;width:88px}
+td{height:48px;vertical-align:middle;border-bottom:1px solid var(--rule)}
+.nm{font-size:19px;color:var(--ink)}
+.in{font-style:italic;font-size:14px;color:#6B6355;margin-left:9px}
+td.c{text-align:center}
+.mk{display:inline-block;width:40px;height:40px;line-height:40px;border-radius:50%;
+ font:700 19px/40px "Courier Prime",monospace;cursor:pointer}
+.mk.p{color:var(--sage);border:2px solid var(--sage)}
+.mk.a{color:var(--red);border:2px solid var(--red)}
+.mk.n{color:#C9BEA4;border:2px dashed #C9BEA4}
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--paper);
+ border-top:2px solid var(--black);padding-bottom:env(safe-area-inset-bottom)}
+.tabs a{flex:1;text-align:center;padding:15px 0 17px;text-decoration:none;color:#8A8069;
+ font:700 11px/1 "Courier Prime",monospace;letter-spacing:.2em;text-transform:uppercase}
+.tabs a.on{color:var(--red);box-shadow:inset 0 3px 0 var(--red)}
+</style></head><body>
+<div class="top"><h1>Mezzo School of Music</h1><div class="sub">Attendance register</div></div>
+<div class="wrap">
+ <div class="daybar"><h2 id="d"></h2><span class="count" id="c"></span></div>
+ <table><thead><tr><th>Student</th><th class="c">Present</th></tr></thead><tbody id="rows"></tbody></table>
+</div>
+<nav class="tabs"><a class="on" href="#">Register</a><a href="#">Dues</a><a href="#">Money</a></nav>
+<script src="_data.js"></script><script>
+var D=window.MZDEMO;document.getElementById('d').textContent=D.day;
+document.getElementById('c').textContent=D.here+' of '+D.total+' present';
+document.getElementById('rows').innerHTML=D.students.map(function(s){
+ var k=s.mark==='present'?'p':s.mark==='absent'?'a':'n',g=s.mark==='present'?'✓':s.mark==='absent'?'✗':'·';
+ return '<tr><td><span class="nm">'+s.name+'</span><span class="in">'+s.inst+'</span></td>'+
+        '<td class="c"><span class="mk '+k+'">'+g+'</span></td></tr>';}).join('');
+</script></body></html>

@@ -1,0 +1,53 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Programme — Mezzo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,500;1,300&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   PROGRAMME — a recital programme, printed.
+   Deep ink and gold leaf. All of its richness comes from
+   typography and one metal colour; there are no photographs, no
+   glass and no gradients. Centred, generous, quiet.
+   ============================================================ */
+:root{--ink:#10121C;--paper:#161A28;--gold:#C8A45C;--cream:#F0EADC;--dim:#8A8496}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--ink);color:var(--cream);font:16px/1.5 Inter,sans-serif;
+ padding-bottom:92px;-webkit-font-smoothing:antialiased;text-align:center}
+.top{padding:34px 24px 22px}
+.crest{font:300 34px/1 "Cormorant Garamond",serif;color:var(--gold);letter-spacing:.02em}
+.rule{width:56px;height:1px;background:var(--gold);margin:16px auto;opacity:.6}
+.kick{font:500 10.5px/1 Inter;letter-spacing:.32em;text-transform:uppercase;color:var(--dim)}
+h1{font:300 30px/1.2 "Cormorant Garamond",serif;margin:14px 0 4px}
+.date{font-style:italic;font:300 19px/1.4 "Cormorant Garamond",serif;color:var(--gold)}
+.count{font:500 10.5px/1 Inter;letter-spacing:.26em;text-transform:uppercase;color:var(--dim);margin-top:20px}
+ul{list-style:none;padding:12px 24px 0;text-align:left;max-width:620px;margin:0 auto}
+li{display:flex;align-items:center;gap:16px;padding:19px 0;border-bottom:1px solid rgba(200,164,92,.18)}
+.nm{font:300 24px/1.2 "Cormorant Garamond",serif;flex:1}
+.in{font:500 10px/1 Inter;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin-top:7px;display:block}
+.mk{width:46px;height:46px;border-radius:50%;border:1px solid rgba(200,164,92,.45);background:none;
+ color:var(--gold);font:300 20px/1 "Cormorant Garamond",serif;cursor:pointer;flex:0 0 46px}
+.mk.p{background:var(--gold);color:var(--ink);border-color:var(--gold)}
+.mk.a{border-color:#9C4A44;color:#D08078}
+.mk.n{opacity:.32}
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--paper);
+ border-top:1px solid rgba(200,164,92,.28);padding-bottom:env(safe-area-inset-bottom)}
+.tabs a{flex:1;text-align:center;padding:17px 0 19px;text-decoration:none;color:var(--dim);
+ font:500 10.5px/1 Inter;letter-spacing:.24em;text-transform:uppercase}
+.tabs a.on{color:var(--gold)}
+</style></head><body>
+<div class="top">
+ <div class="crest">Mezzo</div><div class="rule"></div>
+ <div class="kick">School of Music &middot; Coimbatore</div>
+ <h1>Attendance</h1><div class="date" id="d"></div><div class="count" id="c"></div>
+</div>
+<ul id="rows"></ul>
+<nav class="tabs"><a class="on" href="#">Register</a><a href="#">Dues</a><a href="#">Money</a></nav>
+<script src="_data.js"></script><script>
+var D=window.MZDEMO;document.getElementById('d').textContent=D.day;
+document.getElementById('c').textContent=D.here+' of '+D.total+' present';
+document.getElementById('rows').innerHTML=D.students.map(function(s){
+ var k=s.mark==='present'?'p':s.mark==='absent'?'a':'n',g=s.mark==='present'?'✓':s.mark==='absent'?'✕':'—';
+ return '<li><span class="nm">'+s.name+'<span class="in">'+s.inst+'</span></span>'+
+        '<button class="mk '+k+'">'+g+'</button></li>';}).join('');
+</script></body></html>

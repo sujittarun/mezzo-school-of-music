@@ -1,0 +1,50 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Five directions — Mezzo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#111015;--grey:#77737F;--line:#E6E4EA}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#F6F5F8;color:var(--ink);font:16px/1.5 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+header{padding:34px 26px 8px;max-width:1500px;margin:0 auto}
+h1{font:800 34px/1.1 Inter;letter-spacing:-.03em}
+p.lede{color:var(--grey);margin-top:10px;max-width:60ch;font-size:17px}
+.grid{display:grid;gap:22px;padding:26px;max-width:1500px;margin:0 auto;
+ grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;
+ box-shadow:0 2px 10px rgba(17,16,21,.05);display:flex;flex-direction:column}
+.hd{padding:16px 18px 14px;border-bottom:1px solid var(--line)}
+.n{font:600 11px/1 Inter;letter-spacing:.16em;text-transform:uppercase;color:var(--grey)}
+.hd h2{font:800 21px/1.2 Inter;letter-spacing:-.02em;margin:8px 0 6px}
+.hd p{font-size:14.5px;color:var(--grey);line-height:1.45}
+.frame{position:relative;height:560px;background:#fff}
+iframe{width:390px;height:844px;border:0;transform:scale(.664);transform-origin:top left;
+ position:absolute;top:0;left:50%;margin-left:-129.5px}
+.ft{padding:13px 18px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center}
+.ft a{font:600 14px/1 Inter;color:#fff;background:var(--ink);text-decoration:none;
+ padding:11px 16px;border-radius:9px}
+.ft span{font-size:13px;color:var(--grey)}
+footer{padding:8px 26px 60px;max-width:1500px;margin:0 auto;color:var(--grey);font-size:14.5px}
+</style></head><body>
+<header>
+ <h1>Five directions</h1>
+ <p class="lede">Not variations — five different worlds, each with the same register in it so the
+ comparison is about the design and nothing else. Open any one full screen on the iPad.
+ Tell me which is closest and I will build the whole app in it.</p>
+</header>
+<div class="grid" id="g"></div>
+<footer>None of these is the current app. If none is right, that is a useful answer too — say what
+is wrong with the closest one and I will go again.</footer>
+<script>
+var SETS=[
+ ["01","Ledger","The book he already keeps. Ruled cream paper, a red margin rule, ink-blue names and typewriter capitals. It replaces a paper register, so it looks like one.","1-ledger.html"],
+ ["02","Studio","Swiss and completely undecorated. White, black, one red. A strict grid and a big type scale, with nothing on screen that is not information.","2-studio.html"],
+ ["03","Programme","A recital programme, printed. Deep ink and gold leaf, elegant serif, centred and quiet. All its richness comes from type and one metal colour.","3-programme.html"],
+ ["04","Blocks","Loud, flat and cheerful. Fat rounded shapes in solid poster colour, heavy friendly type. The instrument fills the whole row, readable across the room.","4-blocks.html"],
+ ["05","Slate","The blackboard on the wall. Dark green slate and chalk, handwriting for what a teacher writes and plain type for what is printed.","5-slate.html"]
+];
+document.getElementById('g').innerHTML=SETS.map(function(s){
+ return '<div class="card"><div class="hd"><div class="n">'+s[0]+'</div><h2>'+s[1]+'</h2><p>'+s[2]+'</p></div>'+
+ '<div class="frame"><iframe src="'+s[3]+'" loading="lazy" title="'+s[1]+'"></iframe></div>'+
+ '<div class="ft"><a href="'+s[3]+'">Open full screen</a><span>'+s[1]+'</span></div></div>';}).join('');
+</script></body></html>

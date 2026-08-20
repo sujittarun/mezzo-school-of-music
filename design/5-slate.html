@@ -1,0 +1,51 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Slate — Mezzo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Karla:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   SLATE — the blackboard on the wall of the room.
+   Dark green slate, chalk white, and a handwritten face for the
+   things a teacher writes and a plain one for the things that
+   are printed. Warm and tactile, but completely flat: no glass,
+   no blur, no photograph.
+   ============================================================ */
+:root{--slate:#22322C;--slate2:#1B2924;--chalk:#F2F0E6;--dim:#93A69C;--yellow:#EBCB6B;--rose:#E08A7E}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--slate);color:var(--chalk);font:16px/1.5 Karla,system-ui,sans-serif;
+ padding-bottom:90px;-webkit-font-smoothing:antialiased;
+ background-image:radial-gradient(rgba(255,255,255,.035) 1px,transparent 1px);background-size:4px 4px}
+.top{padding:24px 22px 16px;border-bottom:2px solid rgba(242,240,230,.16)}
+h1{font:700 30px/1 Caveat,cursive;letter-spacing:.01em}
+.kick{font:600 10.5px/1 Karla;letter-spacing:.24em;text-transform:uppercase;color:var(--dim);margin-top:7px}
+.daybar{padding:20px 22px 10px;display:flex;align-items:baseline;gap:12px}
+.daybar h2{font:700 27px/1 Caveat,cursive;color:var(--yellow)}
+.count{margin-left:auto;font:600 12px/1 Karla;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+ul{list-style:none;padding:0 22px}
+li{display:flex;align-items:center;gap:14px;padding:15px 0;border-bottom:1px dashed rgba(242,240,230,.2)}
+.nm{flex:1;font:700 23px/1.1 Caveat,cursive}
+.in{display:block;font:600 11px/1 Karla;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-top:6px}
+.mk{width:50px;height:50px;flex:0 0 50px;border-radius:50%;background:none;cursor:pointer;
+ border:2px solid rgba(242,240,230,.3);color:var(--chalk);font:700 24px/1 Caveat,cursive}
+.mk.p{border-color:var(--yellow);color:var(--yellow)}
+.mk.a{border-color:var(--rose);color:var(--rose)}
+.mk.n{border-style:dashed;color:transparent}
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--slate2);
+ border-top:2px solid rgba(242,240,230,.16);padding-bottom:env(safe-area-inset-bottom)}
+.tabs a{flex:1;text-align:center;padding:16px 0 18px;text-decoration:none;color:var(--dim);
+ font:700 17px/1 Caveat,cursive}
+.tabs a.on{color:var(--yellow)}
+</style></head><body>
+<div class="top"><h1>Mezzo School of Music</h1><div class="kick">Attendance register</div></div>
+<div class="daybar"><h2 id="d"></h2><span class="count" id="c"></span></div>
+<ul id="rows"></ul>
+<nav class="tabs"><a class="on" href="#">Register</a><a href="#">Dues</a><a href="#">Money</a></nav>
+<script src="_data.js"></script><script>
+var D=window.MZDEMO;document.getElementById('d').textContent=D.day;
+document.getElementById('c').textContent=D.here+' of '+D.total+' here';
+document.getElementById('rows').innerHTML=D.students.map(function(s){
+ var k=s.mark==='present'?'p':s.mark==='absent'?'a':'n',g=s.mark==='present'?'✓':s.mark==='absent'?'✕':'·';
+ return '<li><span class="nm">'+s.name+'<span class="in">'+s.inst+'</span></span>'+
+        '<button class="mk '+k+'">'+g+'</button></li>';}).join('');
+</script></body></html>
