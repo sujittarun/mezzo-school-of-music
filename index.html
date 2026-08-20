@@ -11,6 +11,37 @@
 <link rel="stylesheet" href="assets/css/app.css?v=20260820c" />
 </head>
 <body>
+<!-- ============================================================
+     REAL REFRACTION.
+     A displacement map, fed to the backdrop. The map is neutral grey
+     (128,128) through the middle and ramps to black/full in the outer
+     14%, so the picture behind the pane is BENT at the bezel and left
+     alone in the centre — which is what a pane of glass actually does,
+     and what a blur can only imply.
+
+     Scale 8, measured against 14 and 22 side by side over this
+     background: 14 smears, 22 melts, 8 bends.
+
+     Only Chromium honours url() in backdrop-filter today. The script
+     below feature-tests it and adds .has-refraction; without that
+     class the CSS bevel does the job instead, so Safari — which is
+     what he actually uses — gets the fallback and never gets a
+     broken-looking pane.
+     ============================================================ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <filter id="mz-glass" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feImage href="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27100%27%20height%3D%27100%27%3E%3Cdefs%3E%3ClinearGradient%20id%3D%27gx%27%20x1%3D%270%27%20y1%3D%270%27%20x2%3D%271%27%20y2%3D%270%27%3E%3Cstop%20offset%3D%270%27%20stop-color%3D%27%23000000%27%2F%3E%3Cstop%20offset%3D%270.14%27%20stop-color%3D%27%23800000%27%2F%3E%3Cstop%20offset%3D%270.86%27%20stop-color%3D%27%23800000%27%2F%3E%3Cstop%20offset%3D%271%27%20stop-color%3D%27%23ff0000%27%2F%3E%3C%2FlinearGradient%3E%3ClinearGradient%20id%3D%27gy%27%20x1%3D%270%27%20y1%3D%270%27%20x2%3D%270%27%20y2%3D%271%27%3E%3Cstop%20offset%3D%270%27%20stop-color%3D%27%23000000%27%2F%3E%3Cstop%20offset%3D%270.14%27%20stop-color%3D%27%23008000%27%2F%3E%3Cstop%20offset%3D%270.86%27%20stop-color%3D%27%23008000%27%2F%3E%3Cstop%20offset%3D%271%27%20stop-color%3D%27%2300ff00%27%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%27100%27%20height%3D%27100%27%20fill%3D%27url%28%23gx%29%27%2F%3E%3Crect%20width%3D%27100%27%20height%3D%27100%27%20fill%3D%27url%28%23gy%29%27%20style%3D%27mix-blend-mode%3Ascreen%27%2F%3E%3C%2Fsvg%3E" result="m" preserveAspectRatio="none" x="0%" y="0%" width="100%" height="100%"/>
+    <feDisplacementMap in="SourceGraphic" in2="m" scale="8" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</defs></svg>
+<script>
+  /* Set before first paint so the pane is never styled twice. */
+  try {
+    if (window.CSS && CSS.supports && CSS.supports("backdrop-filter", "url(#mz-glass)")) {
+      document.documentElement.className += " has-refraction";
+    }
+  } catch (e) {}
+</script>
 <div id="root"></div>
 <div class="tabs" id="tabs" hidden></div>
 <script src="assets/js/cloud.js?v=20260820c"></script>

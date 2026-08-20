@@ -21,6 +21,17 @@ const ROOT = path.join(__dirname, "..");
 const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
 const app = html.slice(html.lastIndexOf("<script>") + 8, html.lastIndexOf("</script>"));
 
+/* Everything the real page puts in <body> before #root — the SVG
+   filter defs and the feature test that switches refraction on. Taken
+   from index.html rather than copied, because a preview that has
+   drifted from the page it previews is worse than no preview: it was
+   already reporting no refraction on a page that has it. */
+const headOfBody = (function () {
+  const b = html.indexOf("<body>");
+  const r = html.indexOf('<div id="root">');
+  return b < 0 || r < 0 ? "" : html.slice(b + 6, r);
+})();
+
 /* Six children, one per instrument, so the palette is all visible at
    once. Nothing here is a real person. */
 const TODAY = new Date();
@@ -77,6 +88,7 @@ const out = `<!doctype html>
 <title>Mezzo — preview (fixtures, not real data)</title>
 <link rel="stylesheet" href="assets/css/app.css">
 </head><body>
+${headOfBody}
 <div id="root"></div><div class="tabs" id="tabs" hidden></div>
 <script>
 /* signed in as nobody, against nothing */

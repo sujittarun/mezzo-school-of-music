@@ -169,6 +169,16 @@ button { cursor: pointer; }
   transition: box-shadow .5s cubic-bezier(.22,.7,.35,1);
 }
 
+/* WHERE THE BACKDROP CAN REALLY BE BENT, BEND IT.
+   With url() support the displacement filter does the refraction for
+   real and the faked bevel below is switched off — two bezels stacked
+   on each other read as a smudge. */
+.has-refraction .card {
+  backdrop-filter: url(#mz-glass) blur(3px) saturate(1.5);
+  -webkit-backdrop-filter: blur(7px) saturate(1.5);
+}
+.has-refraction .card::before { display: none; }
+
 /* THE BEZEL — the refractive band around the rim.
    Painted into a ring by masking the pseudo-element to its own
    padding box, so ONLY the outer 15px is drawn. That ring carries a
