@@ -373,18 +373,24 @@ table.reg thead th.sun { color: var(--no); }
    worse than no line at all. */
 table.reg tbody tr { border-top: 1px solid var(--line); }
 
-/* The mark IS the cell now. A round pip drawn with a background and a
-   radius costs nothing extra to lay out. */
-table.reg td.c { font-size: 11px; color: transparent; }
-table.reg td.c.p, table.reg td.c.a {
-  color: #fff; background-clip: content-box; padding: 6.5px 4.5px;
-  border-radius: 50%; background-origin: content-box;
-}
-table.reg td.c.p { background-color: var(--ok); }
-table.reg td.c.a { background-color: var(--no); }
-table.reg td.c.n { box-shadow: inset 0 0 0 1px var(--line); border-radius: 50%;
-  background-clip: content-box; padding: 6.5px 4.5px; }
-table.reg td.c.o { color: var(--ink-3); opacity: .35; font-size: 13px; }
+/* THE MARK IS THE CELL, and the mark is a CIRCLE.
+   border-radius:50% on a 26x44 cell is an ellipse, not a circle — the
+   register came out full of little eggs. A radial-gradient is round
+   whatever shape the box is, costs one paint and no layout, and keeps
+   this at one element per cell. */
+table.reg td.c { font-size: 10px; line-height: 44px; color: transparent;
+  background-repeat: no-repeat; background-position: center; }
+table.reg td.c.p { color: #fff;
+  background-image: radial-gradient(circle at 50% 50%, var(--ok) 0 8.5px, rgba(0,0,0,0) 8.5px); }
+table.reg td.c.a { color: #fff;
+  background-image: radial-gradient(circle at 50% 50%, var(--no) 0 8.5px, rgba(0,0,0,0) 8.5px); }
+table.reg td.c.n {
+  background-image: radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 0 7.6px,
+                    var(--line) 7.6px 8.6px, rgba(0,0,0,0) 8.6px); }
+/* A day this child's class does not run. Not "unmarked" — never
+   expected, and an empty circle here would read as a register he
+   forgot to fill in. */
+table.reg td.c.o { color: var(--ink-3); opacity: .38; font-size: 13px; }
 .tot { font-weight: 700; padding: 0 10px !important; white-space: nowrap; }
 
 /* ---------- dues ---------- */
