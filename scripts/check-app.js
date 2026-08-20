@@ -25,6 +25,7 @@ const path = require("path");
 const ROOT = path.join(__dirname, "..");
 const cloudSrc = fs.readFileSync(path.join(ROOT, "assets/js/cloud.js"), "utf8");
 const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+const cssSrc = fs.readFileSync(path.join(ROOT, "assets/css/app.css"), "utf8");
 let appSrc = html.slice(html.lastIndexOf("<script>") + 8, html.lastIndexOf("</script>"));
 
 /* One injected line, at the very top of the IIFE: the app returns early
@@ -253,6 +254,44 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
       "the escape left a filter on: fIns=" + api.S.fIns + " fBat=" + api.S.fBat);
     h = byId("root").innerHTML;
     assert(h.includes("Guitar Kid") && h.includes("Piano Kid"), "clearing did not bring everyone back");
+  });
+
+  /* The month grid is TWO tables now — a frozen name column beside a
+     scrolling one — because 96 position:sticky cells were 43% of its
+     layout cost. That buys speed and introduces one way to be badly
+     wrong: if the two ever disagree about how many rows there are, or
+     about their order, every mark is read against the wrong child.
+     A layout test cannot run here, so this pins the structure and the
+     CSS that fixes the heights. */
+  await check("the month grid's two tables cannot disagree about rows", async () => {
+    signIn();
+    api.S.ref = { batches: [{ id: 9, days: [1,2,3,4,5] }], centres: [], instruments: [] };
+    nextBody = ["Alpha","Beta","Gamma","Delta"].map((n, i) => ({
+      member_name: n, enrollment_id: i + 1, member_id: i + 1, batch_id: 9,
+      sport: ["Piano","Guitar","Drums","Violin"][i], present_days: 10 + i, marks: {}
+    }));
+    api.S.tab = "register"; api.S.mode = "month"; api.S.q = "";
+    api.S.fIns = null; api.S.fBat = null;
+    api.S.month = { y: 2026, m: 8 };
+    api.enter(); await tick(); await tick();
+    const h = byId("root").innerHTML;
+
+    const names = [...h.matchAll(/<td class="nmcol">([^<]*)</g)].map((m) => m[1]);
+    const totals = [...h.matchAll(/<td class="tot">(\d+)<\/td>/g)].map((m) => m[1]);
+    assert(names.length === 4, "the frozen name column has " + names.length + " rows, not 4");
+    assert(totals.length === 4, "the day table has " + totals.length + " rows, not 4");
+    assert(names.join(",") === "Alpha,Beta,Gamma,Delta",
+      "the name column is out of order: " + names.join(","));
+    assert(totals.join(",") === "10,11,12,13",
+      "the two tables are out of step — row N's name would sit beside row M's marks: " + totals.join(","));
+
+    /* And the CSS that makes the rows the same height in both. A table
+       row's height is a MINIMUM, so without a capped, overflow-hidden
+       name cell the columns drift a few pixels per row. */
+    assert(/tbody \.nmcol \{[^}]*max-height: 44px/.test(cssSrc),
+      "the name cell is no longer height-capped — the two tables will drift apart again");
+    assert(/table\.reg tbody tr \{ height: 44px/.test(cssSrc),
+      "the day rows no longer have a fixed height");
   });
 
   /* The day patterns arrive on a SECOND request, after the register has

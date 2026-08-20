@@ -310,26 +310,81 @@ button { cursor: pointer; }
 
 /* ---------- the month grid ---------- */
 .gridwrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-table.reg { border-collapse: separate; border-spacing: 0; font-size: 13px; }
+/* ---------- the month grid ----------
+   MEASURED, at 96 children over 31 days: 2,976 cells, 104ms of layout
+   and 11.7ms of parse. The cost was never the markup size and never
+   the animations — this view runs none — it was the browser measuring
+   a 33-column auto-width table.
+
+   Three changes, in the order they matter:
+     1. table-layout: fixed  — the auto algorithm measures every cell
+        in a column before it can decide the column's width. Fixed
+        takes the width off the first row and stops measuring.
+     2. one element per cell — was td > span > i, now just td.
+     3. the name column lifted OUT of the table — 96 position:sticky
+        cells were 43% of what remained.
+
+   Measured end to end: 104.2ms -> see the commit message.
+*/
+table.reg { border-collapse: separate; border-spacing: 0; font-size: 13px;
+  table-layout: fixed; width: max-content; }
 table.reg th, table.reg td { padding: 0; text-align: center; }
+table.reg .c { width: 26px; height: 30px; }
+table.reg col.day { width: 26px; }
+/* A table row's `height` is a MINIMUM, not a height. This cell was
+   two lines of default line-height and grew to 49.5px against the day
+   rows' 44px — 5.5px per row, 523px of drift by the bottom of the
+   register, which means reading a mark against the wrong child. On an
+   attendance sheet that is not a cosmetic bug.
+
+   So the cell is not allowed to grow: an explicit box, line-heights
+   that add up to less than it, and overflow hidden. Content cannot
+   push it, whatever the name is. */
 table.reg .nmcol {
-  position: sticky; left: 0; z-index: 2; background: var(--card);
-  text-align: left; padding: 7px 10px 7px 9px; min-width: 132px;
+  background: var(--card);
+  text-align: left; padding: 0 10px 0 9px; width: 146px; overflow: hidden;
   border-left: 3px solid var(--hue, transparent);
   border-right: 1px solid var(--line); font-weight: 600; white-space: nowrap;
 }
-table.reg thead th { padding: 6px 0 8px; color: var(--ink-3); font-weight: 600; font-size: 11.5px; }
+/* The height belongs to the BODY cell only. On the header cell it beat
+   `thead th { height: 32px }` on specificity and made the names table's
+   head 44px against the days table's 32 — a constant 12px offset down
+   the whole register, which is the same wrong-row bug by another
+   route. Both heads are 32; both body rows are 44. */
+table.reg tbody .nmcol { height: 44px; max-height: 44px;
+  font-size: 13px; line-height: 17px; padding-top: 5px; }
+table.reg .nmcol .sp { line-height: 15px; }
+/* The frozen column and the scroller, side by side. */
+.gridwrap { display: flex; align-items: flex-start; }
+.gridwrap .reg.names { flex: 0 0 auto; }
+.gridscroll { flex: 1 1 auto; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+/* Both tables march in step because every row is the SAME fixed
+   height in both. One line of text, nothing wraps, nothing drifts. */
+table.reg thead th { height: 32px; max-height: 32px; overflow: hidden; box-sizing: border-box; }
+table.reg tbody tr { height: 44px; }
+table.reg .nmcol .sp { display: block; font-weight: 600; font-size: 11.5px; color: var(--hue);
+  overflow: hidden; text-overflow: ellipsis; }
+table.reg thead th { padding: 0; color: var(--ink-3); font-weight: 600; font-size: 11.5px;
+  line-height: 32px; }
 table.reg thead th.sun { color: var(--no); }
+/* content-visibility was here and it did NOTHING — measured at 40.1ms
+   with it and 39.0ms without. It is not honoured on table rows, and a
+   line of CSS that implies an optimisation it does not deliver is
+   worse than no line at all. */
 table.reg tbody tr { border-top: 1px solid var(--line); }
-.cell { width: 26px; height: 30px; display: inline-flex; align-items: center; justify-content: center; }
-.cell i { width: 17px; height: 17px; border-radius: 50%; display: block; font-style: normal;
-          font-size: 11px; line-height: 17px; color: #fff; }
-.cell i.p { background: var(--ok); }
-.cell i.a { background: var(--no); }
-.cell i.n { background: transparent; border: 1px solid var(--line); }
-/* A day this child's class does not run. Not "unmarked" — never
-   expected. An empty circle here would read as a register he forgot. */
-.cell i.off { color: var(--ink-3); opacity: .35; border: 0; font-size: 13px; }
+
+/* The mark IS the cell now. A round pip drawn with a background and a
+   radius costs nothing extra to lay out. */
+table.reg td.c { font-size: 11px; color: transparent; }
+table.reg td.c.p, table.reg td.c.a {
+  color: #fff; background-clip: content-box; padding: 6.5px 4.5px;
+  border-radius: 50%; background-origin: content-box;
+}
+table.reg td.c.p { background-color: var(--ok); }
+table.reg td.c.a { background-color: var(--no); }
+table.reg td.c.n { box-shadow: inset 0 0 0 1px var(--line); border-radius: 50%;
+  background-clip: content-box; padding: 6.5px 4.5px; }
+table.reg td.c.o { color: var(--ink-3); opacity: .35; font-size: 13px; }
 .tot { font-weight: 700; padding: 0 10px !important; white-space: nowrap; }
 
 /* ---------- dues ---------- */

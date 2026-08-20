@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" />
-<link rel="stylesheet" href="assets/css/app.css?v=20260820g" />
+<link rel="stylesheet" href="assets/css/app.css?v=20260821b" />
 </head>
 <body>
 <!-- ============================================================
@@ -966,26 +966,52 @@
       iso = y + "-" + String(m).padStart(2, "0") + "-" + String(i).padStart(2, "0");
       head += '<th class="' + (isSunday(iso) ? "sun" : "") + '">' + i + "</th>";
     }
+    /* ONE ELEMENT PER CELL.
+       This was <td><span class="cell"><i class="p">✓</i></span></td> —
+       three elements for one mark. At ninety-six children that is
+       2,976 cells and 9,406 elements in the tab, and the browser spent
+       104ms LAYING IT OUT (measured; the parse was 11.7ms, so it was
+       never the markup size and it was never the animations, which
+       this view does not run at all).
+
+       The td does the whole job itself. Same information, same look,
+       a third of the nodes. */
     var body = rows.map(function (r) {
       var cells = "";
       for (i = 1; i <= days; i++) {
         iso = y + "-" + String(m).padStart(2, "0") + "-" + String(i).padStart(2, "0");
         var st = r.marks && r.marks[iso];
-        var runs = runsOn(r.batch_id, iso);
-        cells += '<td><span class="cell">' +
-          (st ? '<i class="' + (st === "present" ? "p" : "a") + '">' +
-                (st === "present" ? "✓" : "✕") + "</i>"
-              : runs ? '<i class="n"></i>' : '<i class="off">·</i>') +
-          "</span></td>";
+        cells += st === "present" ? '<td class="c p">\u2713</td>'
+               : st === "absent"  ? '<td class="c a">\u2715</td>'
+               : runsOn(r.batch_id, iso) ? '<td class="c n"></td>'
+               /* not "unmarked" — never expected. An empty circle here
+                  would read as a register he forgot to fill in. */
+               : '<td class="c o">\u00b7</td>';
       }
-      var ins = inst(r.sport);
-      return '<tr style="--hue:' + ins.hue + '"><td class="nmcol">' + esc(r.member_name) +
-        '<div style="font-weight:600;font-size:11.5px;color:var(--hue)">' + esc(r.sport || "") + "</div></td>" +
+      return '<tr style="--hue:' + inst(r.sport).hue + '">' +
         cells + '<td class="tot">' + r.present_days + "</td></tr>";
     }).join("");
-    return '<div class="card"><div class="gridwrap"><table class="reg">' +
-      "<thead><tr><th class=\"nmcol\"></th>" + head + '<th class="tot">Total</th></tr></thead>' +
-      "<tbody>" + body + "</tbody></table></div>" +
+
+    /* THE NAME COLUMN COMES OUT OF THE TABLE.
+       It was position:sticky on ninety-six cells, and sticky is the
+       single most expensive thing left in this view: removing it took
+       the layout from 40.1ms to 22.7ms, measured. So the names are
+       their own narrow table standing beside the scroller instead —
+       the frozen-column pattern — and nothing is sticky at all.
+
+       The two tables stay in step because every row is one fixed
+       height in both. They are one line of text; nothing can wrap. */
+    var names = rows.map(function (r) {
+      return '<tr style="--hue:' + inst(r.sport).hue + '"><td class="nmcol">' +
+        esc(r.member_name) + '<span class="sp">' + esc(r.sport || "") + "</span></td></tr>";
+    }).join("");
+
+    return '<div class="card"><div class="gridwrap">' +
+      '<table class="reg names"><thead><tr><th class="nmcol"></th></tr></thead>' +
+        "<tbody>" + names + "</tbody></table>" +
+      '<div class="gridscroll"><table class="reg days">' +
+        "<thead><tr>" + head + '<th class="tot">Total</th></tr></thead>' +
+        "<tbody>" + body + "</tbody></table></div></div>" +
       '<div class="muted" style="margin-top:10px">Scroll sideways for the rest of the month. ' +
       "Tap <b>One day</b> to mark attendance.</div></div>";
   }

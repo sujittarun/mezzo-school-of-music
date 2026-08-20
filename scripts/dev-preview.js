@@ -39,50 +39,119 @@ const iso = (d) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, 
                    "-" + String(d.getDate()).padStart(2, "0");
 const T = iso(TODAY);
 
-const STUDENTS = [
-  ["Aarthi",  "Piano",    "present"], ["Bharath", "Guitar",   null],
-  ["Chitra",  "Violin",   "present"], ["Deepak",  "Drums",    "absent"],
-  ["Eshwari", "Vocals",   "present"], ["Farhan",  "Keyboard", null],
-  ["Gowri",   "Ukulele",  "present"], ["Hari",    "Piano",    null]
+/* ============================================================
+   NINETY-SIX CHILDREN, and a month of money.
+
+   Eight was enough to see whether a screen was pretty. It was never
+   enough to see whether it was FAST — the month grid at eight
+   students is 8 x 31 cells and at ninety-six it is 2,976, which is
+   the difference between "instant" and the complaint that arrived.
+
+   Deterministic on purpose: a fixture that reshuffles on every reload
+   cannot be measured twice, and every number below is going to be
+   measured.
+   ============================================================ */
+let SEED = 20260821;
+function rnd() { SEED = (SEED * 1103515245 + 12345) & 0x7fffffff; return (SEED >>> 8) / 8388608; }
+function pick(a) { return a[Math.floor(rnd() * a.length) % a.length]; }
+
+const FIRST = [
+  "Aarthi","Bharath","Chitra","Deepak","Eshwari","Farhan","Gowri","Hari","Ilango","Janani",
+  "Karthik","Lakshmi","Mani","Nithya","Oviya","Prakash","Ramya","Sanjay","Tara","Udhay",
+  "Vidya","Yazhini","Abhinav","Bhavana","Charu","Dhanush","Ezhil","Ganesh","Harini","Indira",
+  "Jeeva","Kavya","Lalitha","Madhan","Nandini","Oorja","Pavithra","Raghav","Sneha","Thamarai",
+  "Uma","Varun","Yamini","Anand","Bhargav","Chandra","Divya","Elango","Gayathri","Hemanth",
+  "Ishwarya","Jayanth","Keerthi","Lavanya","Mohan","Naveen","Padma","Rajesh","Sundar","Tanvi",
+  "Usha","Vignesh","Anjali","Balaji","Chetan","Deepika","Ganga","Haritha","Iniya","Jagan",
+  "Kalyani","Lokesh","Meera","Nithin","Poorna","Rekha","Sathya","Tejas","Vasanth","Yuvan",
+  "Aditi","Bhuvana","Chinmay","Devika","Girish","Hasini","Kiran","Malar","Nirmala","Preethi",
+  "Rithika","Shankar","Swathi","Vaishali","Arjun","Nivetha"
 ];
+/* Twenty-two on piano and eight on drums is not arbitrary: piano is
+   the premium instrument here and drums is the one that needs a room
+   nobody else can use while it is running. */
+const MIX = [["Piano",22],["Guitar",18],["Keyboard",14],["Violin",13],
+             ["Vocals",12],["Ukulele",9],["Drums",8]];
+
+const STUDENTS = [];
+(function () {
+  let n = 0;
+  MIX.forEach(([sport, count]) => {
+    for (let i = 0; i < count; i++) {
+      const name = FIRST[n % FIRST.length] + (n >= FIRST.length ? " " + String.fromCharCode(65 + (n % 26)) : "");
+      /* three in four come midweek */
+      const batch = rnd() < 0.76 ? 1 : 2;
+      /* attendance rate 0.55-1.0. The spread is the point: without it
+         nothing can tell a child who is drifting from one who is not. */
+      const rate = 0.55 + rnd() * 0.45;
+      /* joined between 1 and 26 months ago — retention needs a past */
+      const tenure = 1 + Math.floor(rnd() * 26);
+      STUDENTS.push({ n, name, sport, batch, rate, tenure });
+      n++;
+    }
+  });
+})();
+
+const Y = TODAY.getFullYear(), M = TODAY.getMonth() + 1, DOM = TODAY.getDate();
+function isoOf(d) { return Y + "-" + String(M).padStart(2, "0") + "-" + String(d).padStart(2, "0"); }
+function dowOf(d) { return new Date(Y, M - 1, d).getDay(); }
 
 const fixtures = {
-  register: STUDENTS.map((s, i) => {
+  register: STUDENTS.map((s) => {
     const marks = {};
-    if (s[2]) marks[T] = s[2];
-    for (let d = 1; d <= 18; d++) {
-      const day = T.slice(0, 8) + String(d).padStart(2, "0");
-      if (d % 3 !== 0) marks[day] = d % 7 === 0 ? "absent" : "present";
+    for (let d = 1; d <= DOM; d++) {
+      const w = dowOf(d);
+      const runs = s.batch === 1 ? (w >= 1 && w <= 5) : w === 6;
+      if (!runs) continue;
+      const r = rnd();
+      /* a child who is fading does it toward the END of the month,
+         which is the only reason a trend is detectable at all */
+      const late = d > DOM - 10 ? (s.rate < 0.72 ? 0.30 : 0) : 0;
+      if (r < s.rate - late) marks[isoOf(d)] = "present";
+      else if (r < s.rate - late + 0.18) marks[isoOf(d)] = "absent";
     }
-    return { enrollment_id: i + 1, member_id: i + 1, member_name: s[0],
-             sport: s[1], batch_id: 1, marks,
+    return { enrollment_id: s.n + 1, member_id: s.n + 1, member_name: s.name,
+             sport: s.sport, batch_id: s.batch, marks,
+             months_enrolled: s.tenure,
              present_days: Object.values(marks).filter((v) => v === "present").length };
   }),
-  dues: STUDENTS.slice(0, 4).map((s, i) => ({
-    enrollment_id: i + 1, member_name: s[0], parent_name: "Parent " + s[0],
-    sport: s[1], amount: s[1] === "Piano" ? 2500 : 1500,
-    days_since: i + 1, due_date: T, phone: "90000006" + (10 + i),
-    already_sent: i === 0
+  dues: STUDENTS.filter((s) => s.n % 7 === 3).map((s, i) => ({
+    enrollment_id: s.n + 1, member_name: s.name, parent_name: "Parent " + s.name.split(" ")[0],
+    sport: s.sport, amount: s.sport === "Piano" ? 2500 : 1500,
+    days_since: 1 + (i * 3) % 26, due_date: isoOf(Math.max(1, DOM - ((i * 3) % 26))),
+    phone: "900000" + String(1000 + s.n).slice(-4), already_sent: i % 4 === 0
   })),
-  payments: [1, 2, 3, 4, 5].map((i) => ({
-    id: i, amount: i % 2 ? 1500 : 2500, on_date: T, mode: i % 2 ? "UPI" : "Cash",
-    kind: "fee", status: "paid", member_id: i, enrollment_id: i
+  payments: STUDENTS.filter((s) => s.n % 7 !== 3).slice(0, 62).map((s, i) => ({
+    id: i + 1, amount: s.sport === "Piano" ? 2500 : 1500,
+    on_date: isoOf(1 + (i * 3) % Math.max(1, DOM - 1)),
+    mode: i % 3 ? "UPI" : "Cash", kind: "fee", status: "paid",
+    member_id: s.n + 1, enrollment_id: s.n + 1, member_name: s.name, sport: s.sport
   })),
   expenses: [
-    { id: 1, category: "General", detail: "Guitar strings", amount: 850,  mode: "Cash", on_date: T },
-    { id: 2, category: "General", detail: "Electricity",    amount: 2400, mode: "UPI",  on_date: T },
-    { id: 3, category: "General", detail: "Piano tuning",   amount: 1800, mode: "Cash", on_date: T }
+    { id: 1,  category: "Rent",     detail: "Studio rent",        amount: 18000, mode: "UPI",  on_date: isoOf(2) },
+    { id: 2,  category: "Utility",  detail: "Electricity",        amount: 3400,  mode: "UPI",  on_date: isoOf(4) },
+    { id: 3,  category: "Upkeep",   detail: "Piano tuning",       amount: 2200,  mode: "Cash", on_date: isoOf(6) },
+    { id: 4,  category: "Supplies", detail: "Guitar strings x6",  amount: 1450,  mode: "Cash", on_date: isoOf(8) },
+    { id: 5,  category: "Supplies", detail: "Violin rosin, bows", amount: 980,   mode: "Cash", on_date: isoOf(9) },
+    { id: 6,  category: "Upkeep",   detail: "Drum head replace",  amount: 2650,  mode: "UPI",  on_date: isoOf(11) },
+    { id: 7,  category: "Utility",  detail: "Internet",           amount: 1100,  mode: "UPI",  on_date: isoOf(12) },
+    { id: 8,  category: "Supplies", detail: "Printed music",      amount: 1650,  mode: "Cash", on_date: isoOf(14) },
+    { id: 9,  category: "Upkeep",   detail: "Keyboard stand",     amount: 1900,  mode: "UPI",  on_date: isoOf(16) },
+    { id: 10, category: "Utility",  detail: "Water",              amount: 450,   mode: "Cash", on_date: isoOf(17) },
+    { id: 11, category: "Supplies", detail: "Ukulele strings",    amount: 620,   mode: "Cash", on_date: isoOf(18) },
+    { id: 12, category: "Upkeep",   detail: "Aircon service",     amount: 2800,  mode: "UPI",  on_date: isoOf(19) }
   ],
-  members: STUDENTS.map((s, i) => ({
-    id: i + 1, name: s[0], phone: "90000001" + (10 + i),
-    parent_name: "Parent " + s[0], parent_phone: "90000001" + (10 + i),
-    enrollments: [{ id: i + 1, sport: s[1], batch_id: 1, status: "active" }]
+  members: STUDENTS.map((s) => ({
+    id: s.n + 1, name: s.name, phone: "900000" + String(1000 + s.n).slice(-4),
+    parent_name: "Parent " + s.name.split(" ")[0],
+    parent_phone: "900000" + String(1000 + s.n).slice(-4),
+    enrollments: [{ id: s.n + 1, sport: s.sport, batch_id: s.batch, status: "active" }]
   })),
   centres: [{ id: 1, code: "main", name: "Thadagam Road", short_name: "Main", sort: 1 }],
-  batches: [{ id: 1, code: "weekday", name: "Mon–Fri 3–8pm", days: [1,2,3,4,5],
-              start_time: "15:00", end_time: "20:00", sort: 1 },
-            { id: 2, code: "saturday", name: "Saturday 10am–8pm", days: [6],
-              start_time: "10:00", end_time: "20:00", sort: 2 }],
+  batches: [{ id: 1, code: "weekday", name: "Mon–Fri 3–8pm", short_name: "Mon–Fri",
+              days: [1,2,3,4,5], start_time: "15:00", end_time: "20:00", sort: 1 },
+            { id: 2, code: "saturday", name: "Saturday 10am–8pm", short_name: "Saturday",
+              days: [6], start_time: "10:00", end_time: "20:00", sort: 2 }],
   sports: ["Piano","Keyboard","Guitar","Violin","Ukulele","Drums","Vocals"]
            .map((n, i) => ({ id: i + 1, code: n.toLowerCase(), name: n, icon: null, sort: i }))
 };
