@@ -326,21 +326,76 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
     assert(/target="_blank"/.test(h) && /rel="noopener"/.test(h), "the link is not safely external");
   });
 
-  await check("marking someone paid goes through record_fee_payment", async () => {
+  /* A payment is three questions and a confirmation now, not one tap.
+     These four checks exist because each of the three was previously
+     hardcoded, and the months one reached the parent: a term paid up
+     front recorded as one month rolls renewal_on forward once, and the
+     platform then chases a family that has already paid. */
+  await check("the Paid button opens the sheet and writes nothing yet", async () => {
     signIn(); fetchLog.length = 0; nextBody = {};
-    const btn = { getAttribute: (k) => ({ "data-paid": "5", "data-amt": "1500", "data-nm": "Chitra" }[k]) };
+    const btn = { getAttribute: (k) => ({ "data-paid": "5", "data-amt": "1500",
+                                          "data-nm": "Chitra", "data-sport": "Violin" }[k]) };
     onClick({ target: { closest: (s) => (s === "[data-paid]" ? btn : null) } });
     await tick(); await tick();
+    assert(calls("record_fee_payment").length === 0,
+      "it recorded a payment before he had confirmed anything");
+    assert(api.S.pay && api.S.pay.enrollment === 5, "the sheet did not open on the right student");
+    assert(api.S.pay.amount === 1500, "the sheet lost the amount the queue quoted");
+  });
+
+  await check("months and mode are asked, and both reach the database", async () => {
+    signIn();
+    api.S.pay = { enrollment: 5, name: "Chitra", sport: "Violin", amount: 1500, months: 1, mode: "Cash" };
+    fetchLog.length = 0; nextBody = { amount: 4500 };
+
+    /* three months: the price must be re-asked, never multiplied here */
+    onClick({ target: { closest: (s) => (s === "[data-paymonths]"
+      ? { getAttribute: () => "3" } : null) } });
+    await tick(); await tick();
+    assert(calls("enrollment_fee").length === 1,
+      "it did not ask the database what three months costs");
+    assert(api.S.pay.amount === 4500, "it ignored the price the database returned");
+
+    onClick({ target: { closest: (s) => (s === "[data-paymode]"
+      ? { getAttribute: () => "UPI" } : null) } });
+    await tick();
+    assert(api.S.pay.mode === "UPI", "the payment mode was not recorded");
+
+    fetchLog.length = 0; nextBody = {};
+    byId("payAmt").value = "4500";   /* elements exist on first access */
+    onClick({ target: { closest: (s) => (s === "#payGo" ? {} : null) } });
+    await tick(); await tick();
     const p = calls("record_fee_payment");
-    assert(p.length === 1, "the Paid button made " + p.length + " calls to record_fee_payment");
-    assert(p[0].body.p_enrollment === 5 && p[0].body.p_amount === 1500, "wrong payment: " + JSON.stringify(p[0].body));
+    assert(p.length === 1, "confirming made " + p.length + " calls to record_fee_payment");
+    assert(p[0].body.p_months === 3, "months went in as " + p[0].body.p_months + ", not 3");
+    assert(p[0].body.p_mode === "UPI", "mode went in as " + p[0].body.p_mode + ", not UPI");
+    assert(p[0].body.p_amount === 4500, "amount went in as " + p[0].body.p_amount);
     /* Nothing else may write a payment: that function also rolls the
        renewal date forward and closes the reminder. */
     assert(calls("/payments").filter((c) => c.method === "POST").length === 0,
       "it wrote to the payments table directly, bypassing the fee logic");
   });
 
-  /* ---- 4. money ---- */
+  await check("a family who paid ON TIME can still be recorded", async () => {
+    signIn(); api.S.pay = null; api.S.picker = null;
+    fetchLog.length = 0;
+    nextBody = [{ id: 9, name: "Gowri", enrollments: [{ id: 12, sport: "Ukulele" }] }];
+    onClick({ target: { closest: (s) => (s === "[data-other]" ? {} : null) } });
+    await tick(); await tick();
+    assert(calls("/members").length >= 1,
+      "the picker never read the members list, so only overdue families can pay");
+
+    nextBody = { amount: 1500 };
+    onClick({ target: { closest: (s) => (s === "[data-pick]"
+      ? { getAttribute: (k) => ({ "data-pick": "12", "data-nm": "Gowri",
+                                  "data-sport": "Ukulele" }[k]) } : null) } });
+    await tick(); await tick();
+    assert(api.S.pay && api.S.pay.enrollment === 12,
+      "picking a student did not open the payment sheet");
+    assert(api.S.pay.amount === 1500,
+      "the amount was not priced by the database for a student who is not overdue");
+  });
+
   await check("an expense is amount + what + save, and nothing else", async () => {
     signIn(); fetchLog.length = 0; nextBody = [];
     byId("exAmt").value = "450"; byId("exWhat").value = "Guitar strings";

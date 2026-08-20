@@ -13,7 +13,7 @@ Three tabs, and nothing else.
 | | |
 |---|---|
 | **Register** | Today's attendance — tap a name to mark them. Switch to **Whole month** for the register grid, students down the side and days across. |
-| **Dues** | Whoever is a day or more late on their fee, with a WhatsApp button and a Paid button. |
+| **Dues** | Whoever is a day or more late on their fee, with a WhatsApp button and a Paid button. **Someone else paid** records a family who paid on time and so never appeared here at all. |
 | **Money** | Fees collected and money spent this month, and a two-field form to add an expense. |
 
 ## The landing page
@@ -49,6 +49,19 @@ turned an intentional `null` back into a present.
 
 Add a case whenever something breaks. A conclusion defended only by
 reading the source has been wrong here before.
+
+## Taking money
+
+A payment asks three things: how much, how many months, and cash or
+UPI. All three were once hardcoded — one month, UPI, and the exact
+figure the reminder queue quoted — and the months one reached the
+parent: a term paid up front recorded as a single month rolls
+`renewal_on` forward once, and the platform then chases a family that
+has already paid.
+
+The amount is still never worked out here. `enrollment_fee()` prices
+the months and the app displays what it is told; changing the month
+count re-asks the database rather than multiplying anything.
 
 ## The one rule
 

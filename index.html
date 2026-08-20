@@ -87,6 +87,8 @@
     month: null,              // {y, m}
     q: "",
     fresh: false,             // true for exactly one render, after a tab change
+    pay: null,                // the payment being taken: {enrollment,name,amount,months,mode}
+    picker: null,             // the student list, when choosing who paid
     fIns: null,               // instrument filter, null = all
     fBat: null,               // batch filter, null = all
     showOff: false,
@@ -707,13 +709,17 @@
     if (!S.dues) return '<div class="note">Loading…</div>';
     if (!S.dues.length) {
       return '<div class="card"><div class="note">' +
-        '<div style="font-size:34px">✓</div>Nobody is overdue.<br>Everyone has paid.</div></div>';
+        '<div style="font-size:34px">✓</div>Nobody is overdue.<br>Everyone has paid.' +
+        '<br><br><button class="btn ghost" data-other="1">Someone else paid</button>' +
+        "</div></div>";
     }
     var total = S.dues.reduce(function (a, d) { return a + Number(d.amount || 0); }, 0);
     return '<div class="card">' +
       '<div class="rowline" style="margin-bottom:10px">' +
         "<div><b style=\"font-size:19px\">" + S.dues.length + " to collect</b>" +
         '<div class="muted">' + inr(total) + " in total</div></div></div>" +
+      '<button class="btn ghost" data-other="1" style="margin-bottom:14px">' +
+        "Someone else paid</button>" +
       S.dues.map(function (d) {
         var blocked = d.blocked_reason === "missing_phone";
         return '<div class="due tuned" style="--hue:' + inst(d.sport).hue + '">' +
@@ -728,7 +734,7 @@
                 ' data-sent="' + d.enrollment_id + '" data-amt="' + d.amount + '"' +
                 ' data-ph="' + esc(d.phone || "") + '">WhatsApp</a>') +
             '<button class="paid" data-paid="' + d.enrollment_id + '" data-amt="' + d.amount +
-              '" data-nm="' + esc(d.member_name) + '">Paid</button>' +
+              '" data-nm="' + esc(d.member_name) + '" data-sport="' + esc(d.sport || "") + '">Paid</button>' +
           "</div></div>";
       }).join("") + "</div>";
   }
@@ -794,6 +800,134 @@
         : "");
   }
 
+  /* ============================================================
+     TAKING MONEY
+
+     This used to be one window.confirm() that recorded the exact
+     amount reminder_queue quoted, for one month, as UPI, and only
+     ever for somebody already overdue. Three things were wrong with
+     that and one of them reached the parent:
+
+       · a family paying ON TIME had nowhere to be recorded, because
+         the only Paid button lived in the overdue list;
+       · every rupee was filed as UPI, in a school that takes cash;
+       · a term paid up front was recorded as one month, so
+         renewal_on rolled forward once and the platform chased them
+         again the following month for money already paid.
+
+     So there is a sheet now. It asks the three things that actually
+     vary and nothing else, and it is only ever on screen while he is
+     taking money — the register behind it is untouched.
+
+     THE AMOUNT STILL COMES FROM POSTGRES. enrollment_fee() prices the
+     months; this file only ever displays what it is told and sends
+     back what he confirms. */
+  function viewPay() {
+    var p = S.pay;
+    return '<div class="sheet"><div class="card">' +
+      '<h3 style="font-size:19px;margin-bottom:2px">' + esc(p.name) + "</h3>" +
+      '<div class="muted" style="margin-bottom:14px">' + esc(p.sport || "") + "</div>" +
+
+      '<label class="field"><span>How much</span>' +
+        '<input id="payAmt" type="number" inputmode="numeric" min="1" value="' +
+        (p.amount == null ? "" : p.amount) + '" /></label>' +
+
+      '<span class="field"><span>How many months</span></span>' +
+      '<div class="frow" style="margin-bottom:14px">' +
+        [1, 2, 3, 6, 12].map(function (m) {
+          return '<button class="chip' + (p.months === m ? " on" : "") +
+                 '" data-paymonths="' + m + '">' + m + "</button>";
+        }).join("") +
+      "</div>" +
+
+      '<span class="field"><span>How it was paid</span></span>' +
+      '<div class="frow" style="margin-bottom:18px">' +
+        ["Cash", "UPI"].map(function (m) {
+          return '<button class="chip' + (p.mode === m ? " on" : "") +
+                 '" data-paymode="' + esc(m) + '">' + m + "</button>";
+        }).join("") +
+      "</div>" +
+
+      '<button class="btn" id="payGo">Record ' + (p.amount ? inr(p.amount) : "payment") + "</button>" +
+      '<button class="btn ghost" id="payCancel" style="margin-top:8px">Cancel</button>' +
+    "</div></div>";
+  }
+
+  /* Ask the database what this costs for that many months, and never
+     work it out here. A null answer leaves the field as he typed it. */
+  function repriceAndRender() {
+    render();
+    if (!S.pay || !S.pay.enrollment) return;
+    var want = S.pay;
+    MZ.feeFor(want.enrollment, want.months).then(function (v) {
+      if (S.pay !== want) return;                 /* he moved on */
+      var amt = v && (v.amount != null ? v.amount : (v[0] && v[0].amount));
+      if (amt != null) { S.pay.amount = amt; render(); }
+    });
+  }
+
+  function openPay(enrollment, name, sport, amount) {
+    S.pay = { enrollment: enrollment, name: name, sport: sport,
+              amount: amount == null ? null : amount, months: 1, mode: "Cash" };
+    if (amount == null) repriceAndRender(); else render();
+  }
+
+  function confirmPay() {
+    var el = document.getElementById("payAmt");
+    var amt = el ? Math.round(+el.value) : 0;
+    if (!amt || amt <= 0) { S.err = "Enter how much was paid."; return render(); }
+    var b = document.getElementById("payGo");
+    if (b) { b.disabled = true; b.textContent = "Recording…"; }
+    MZ.takePayment({ enrollment: S.pay.enrollment, amount: amt,
+                     months: S.pay.months, mode: S.pay.mode })
+      .then(function () {
+        toast("Payment recorded"); S.pay = null; S.err = ""; loadDues();
+      })
+      .catch(function (e) {
+        if (b) { b.disabled = false; b.textContent = "Record " + inr(amt); }
+        fail(e);
+      });
+  }
+
+  /* ---------- who else has paid ----------
+     The picker is the answer to "somebody paid and they are not on
+     the overdue list". It reads members, which is the one call this
+     app had never made. */
+  function loadPicker() {
+    S.picker = { rows: null, q: "" };
+    render();
+    MZ.students().then(function (rows) {
+      S.picker = { rows: rows || [], q: (S.picker && S.picker.q) || "" };
+      render();
+    }).catch(fail);
+  }
+  function viewPicker() {
+    var pk = S.picker;
+    var body = '<div class="sheet"><div class="card">' +
+      '<h3 style="font-size:18px;margin-bottom:10px">Who paid?</h3>' +
+      '<input class="search" id="pq" placeholder="Find a student…" value="' + esc(pk.q) + '" />';
+    if (!pk.rows) return body + '<div class="note">Loading…</div>' +
+      '<button class="btn ghost" id="pkCancel" style="margin-top:10px">Cancel</button></div></div>';
+
+    var q = pk.q.toLowerCase();
+    var rows = pk.rows.filter(function (m) {
+      return !q || (m.name || "").toLowerCase().indexOf(q) >= 0;
+    }).slice(0, 40);
+
+    body += rows.map(function (m) {
+      var e = (m.enrollments || [])[0] || {};
+      var ins = inst(e.sport);
+      return '<div class="srow key tuned" style="--hue:' + ins.hue + '"' +
+        ' data-pick="' + (e.id || "") + '" data-nm="' + esc(m.name) +
+        '" data-sport="' + esc(e.sport || "") + '">' +
+        '<span class="ig">' + svgIcon(ins) + "</span>" +
+        '<div class="nm"><b>' + esc(m.name) + "</b><span>" + esc(e.sport || "no instrument") + "</span></div>" +
+      "</div>";
+    }).join("") || '<div class="note">Nobody matches that.</div>';
+
+    return body + '<button class="btn ghost" id="pkCancel" style="margin-top:10px">Cancel</button></div></div>';
+  }
+
   /* ---------- add a student ---------- */
   function viewAdd() {
     var ins = (S.ref && S.ref.instruments) || [], bs = (S.ref && S.ref.batches) || [];
@@ -831,6 +965,10 @@
     var inner = S.tab === "add" ? viewAdd()
               : S.tab === "register" ? viewRegister()
               : S.tab === "dues" ? viewDues() : viewMoney();
+    /* The sheets sit ON the tab, so cancelling always returns him to
+       exactly where he was rather than to some remembered screen. */
+    if (S.picker) inner += viewPicker();
+    if (S.pay)    inner += viewPay();
     /* Read and clear: the entrance animation belongs to the render
        that follows a tab change, not to the twenty re-renders that
        follow marking twenty children. */
@@ -905,9 +1043,34 @@
       return;
     }
     var pd = t.closest("[data-paid]");
-    if (pd) { takePayment(+pd.getAttribute("data-paid"), +pd.getAttribute("data-amt"), pd.getAttribute("data-nm")); return; }
+    if (pd) {
+      openPay(+pd.getAttribute("data-paid"), pd.getAttribute("data-nm"),
+              pd.getAttribute("data-sport"), +pd.getAttribute("data-amt"));
+      return;
+    }
+    if (t.closest("[data-other]")) { loadPicker(); return; }
+    var pk = t.closest("[data-pick]");
+    if (pk) {
+      S.picker = null;
+      openPay(+pk.getAttribute("data-pick"), pk.getAttribute("data-nm"),
+              pk.getAttribute("data-sport"), null);
+      return;
+    }
+    if (t.closest("#pkCancel")) { S.picker = null; render(); return; }
+    var pm = t.closest("[data-paymonths]");
+    if (pm) { S.pay.months = +pm.getAttribute("data-paymonths"); repriceAndRender(); return; }
+    var pmo = t.closest("[data-paymode]");
+    if (pmo) { S.pay.mode = pmo.getAttribute("data-paymode"); render(); return; }
+    if (t.closest("#payGo")) { confirmPay(); return; }
+    if (t.closest("#payCancel")) { S.pay = null; S.err = ""; render(); return; }
   });
   document.addEventListener("input", function (e) {
+    if (e.target.id === "pq" && S.picker) {
+      S.picker.q = e.target.value; var pv = S.picker.q;
+      render();
+      var pn = document.getElementById("pq"); if (pn) { pn.value = pv; pn.focus(); }
+      return;
+    }
     if (e.target.id === "q") { S.q = e.target.value; var v = S.q;
       var cur = document.getElementById("q"); render();
       var n = document.getElementById("q"); if (n) { n.value = v; n.focus(); } }
@@ -935,16 +1098,6 @@
     MZ.addExpense({ amount: amt, detail: what || "General", category: "General" })
       .then(function () { toast("Expense saved"); loadMoney(); })
       .catch(function (e) { b.disabled = false; b.textContent = "Save expense"; fail(e); });
-  }
-
-  /* record_fee_payment does everything: writes the payment, rolls the
-     renewal date forward and closes the reminder. That is why there is
-     no second step here and no number computed in this file. */
-  function takePayment(enrollment, amount, name) {
-    if (!window.confirm("Received " + inr(amount) + " from " + name + "?")) return;
-    MZ.takePayment({ enrollment: enrollment, amount: amount, months: 1, mode: "UPI" })
-      .then(function () { toast("Payment recorded"); loadDues(); })
-      .catch(fail);
   }
 
   /* ---------- entering a tab loads only what that tab needs ---------- */
