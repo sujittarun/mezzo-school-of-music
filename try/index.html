@@ -1223,28 +1223,68 @@ window.fetch = function (url) {
       ". Kindly pay at your convenience. Thank you.";
     return "https://wa.me/" + ph + "?text=" + encodeURIComponent(msg);
   }
+  /* ============================================================
+     THE TUNER — the dues tab
+
+     Every family is a note being tuned. Dead centre is settled; the
+     needle sits FLAT by how many days they are late, and the further
+     out, the redder. Late becomes a thing you see the shape of before
+     you have read a single number, and a school with nothing owing is
+     a screen that has gone perfectly still.
+
+     The list is whatever reminder_queue() returned, in the order it
+     returned it. This app does not filter the dues list — that is how
+     his screen and his WhatsApp message start disagreeing.
+     ============================================================ */
+  var TUNER_NOTE = { Piano: "C", Keyboard: "E", Guitar: "E", Violin: "A",
+                     Ukulele: "G", Vocals: "A", Drums: "D", Flute: "B" };
+  /* days late -> how far off the needle sits, capped and curved so a
+     month late and three months late do not look the same. */
+  function flatness(days) {
+    var d = Number(days) || 0;
+    return d <= 0 ? 0 : Math.min(1, Math.pow(d / 26, 0.72));
+  }
+
   function viewDues() {
     if (!S.dues) return '<div class="note">Loading…</div>';
     if (!S.dues.length) {
-      return '<div class="card"><div class="note">' +
-        '<div style="font-size:34px">✓</div>Nobody is overdue.<br>Everyone has paid.' +
-        '<br><br><button class="btn ghost" data-other="1">Someone else paid</button>' +
+      return '<div class="card tuner"><div class="tn-allin">' +
+        '<div class="tn-ring"><b>\u2713</b></div>' +
+        "<b>The whole school is in tune.</b><span>Nobody is overdue.</span>" +
+        '<button class="btn ghost" data-other="1">Someone else paid</button>' +
         "</div></div>";
     }
     var total = S.dues.reduce(function (a, d) { return a + Number(d.amount || 0); }, 0);
-    return '<div class="card">' +
-      '<div class="rowline" style="margin-bottom:10px">' +
-        "<div><b style=\"font-size:19px\">" + S.dues.length + " to collect</b>" +
+    return '<div class="card tuner">' +
+      '<div class="rowline" style="margin-bottom:4px">' +
+        "<div><b style=\"font-size:19px\">" + S.dues.length + " out of tune</b>" +
         '<div class="muted">' + inr(total) + " in total</div></div></div>" +
-      '<button class="btn ghost" data-other="1" style="margin-bottom:14px">' +
+      '<button class="btn ghost" data-other="1" style="margin:8px 0 14px">' +
         "Someone else paid</button>" +
       S.dues.map(function (d) {
         var blocked = d.blocked_reason === "missing_phone";
-        return '<div class="due tuned" style="--hue:' + inst(d.sport).hue + '">' +
-          '<div class="hd"><b>' + esc(d.member_name) + "</b><em>" + inr(d.amount) + "</em></div>" +
-          '<div class="sub"><span class="late">' + d.days_since + " day" + (d.days_since === 1 ? "" : "s") +
-            " late</span> · " + esc(d.sport || "") +
-            (d.already_sent ? " · asked today" : "") + "</div>" +
+        var off = flatness(d.days_since), hue = inst(d.sport).hue;
+        var col = off < 0.12 ? "var(--ok)" : off < 0.5 ? "var(--warn)" : "var(--no)";
+        /* left of centre is flat; 50% is dead centre and 7% is as flat
+           as the meter draws */
+        var left = (50 - off * 43).toFixed(1);
+        var ticks = "";
+        for (var t = 0; t < 11; t++) {
+          ticks += '<i class="tn-tk' + (t === 5 ? " mid" : "") + '" style="left:' + (t * 10) + '%"></i>';
+        }
+        return '<div class="due tuned" style="--hue:' + hue + '">' +
+          '<div class="hd">' +
+            '<span class="tn-note" style="color:' + col + '">' +
+              (TUNER_NOTE[d.sport] || "\u266a") + "</span>" +
+            "<b>" + esc(d.member_name) + "</b><em>" + inr(d.amount) + "</em></div>" +
+          '<div class="tn-meter"><div class="tn-ticks">' + ticks +
+            '<span class="tn-gate"></span></div>' +
+            '<span class="ndl' + (off > 0.12 ? " off" : "") +
+              '" style="left:' + left + '%;background:' + col + '"></span>' +
+            '<span class="tn-cents">' + d.days_since + " day" + (d.days_since === 1 ? "" : "s") +
+            " flat</span></div>" +
+          '<div class="sub">' + esc(d.sport || "") +
+            (d.already_sent ? " \u00b7 asked today" : "") + "</div>" +
           '<div class="acts">' +
             (blocked
               ? '<button disabled style="opacity:.5">No phone number</button>'
@@ -1257,12 +1297,6 @@ window.fetch = function (url) {
       }).join("") + "</div>";
   }
 
-  /* ============================================================
-     TAB 3 — MONEY
-     Three numbers and one form. Adding an expense is amount, what it
-     was for, save — nothing else, because anything else is a reason
-     not to bother recording it.
-     ============================================================ */
   function loadMoney() {
     S.money = null;
     var r = MZ.monthRange(S.month.y, S.month.m);

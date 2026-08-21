@@ -560,8 +560,15 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
     assert(h.includes("Chitra") && h.includes("Deepak"), "a name is missing from the dues list");
     /* 40 days late must still be chased: the +15 stop belongs to the
        ladder, and this tenant is not on the ladder. */
-    assert(h.includes("40 days late"), "the long-overdue student was dropped");
-    assert(h.includes("2 to collect") && h.includes("₹4,000"), "the total is wrong");
+    assert(h.includes("40 days flat"), "the long-overdue student was dropped");
+    assert(h.includes("2 out of tune") && h.includes("₹4,000"), "the total is wrong");
+
+    /* The needle has to be further from centre for 40 days than for 1,
+       or the meter is decoration. */
+    const lefts = [...h.matchAll(/class="ndl[^"]*" style="left:([\d.]+)%/g)].map((m) => +m[1]);
+    assert(lefts.length === 2, "two students, " + lefts.length + " needles");
+    assert(lefts[1] < lefts[0] - 10,
+      "40 days does not read as flatter than 1 day: " + lefts.join(" vs "));
   });
 
   await check("the WhatsApp link carries the country code and no stray characters", async () => {

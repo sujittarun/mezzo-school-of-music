@@ -1073,3 +1073,61 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
 .daysum { display: block; font-style: normal; font-size: 13.5px; font-weight: 600;
   color: var(--brand); margin-bottom: 2px; }
 .daysum.dim { color: var(--ink-3); font-weight: 500; }
+
+/* ============================================================
+   THE TUNER — the dues tab
+
+   Dead centre is settled. The needle sits flat by how many days they
+   are late; the further out, the redder. The number is still there,
+   but the shape of the problem arrives before the number does.
+
+   Out of tune wavers, very slightly. In tune is perfectly still —
+   and stillness is what makes "settled" readable at a glance.
+
+   Every class here is prefixed tn-. Two of the obvious names were
+   already taken by other parts of this app: `.gate` is the SIGN-IN
+   SCREEN, which is position:fixed and inset:0, so a `.gate` inside a
+   dues row painted a black bar down the whole page; and `.note` is
+   the muted "Loading..." box.
+   ============================================================ */
+.card.tuner .due { padding: 13px 4px 14px; }
+.card.tuner .due .hd { display: flex; align-items: center; gap: 9px; }
+.card.tuner .tn-note {
+  width: 30px; height: 30px; flex: none; border: 1.6px solid currentColor;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font: 600 15px/1 "Cormorant Garamond", Georgia, serif;
+}
+.card.tuner .due .hd b { flex: 1; min-width: 0; }
+
+/* 34px was the ticks' height, so the label underneath had nowhere to
+   go and printed straight across them. The meter is the ticks PLUS
+   the label. */
+.card.tuner .tn-meter { position: relative; height: 46px; margin: 8px 0 0; }
+.card.tuner .tn-ticks { position: absolute; inset: 0; }
+/* Everything on the dial lives in the top 26px; the label owns the
+   bottom. Measured, because "looks fine" is how it overlapped twice. */
+.card.tuner .tn-tk { position: absolute; top: 9px; width: 1px; height: 8px;
+  background: var(--rule); }
+.card.tuner .tn-tk.mid { top: 4px; height: 18px; width: 1.6px; }
+.card.tuner .tn-gate { position: absolute; left: 50%; top: 2px; width: 24px; height: 22px;
+  margin-left: -12px; border: 1.4px solid var(--rule); border-radius: 4px; }
+.card.tuner .ndl { position: absolute; top: 1px; width: 2.4px; height: 24px;
+  margin-left: -1.2px; border-radius: 2px;
+  transition: left .62s cubic-bezier(.22,1.4,.36,1), background .4s; }
+.card.tuner .tn-cents { position: absolute; left: 0; right: 0; bottom: 0; text-align: center;
+  font: 600 10px/1 inherit; letter-spacing: .08em; color: var(--ink-3); }
+@keyframes waver { 0%,100% { transform: translateX(-1.3px) } 50% { transform: translateX(1.3px) } }
+.card.tuner .ndl.off { animation: waver 1.1s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .card.tuner .ndl.off { animation: none; } }
+
+.card.tuner .sub { margin: 6px 0 10px; }
+
+/* nothing owing: the one screen in the app that is allowed to be empty
+   and pleased about it */
+.card.tuner .tn-allin { text-align: center; padding: 26px 10px 8px; }
+.card.tuner .tn-allin .ring { width: 62px; height: 62px; margin: 0 auto 14px;
+  border: 2px solid var(--ok); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; }
+.card.tuner .tn-allin .ring b { font-size: 28px; color: var(--ok); line-height: 1; }
+.card.tuner .tn-allin > b { display: block; font-size: 18px; margin-bottom: 3px; }
+.card.tuner .tn-allin span { display: block; color: var(--ink-3); font-size: 14.5px; margin-bottom: 20px; }
