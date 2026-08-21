@@ -33,7 +33,8 @@ let appSrc = html.slice(html.lastIndexOf("<script>") + 8, html.lastIndexOf("</sc
    the foot would never run. */
 const before = appSrc.length;
 appSrc = appSrc.replace(/"use strict";/,
-  '"use strict"; __x(function () { return { S: S, render: render, enter: enter, boot: boot }; });');
+  '"use strict"; __x(function () { return { S: S, render: render, enter: enter, boot: boot, ' +
+  'openWho: openWho }; });');
 if (appSrc.length === before) { console.error("could not inject the accessor"); process.exit(1); }
 
 /* ---- the browser, and only the browser ---- */
@@ -620,7 +621,7 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
        overdue for two months they did not attend. */
     fetchLog.length = 0;
     onClick({ target: { closest: (q) => (q === "[data-pause]" ? { getAttribute: (a) =>
-      a === "data-pause" ? "11" : a === "data-months" ? "2" :
+      a === "data-pause" ? "11" : a === "data-pmonths" ? "2" :
       a === "data-ren" ? "2026-09-10" : "Aarthi" } : null) } });
     for (let i = 0; i < 8; i++) await tick();
     const pw = calls("/enrollments").filter((c) => c.method === "PATCH");
@@ -653,6 +654,45 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
     const rw = calls("/enrollments").filter((c) => c.method === "PATCH");
     assert(rw.length === 1 && rw[0].body.status === "active",
       "bringing back did not restore the enrolment: " + JSON.stringify(rw.map((c) => c.body)));
+  });
+
+  /* A parent says "he is away until October" while the register is
+     open. If pause is only on the Members tab, the nearest answer on
+     the card in front of him is "has stopped coming" — which closes
+     the enrolment. So it has to be here too, and it has to carry the
+     renewal date, or the projection is blank and the shift silent. */
+  await check("a student can be paused from the register card, not only from Members", async () => {
+    signIn(); fetchLog.length = 0;
+    nextBody = (url) => {
+      if (url.includes("attendance_month")) return [];
+      if (url.includes("attendance_roster")) return [
+        { enrollment_id: 11, member_id: 1, member_name: "Aarthi", sport: "Piano", batch_id: 1 }];
+      if (url.includes("/members")) return [{ id: 1, name: "Aarthi", phone: "9000000111",
+        enrollments: [{ id: 11, sport: "Piano", batch_id: 1, status: "active",
+                        renewal_on: "2026-09-10" }] }];
+      if (url.includes("/batches")) return [{ id: 1, days: [3, 6], name: "Wed + Sat", active: true }];
+      return [];
+    };
+    api.S.tab = "register"; api.enter();
+    for (let i = 0; i < 10; i++) await tick();
+    api.openWho({ getAttribute: (a) => ({ "data-who": "11", "data-mem": "1",
+      "data-nm": "Aarthi", "data-sport": "Piano", "data-batch": "1" }[a] || "") });
+    for (let i = 0; i < 10; i++) await tick();
+    let h = byId("root").innerHTML;
+    assert(/data-pausing="11"/.test(h), "the register card offers no way to pause");
+
+    api.S.pausing = 11; api.S.pauseMonths = 2; api.render();
+    h = byId("root").innerHTML;
+    assert(/data-pmonths="2"/.test(h), "the pause panel did not open on the register card");
+    assert(/10 Nov 2026/.test(h),
+      "the register card cannot project the new fee date — renewal_on never reached S.who");
+
+    fetchLog.length = 0;
+    onClick({ target: { closest: (q) => (q === "[data-pause]" ? { getAttribute: (a) =>
+      a === "data-pause" ? "11" : a === "data-pmonths" ? "2" :
+      a === "data-ren" ? "2026-09-10" : "Aarthi" } : null) } });
+    for (let i = 0; i < 8; i++) await tick();
+    assert(api.S.who == null, "the card stayed open over a student who is no longer on the register");
   });
 
   /* enrollments_plan_months_check allows 1, 3, 6 or 12 and nothing
@@ -1166,6 +1206,23 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
     });
     const evs = (appSrc + cloudSrc).match(/report\("(\w+)"/g) || [];
     assert(evs.length >= 4, "only " + evs.length + " event kinds; the console reads a silent tenant as Onboarding");
+  });
+
+  /* "Who paid me" is the question the Received list exists to answer,
+     and for a while it answered with a column of identical amounts.
+     The name comes from the members embed, so both halves are pinned:
+     the query must ask for it and the row must print it. */
+  await check("the Received list names the payer", () => {
+    const sel = cloudSrc.slice(cloudSrc.indexOf("function payments("),
+                               cloudSrc.indexOf("function expenses("));
+    assert(/members\(name\)/.test(sel), "payments() no longer embeds the member name");
+    assert(/\bmonths\b/.test(sel), "payments() stopped asking for months; 6x rates read as errors");
+    const row = appSrc.slice(appSrc.indexOf("function ledgerIn("),
+                             appSrc.indexOf("function expenseRow("));
+    assert(/p\.member && p\.member\.name/.test(row), "ledgerIn no longer reads the embedded name");
+    assert(/\|\| p\.name/.test(row), "no fallback for a payment with no member row");
+    const head = row.slice(row.indexOf('"nm"'), row.indexOf("</span></div>"));
+    assert(!/inr\(/.test(head), "the amount is back in the headline instead of the payer");
   });
 
   console.log(failed ? "\n" + failed + " failed" : "\nall app checks passed");

@@ -1715,8 +1715,11 @@
           ? "Next fee moves to " +
             new Date(next).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
           : "No renewal date set, so nothing to move.") + "</span>" +
+      /* data-pmonths, not data-months: the month-jump button in the
+         daybar is [data-months] and this one only escaped it because
+         [data-pause] happens to be tested first. */
       '<button class="btn bow" data-pause="' + pr.enrollment_id +
-        '" data-nm="' + esc(pr.name) + '" data-months="' + m +
+        '" data-nm="' + esc(pr.name) + '" data-pmonths="' + m +
         '" data-ren="' + esc(pr.renewal_on || "") + '">Pause ' + esc(pr.name) + "</button>" +
       '<button class="rest-link" data-pausecancel="1">Not now</button></div>';
   }
@@ -2078,14 +2081,24 @@
         : '<div class="note" style="margin-top:10px">Nothing spent this month yet.</div>');
   }
 
+  /* The headline is the child, not the amount. A column of rupees
+     tells him what came in, which he already has three figures for at
+     the top of the page; what he opens this list to find is whether
+     Aarthi has paid. The amount moves right, where the expense list
+     already puts it, so the two faces of the panel read the same way. */
   function ledgerIn(live) {
     if (!live.length) return '<div class="note" style="margin-top:12px">No fees in yet this month.</div>';
     return '<div class="lglist">' + S.money.paid.slice(0, 40).map(function (p) {
       var dead = p.status === "void";
+      var who  = (p.member && p.member.name) || p.name || "";
+      var mo   = Number(p.months || 1);
+      var sub  = new Date(p.on_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) +
+        (p.mode ? " \u00b7 " + esc(p.mode) : "") +
+        (mo > 1 ? " \u00b7 " + mo + " months" : "") +
+        (dead ? " \u00b7 cancelled" : "");
       return '<div class="srow' + (dead ? " voided" : "") + '">' +
-        '<div class="nm"><b>' + inr(p.amount) + "</b><span>" +
-        new Date(p.on_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) +
-        " \u00b7 " + esc(p.mode || "") + (dead ? " \u00b7 cancelled" : "") + "</span></div>" +
+        '<div class="nm"><b>' + (who ? esc(who) : "Fee received") + "</b><span>" + sub + "</span></div>" +
+        "<b>" + inr(p.amount) + "</b>" +
         (dead ? "" : '<button class="mini" data-void="' + p.id + '">Undo</button>') +
       "</div>";
     }).join("") + "</div>";
@@ -2265,6 +2278,12 @@
       '<button class="btn" id="whSave">' +
         (w.oneOk === "ask" ? "Yes, save" : "Save changes") + "</button>" +
       '<button class="btn ghost" id="whPay" style="margin-top:8px">Record a payment</button>' +
+      /* Away for two months is something a parent says at the door,
+         mid-register — so it has to be reachable from the register's
+         own card and not only from Members. Without it the nearest
+         thing on this card is "has stopped coming", which is far too
+         final an answer to "he is travelling until October". */
+      pausePanel({ enrollment_id: w.enrollment, name: w.name, renewal_on: w.renewalOn }) +
       '<button class="btn ghost" id="whCancel" style="margin-top:8px">Close</button>' +
 
       /* Last, separated, and it says what it does rather than "delete".
@@ -2311,6 +2330,12 @@
         if (S.who !== want) return;
         S.who.phone  = (m && (m.phone || m.parent_phone)) || "";
         S.who.loaded = !!m;
+        /* The pause panel projects the date the next fee moves to, and
+           the register row does not carry renewal_on. The enrolment
+           this card was opened on does. */
+        var en = (m && m.enrollments || []).filter(function (e) {
+          return e.id === S.who.enrollment; })[0];
+        S.who.renewalOn = (en && en.renewal_on) || null;
         /* Even when the read came back with nothing, unlock the box —
            a field stuck on "Loading…" for ever is worse than one he
            can type into, and saveWho() still refuses to send an empty
@@ -2638,11 +2663,11 @@
     if (pz) {
       var pn = pz.getAttribute("data-nm");
       MZ.pauseStudent({ enrollment: +pz.getAttribute("data-pause"),
-                        months: +pz.getAttribute("data-months") || 1,
+                        months: +pz.getAttribute("data-pmonths") || 1,
                         renewalOn: pz.getAttribute("data-ren") || null })
         .then(function () {
           toast(pn + " is paused");
-          S.fam = null; S.famInfo = null; S.pausing = null;
+          S.fam = null; S.famInfo = null; S.pausing = null; S.who = null;
           S.tab === "register" ? loadRegister() : loadDues();
         }).catch(fail);
       return;

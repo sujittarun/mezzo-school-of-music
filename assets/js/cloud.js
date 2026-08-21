@@ -432,9 +432,17 @@
       p_on_date: a.onDate || todayIso(), p_note: a.note || null
     }).then(function (r) { report("payment_recorded", {}); return r; });
   }
+  /* A list of amounts is not an answer to "who paid me". The name is
+     one embed away — payments.member_id is a real foreign key — so it
+     comes back in the same round trip rather than costing a second.
+     `name` is the plain text column the base schema has always had; it
+     is the fallback when a payment predates member_id or was taken
+     against no member at all. `months` is what makes ₹15,000 legible
+     as six months rather than a suspicious number. */
   function payments(fromIso, toIso) {
     return get("/payments?" + T + "&on_date=gte." + fromIso + "&on_date=lte." + toIso +
-               "&order=on_date.desc&select=id,amount,on_date,mode,kind,status,member_id,enrollment_id");
+               "&order=on_date.desc&select=id,amount,on_date,mode,kind,status,months,name," +
+               "member_id,enrollment_id,member:members(name)");
   }
   function expenses(fromIso, toIso) {
     return get("/expenses?" + T + "&on_date=gte." + fromIso + "&on_date=lte." + toIso +

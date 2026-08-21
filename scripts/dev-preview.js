@@ -173,7 +173,11 @@ const fixtures = {
       mode: i % 5 === 0 ? "Cash" : "UPI",
       kind: "fee", status: i === 12 || i === 41 ? "void" : "paid",
       months: months,
-      member_id: s.n + 1, enrollment_id: s.n + 1, member_name: s.name, sport: s.sport
+      member_id: s.n + 1, enrollment_id: s.n + 1, sport: s.sport,
+      /* the embed is what the app reads; two rows carry only the plain
+         `name` column so the fallback path is exercised too */
+      member: i % 23 === 5 ? null : { name: s.name },
+      name: s.name
     };
   }),
 
@@ -256,7 +260,21 @@ window.fetch = function (url) {
   else if (url.indexOf("reminder_queue") > -1) body = FIX.dues;
   else if (url.indexOf("/payments") > -1)     body = FIX.payments;
   else if (url.indexOf("/expenses") > -1)     body = FIX.expenses;
-  else if (url.indexOf("/members") > -1)      body = FIX.members;
+  else if (url.indexOf("/members") > -1) {
+    /* One student's card asks for ONE student. Handing back the whole
+       list meant every card in the preview showed Aarthi's phone and
+       Aarthi's renewal date, so anything read off a card was a lie —
+       including whether pausing could see a fee date to move. */
+    /* Doubled backslashes on purpose: this line lives inside a template
+       literal, which eats \d and \. on the way out. The first version
+       shipped as /[?&]id=eq.(d+)/ and matched nothing, so every card
+       still showed the first student's phone — and it looked like the
+       app reading the wrong row. */
+    var one = url.match(/[?&]id=eq\\.(\\d+)/);
+    body = one
+      ? FIX.members.filter(function (m) { return String(m.id) === one[1]; })
+      : FIX.members;
+  }
   else if (url.indexOf("/centres") > -1)      body = FIX.centres;
   else if (url.indexOf("/batches") > -1)      body = FIX.batches;
   else if (url.indexOf("/sports") > -1)       body = FIX.sports;
