@@ -278,13 +278,23 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
     const h = byId("root").innerHTML;
 
     const names = [...h.matchAll(/<td class="nmcol">([^<]*)</g)].map((m) => m[1]);
-    const totals = [...h.matchAll(/<td class="tot">(\d+)<\/td>/g)].map((m) => m[1]);
     assert(names.length === 4, "the frozen name column has " + names.length + " rows, not 4");
-    assert(totals.length === 4, "the day table has " + totals.length + " rows, not 4");
     assert(names.join(",") === "Alpha,Beta,Gamma,Delta",
       "the name column is out of order: " + names.join(","));
-    assert(totals.join(",") === "10,11,12,13",
-      "the two tables are out of step — row N's name would sit beside row M's marks: " + totals.join(","));
+
+    /* Compare the two tables on something neither can fake: each row
+       carries its instrument's hue, and the four students play four
+       different instruments. If the sequences ever differ, row N's
+       name is sitting beside row M's marks. */
+    const nameTbl = h.slice(h.indexOf('reg names'), h.indexOf('gridscroll'));
+    const dayTbl  = h.slice(h.indexOf('gridscroll'));
+    const hues = (frag) => [...frag.matchAll(/<tr style="--hue:(#[0-9A-Fa-f]{6})"/g)].map((m) => m[1]);
+    const nh = hues(nameTbl), dh = hues(dayTbl);
+    assert(nh.length === 4, "the name table has " + nh.length + " rows, not 4");
+    assert(dh.length === 4, "the day table has " + dh.length + " rows, not 4");
+    assert(nh.join(",") === dh.join(","),
+      "the two tables are out of step — row N's name would sit beside row M's marks:\n  names " +
+      nh.join(",") + "\n  days  " + dh.join(","));
 
     /* And the CSS that makes the rows the same height in both. A table
        row's height is a MINIMUM, so without a capped, overflow-hidden

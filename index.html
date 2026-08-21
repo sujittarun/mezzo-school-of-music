@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" />
-<link rel="stylesheet" href="assets/css/app.css?v=20260821c" />
+<link rel="stylesheet" href="assets/css/app.css?v=20260821d" />
 </head>
 <body>
 <!-- ============================================================
@@ -1038,37 +1038,52 @@
   }
 
 
+  /* ============================================================
+     THE ROLL — the month as a player-piano roll
+
+     Each child is a lane, each day a column, and present is a PUNCHED
+     HOLE. The pianola is the one instrument where the hole IS the
+     note, so a month of attendance is literally a roll you could feed
+     through something and hear.
+
+     It is the same two-table grid underneath, unchanged, because that
+     grid was taken from 104ms of layout to 27.8ms and repainting it as
+     a roll must not give any of that back. Everything below is paint:
+     the holes, the perforations and the hatching are backgrounds and
+     classes on cells that already existed.
+     ============================================================ */
   function monthGrid(rows) {
     var y = S.month.y, m = S.month.m, days = MZ.monthRange(y, m).days;
-    var head = "", i, iso;
+    var today = MZ.todayIso();
+    var head = "", perf = "", i, iso;
     for (i = 1; i <= days; i++) {
       iso = y + "-" + String(m).padStart(2, "0") + "-" + String(i).padStart(2, "0");
-      head += '<th class="' + (isSunday(iso) ? "sun" : "") + '">' + i + "</th>";
+      var d = new Date(y, m - 1, i).getDay();
+      head += '<th class="' + (isSunday(iso) ? "shut" : "") +
+              (iso === today ? " today" : "") + '"><b>' + i + "</b>" +
+              DAY_NAMES[d].slice(0, 2) + "</th>";
+      perf += '<td class="pf"></td>';
     }
-    /* ONE ELEMENT PER CELL.
-       This was <td><span class="cell"><i class="p">✓</i></span></td> —
-       three elements for one mark. At ninety-six children that is
-       2,976 cells and 9,406 elements in the tab, and the browser spent
-       104ms LAYING IT OUT (measured; the parse was 11.7ms, so it was
-       never the markup size and it was never the animations, which
-       this view does not run at all).
 
-       The td does the whole job itself. Same information, same look,
-       a third of the nodes. */
     var body = rows.map(function (r) {
-      var cells = "";
+      var cells = "", seen = 0, came = 0;
       for (i = 1; i <= days; i++) {
         iso = y + "-" + String(m).padStart(2, "0") + "-" + String(i).padStart(2, "0");
         var st = r.marks && r.marks[iso];
-        cells += st === "present" ? '<td class="c p">\u2713</td>'
-               : st === "absent"  ? '<td class="c a">\u2715</td>'
-               : runsOn(r.batch_id, iso) ? '<td class="c n"></td>'
-               /* not "unmarked" — never expected. An empty circle here
-                  would read as a register he forgot to fill in. */
-               : '<td class="c o">\u00b7</td>';
+        var runs = runsOn(r.batch_id, iso) && !isSunday(iso);
+        if (st === "present") { came++; seen++; } else if (st === "absent") seen++;
+        cells += st === "present" ? '<td class="c pn' + (iso === today ? " today" : "") + '"></td>'
+               : st === "absent"  ? '<td class="c ab' + (iso === today ? " today" : "") + '"></td>'
+               /* A day this child's class does not run is not
+                  "unmarked" — it is never expected, and an empty hole
+                  here would read as a register he forgot to punch. */
+               : runs ? '<td class="c bl' + (iso === today ? " today" : "") + '"></td>'
+                      : '<td class="c shut' + (iso === today ? " today" : "") + '"></td>';
       }
-      return '<tr style="--hue:' + inst(r.sport).hue + '">' +
-        cells + '<td class="tot">' + r.present_days + "</td></tr>";
+      var rate = seen ? Math.round(came / seen * 100) : 0;
+      return '<tr style="--hue:' + inst(r.sport).hue + '">' + cells +
+        '<td class="tot"><b>' + (seen ? rate + "%" : "\u2013") + "</b>" +
+        '<i style="width:' + (seen ? rate : 0) + '%"></i></td></tr>';
     }).join("");
 
     /* THE NAME COLUMN COMES OUT OF THE TABLE.
@@ -1085,12 +1100,23 @@
         esc(r.member_name) + '<span class="sp">' + esc(r.sport || "") + "</span></td></tr>";
     }).join("");
 
-    return '<div class="card"><div class="gridwrap">' +
+    /* The name table carries the SAME perforation rows. Without them
+       its tbody starts 13px above the day table's and every name sits
+       against the wrong child's marks — the third time this pair has
+       drifted, and the reason both now get identical rows or none. */
+    return '<div class="card roll"><div class="gridwrap">' +
       '<table class="reg names"><thead><tr><th class="nmcol"></th></tr></thead>' +
-        "<tbody>" + names + "</tbody></table>" +
+        '<tbody><tr class="perf"><td class="nmcol"></td></tr>' +
+          names +
+        '<tr class="perf b"><td class="nmcol"></td></tr></tbody></table>' +
       '<div class="gridscroll"><table class="reg days">' +
-        "<thead><tr>" + head + '<th class="tot">Total</th></tr></thead>' +
-        "<tbody>" + body + "</tbody></table></div></div>" +
+        "<thead><tr>" + head + '<th class="tot">In</th></tr></thead>' +
+        /* the tractor feed, which is what makes it a roll and not a
+           spreadsheet with round corners */
+        '<tbody><tr class="perf">' + perf + '<td class="tot"></td></tr>' +
+          body +
+        '<tr class="perf b">' + perf + '<td class="tot"></td></tr></tbody>' +
+      "</table></div></div>" +
       '<div class="muted" style="margin-top:10px">Scroll sideways for the rest of the month. ' +
       "Tap <b>One day</b> to mark attendance.</div></div>";
   }
