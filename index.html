@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" />
-<link rel="stylesheet" href="assets/css/app.css?v=20260821m" />
+<link rel="stylesheet" href="assets/css/app.css?v=20260821n" />
 </head>
 <body>
 <!-- ============================================================
@@ -103,6 +103,7 @@
     register: null,           // rows from attendance_month
     dues: null,
     duesReg: null,            // this month's register, for the family card
+    people: null,             // every live enrolment, with its due row if any
     fam: null,                // the family card that is open: an index into S.dues
     famInfo: null,            // that member's row, once it lands
     money: null,
@@ -776,7 +777,11 @@
       register: '<svg viewBox="0 0 24 24"><path d="M14.6 3.2H6.2a1.8 1.8 0 0 0-1.8 1.8v14a1.8 1.8 0 0 0 1.8 1.8h7.6"/>' +
                 '<path d="M7.6 8.4h6.6M7.6 12h6.6M7.6 15.6h3.4"/>' +
                 '<path d="M12.9 16.6 15.8 19.6 21.2 12.4" stroke-width="2.1"/></svg>',
-      dues:     '<svg viewBox="0 0 24 24"><path d="M12 3.2a6.6 6.6 0 0 1 6.6 6.6c0 4 1.2 5.6 2.2 6.6H3.2c1-1 2.2-2.6 2.2-6.6A6.6 6.6 0 0 1 12 3.2z"/><path d="M10 19.4a2.1 2.1 0 0 0 4 0"/><path d="M12 3.2V1.6"/></svg>',
+      /* Was a bell, which said "reminders". The tab is the whole roll
+         now, so it is a tuning fork: the thing you hold up to find
+         out whether everything is where it should be. */
+      dues:     '<svg viewBox="0 0 24 24"><path d="M8.4 3v7.2a3.6 3.6 0 0 0 7.2 0V3"/>' +
+                '<path d="M12 13.8V21"/><path d="M9.6 21h4.8"/></svg>',
       /* Two concentric circles read as a target, or an aperture, or a
          drum head — anything except money. This is a banknote with a
          rupee on it, which at 26px is the one shape nobody has to
@@ -785,7 +790,7 @@
                 '<path d="M9.4 9.6h4.6M9.4 12h4.6M13 9.6c1.6 0 1.6 2.4 0 2.4h-3.6l4 3.4"/>' +
                 '<path d="M5.2 9.1v5.8M18.8 9.1v5.8"/></svg>'
     };
-    var T = [["register", "Attendance"], ["dues", "Dues"], ["money", "Money"]];
+    var T = [["register", "Attendance"], ["dues", "Members"], ["money", "Money"]];
     tabs.innerHTML = T.map(function (t) {
       return '<button data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' class="on"' : "") +
         '><span class="ic">' + ICON[t[0]] + "</span>" + t[1] + "</button>";
@@ -1268,18 +1273,66 @@
      ============================================================ */
   function loadDues() {
     S.dues = null;
-    /* The register rides along in the same round trip. Opening a
-       family's card needs their attendance, and asking for it only
-       when he taps would put a Tokyo round trip — ~180ms — between the
-       tap and anything appearing. */
+    /* THREE READS, ONE ROUND TRIP.
+       reminder_queue() says who OWES; it has no reason to know about
+       anybody who does not. The tab shows everyone now, so the member
+       list comes too — and the register, because a family's card
+       needs their attendance the instant he taps a name. A Tokyo
+       round trip is ~180ms and the queries are single digits, so
+       asking for all three together costs nothing over asking for one. */
     var r = MZ.monthRange(S.month.y, S.month.m);
-    return Promise.all([MZ.dues(), MZ.register(r.from, r.to)])
+    return Promise.all([MZ.dues(), MZ.register(r.from, r.to), MZ.students()])
       .then(function (x) {
-        S.dues = Array.isArray(x[0]) ? x[0] : [];
+        var owed = Array.isArray(x[0]) ? x[0] : [];
+        S.dues    = owed;
         S.duesReg = Array.isArray(x[1]) ? x[1] : [];
+        S.people  = combine(owed, Array.isArray(x[2]) ? x[2] : []);
         render();
       }).catch(fail);
   }
+
+  /* One row per LIVE ENROLMENT, with the reminder_queue row attached
+     if there is one.
+
+     Note what this does not do: it never drops a row that came back
+     from reminder_queue(). If a family is in the queue and somehow
+     not in the member list, they are still here — otherwise his
+     screen and his WhatsApp message could disagree, which is the one
+     thing this tab is not allowed to do. */
+  function combine(owed, members) {
+    var byEnrol = {}, out = [];
+    owed.forEach(function (d) { byEnrol[d.enrollment_id] = d; });
+
+    members.forEach(function (m) {
+      (m.enrollments || []).forEach(function (en) {
+        if (en.status && en.status !== "active") return;
+        out.push({
+          key: en.id, member_id: m.id, enrollment_id: en.id,
+          name: m.name, sport: en.sport, batch_id: en.batch_id,
+          renewal_on: en.renewal_on, phone: m.phone || m.parent_phone,
+          due: byEnrol[en.id] || null
+        });
+        delete byEnrol[en.id];
+      });
+    });
+    /* anyone the queue named that the member list did not */
+    Object.keys(byEnrol).forEach(function (k) {
+      var d = byEnrol[k];
+      out.push({ key: d.enrollment_id, member_id: d.member_id || null,
+                 enrollment_id: d.enrollment_id, name: d.member_name,
+                 sport: d.sport, batch_id: null, renewal_on: null,
+                 phone: d.phone, due: d });
+    });
+
+    /* flat first, worst first; then everyone else by name */
+    out.sort(function (a, b) {
+      var ad = a.due ? a.due.days_since || 0 : -1, bd = b.due ? b.due.days_since || 0 : -1;
+      if (ad !== bd) return bd - ad;
+      return String(a.name).localeCompare(String(b.name));
+    });
+    return out;
+  }
+
   function waLink(d) {
     var ph = String(d.phone || "").replace(/\D/g, "");
     if (ph.length === 10) ph = "91" + ph;
@@ -1317,66 +1370,115 @@
     return off < 0.30 ? "var(--warn)" : off < 0.62 ? "#C25A17" : "var(--no)";
   }
 
-  function viewDues() {
-    if (!S.dues) return '<div class="note">Loading…</div>';
-    if (!S.dues.length) {
-      return '<div class="card tuner"><div class="tn-allin">' +
-        '<div class="tn-ring"><b>\u2713</b></div>' +
-        "<b>The whole school is in tune.</b><span>Nobody is overdue.</span>" +
-        '<button class="btn plec" data-other="1">Someone else paid</button>' +
-        "</div></div>";
+  /* ============================================================
+     THE TUNER, REBUILT — ONE DIAL, NOT NINETY-SIX
+
+     Every previous version put a full tuning meter on every row:
+     eleven ticks, a gate and a needle, ninety-six times. That is not
+     a tuner, it is ninety-six tuners, and the furniture drowned the
+     one thing each row actually says.
+
+     A real tuner has ONE face. So the face is at the top and reads
+     the whole school — dead centre when everybody has paid, swinging
+     flat as more of them slip. Underneath, each member is a single
+     thin row with one mark on a shared scale: a dot at centre and a
+     tick if they are settled, a dot to the left if they are behind.
+     No ticks, no gate, no repetition. About half the height per name
+     and it finally looks like a list of tunings rather than a stack
+     of instruments.
+     ============================================================ */
+  function polar(cx, cy, r, deg) {
+    var a = deg * Math.PI / 180;
+    return [cx + r * Math.cos(a), cy - r * Math.sin(a)];
+  }
+  function arcPath(cx, cy, r, from, to) {
+    var p0 = polar(cx, cy, r, from), p1 = polar(cx, cy, r, to);
+    /* sweep-flag 0, not 1. Going from the right of the dial to the
+       left OVER THE TOP is counter-clockwise once y points down, and
+       with sweep 1 the renderer drew the bottom half instead — which
+       came out as two curved wedges either side of the face. */
+    return "M" + p0[0].toFixed(1) + " " + p0[1].toFixed(1) +
+           " A" + r + " " + r + " 0 0 0 " + p1[0].toFixed(1) + " " + p1[1].toFixed(1);
+  }
+
+  function tunerFace(flat, total, owedTotal) {
+    /* dead centre is 90 degrees. Flat swings left, toward 170. */
+    var share = total ? flat / total : 0;
+    var deg = 90 + Math.min(1, share) * 78;
+    var col = share === 0 ? "var(--ok)" : share < 0.18 ? "var(--warn)"
+            : share < 0.4 ? "#C25A17" : "var(--no)";
+    var cx = 130, cy = 118, r = 96;
+    var ticks = "";
+    for (var t = 0; t <= 14; t++) {
+      var a = 12 + t * 12;
+      var p0 = polar(cx, cy, r - (t % 7 === 0 ? 15 : 8), a), p1 = polar(cx, cy, r, a);
+      ticks += '<line x1="' + p0[0].toFixed(1) + '" y1="' + p0[1].toFixed(1) +
+               '" x2="' + p1[0].toFixed(1) + '" y2="' + p1[1].toFixed(1) + '"/>';
     }
-    var total = S.dues.reduce(function (a, d) { return a + Number(d.amount || 0); }, 0);
-    return '<div class="card tuner">' +
-      '<div class="rowline" style="margin-bottom:4px">' +
-        "<div><b style=\"font-size:19px\">" + S.dues.length + " out of tune</b>" +
-        '<div class="muted">' + inr(total) + " in total</div></div></div>" +
-      '<div class="muted" style="margin:6px 0 12px">Tap a name to hear where they sit</div>' +
-      S.dues.map(function (d, i) {
-        var off = flatness(d.days_since), hue = inst(d.sport).hue;
-        /* NEVER GREEN. Green is "in tune" — settled — and nobody on
-           this list is settled: reminder_queue() only returns families
-           who owe. One day late came out green and nineteen days came
-           out red, which read as two different KINDS of thing rather
-           than two points on one scale. Amber to red, monotonic, so
-           the colour only ever says "how late". */
-        var col = tuneColour(off);
-        var left = (50 - off * 43).toFixed(1);
-        var ticks = "";
-        for (var t = 0; t < 11; t++) {
-          ticks += '<i class="tn-tk' + (t === 5 ? " mid" : "") + '" style="left:' + (t * 10) + '%"></i>';
-        }
-        /* ONE ROW, ONE TAP. The WhatsApp and Paid buttons used to sit
-           on every row, which made each family 150px tall and the list
-           a wall of green and violet. They live in the family's own
-           card now: the list is for SEEING who is flat, the card is
-           for doing something about it. */
-        /* THE METER GETS ITS OWN LINE.
-           Beside the name and the amount it was squeezed to 96px in a
-           326px row — a dial that small is a decoration, not a
-           reading. On its own line it is as wide as the row on any
-           screen, which is the whole point of a tuner. */
-        return '<button class="due tuned tn-row" data-fam="' + i + '" style="--hue:' + hue + '">' +
-          '<span class="tn-top">' +
-          '<span class="tn-note" style="color:' + col + '">' +
-            (TUNER_NOTE[d.sport] || "\u266a") + "</span>" +
-          '<span class="tn-who"><b>' + esc(d.member_name) + "</b>" +
-            /* "asked today" did not fit beside the instrument and came
-               out as "Piano · ask…". The full sentence is on the card;
-               the row only needs to say that it happened. */
-            "<span>" + esc(d.sport || "") +
-            (d.already_sent ? " \u00b7 asked" : "") + "</span></span>" +
-          '<span class="tn-amt"><b>' + inr(d.amount) + "</b></span></span>" +
-          '<span class="tn-meter"><span class="tn-ticks">' + ticks +
-            '<span class="tn-gate"></span></span>' +
-            '<span class="ndl' + (off > 0.12 ? " off" : "") +
-              '" style="left:' + left + '%;background:' + col + '"></span>' +
-            '<span class="tn-cents">' + d.days_since + " day" + (d.days_since === 1 ? "" : "s") +
-            " flat</span></span>" +
-        "</button>";
-      }).join("") +
-      '<button class="btn plec" data-other="1" style="margin-top:14px">' +
-        "Someone else paid</button></div>";
+    var n = polar(cx, cy, r - 20, deg);
+    return '<div class="face"><svg viewBox="0 0 260 132" aria-hidden="true">' +
+      '<path class="bg" d="' + arcPath(cx, cy, r, 12, 168) + '"/>' +
+      '<path class="ok" d="' + arcPath(cx, cy, r, 82, 98) + '"/>' +
+      '<g class="tk">' + ticks + "</g>" +
+      '<line class="ndl" x1="' + cx + '" y1="' + cy + '" x2="' + n[0].toFixed(1) +
+        '" y2="' + n[1].toFixed(1) + '" style="stroke:' + col + '"/>' +
+      '<circle class="hub" cx="' + cx + '" cy="' + cy + '" r="7"/></svg></div>' +
+      /* The reading sits BELOW the dial. Nothing can live on the
+         needle's axis — it sweeps the whole radius, so any label in
+         there gets a line drawn through it, which is what happened. */
+      '<div class="reading" style="color:' + col + '">' +
+        (flat ? "<b>" + flat + "</b><span>out of tune</span>"
+              : '<b>\u2713</b><span>all in tune</span>') + "</div>" +
+      '<div class="facesub">' + total + (total === 1 ? " member" : " members") +
+        (owedTotal ? " \u00b7 " + inr(owedTotal) + " owing" : "") + "</div>";
+  }
+
+  function viewDues() {
+    if (!S.people) return '<div class="note">Loading…</div>';
+    var flat = S.people.filter(function (p) { return p.due; });
+    var owedTotal = flat.reduce(function (a, p) { return a + Number(p.due.amount || 0); }, 0);
+    if (!S.people.length) {
+      return '<div class="card tuner"><div class="tn-allin">' +
+        '<div class="tn-ring"><b>\u266a</b></div><b>Nobody on the roll yet.</b>' +
+        "<span>Add a student from the register.</span></div></div>";
+    }
+
+    var shownFlat = false, shownOk = false, rows = "";
+    S.people.forEach(function (p, i) {
+      if (p.due && !shownFlat) { shownFlat = true;
+        rows += '<div class="msec">Out of tune \u2014 ' + flat.length + "</div>"; }
+      if (!p.due && !shownOk) { shownOk = true;
+        rows += '<div class="msec">In tune \u2014 ' + (S.people.length - flat.length) + "</div>"; }
+      rows += memberRow(p, i);
+    });
+
+    return '<div class="card tuner">' + tunerFace(flat.length, S.people.length, owedTotal) +
+      '<button class="btn plec" data-other="1" style="margin:14px auto 6px">' +
+        "Someone else paid</button>" + rows + "</div>";
+  }
+
+  function memberRow(p, i) {
+    var hue = inst(p.sport).hue;
+    if (!p.due) {
+      /* settled: the mark sits dead centre and it is green. Nothing
+         else on the row, because there is nothing to do about it. */
+      return '<button class="mrow ok" data-fam="' + i + '" style="--hue:' + hue + '">' +
+        '<span class="mnote">' + (TUNER_NOTE[p.sport] || "\u266a") + "</span>" +
+        '<span class="mwho"><b>' + esc(p.name) + "</b><span>" + esc(p.sport || "") + "</span></span>" +
+        '<span class="mtrack"><i style="left:50%"></i></span>' +
+        '<span class="mamt"><b>\u2713</b><span>in tune</span></span></button>';
+    }
+    var off = flatness(p.due.days_since), col = tuneColour(off);
+    var left = (50 - off * 44).toFixed(1);
+    return '<button class="mrow" data-fam="' + i + '" style="--hue:' + hue +
+        ';--mark:' + col + '">' +
+      '<span class="mnote" style="color:' + col + '">' +
+        (TUNER_NOTE[p.sport] || "\u266a") + "</span>" +
+      '<span class="mwho"><b>' + esc(p.name) + "</b><span>" + esc(p.sport || "") +
+        (p.due.already_sent ? " \u00b7 asked" : "") + "</span></span>" +
+      '<span class="mtrack"><i style="left:' + left + '%"></i></span>' +
+      '<span class="mamt"><b>' + inr(p.due.amount) + "</b><span>" +
+        p.due.days_since + (p.due.days_since === 1 ? " day" : " days") + "</span></span></button>";
   }
 
   /* ============================================================
@@ -1401,11 +1503,16 @@
     return Math.max(0, m);
   }
   function viewFam() {
-    var d = S.dues && S.dues[S.fam];
-    if (!d) return "";
+    var pr = S.people && S.people[S.fam];
+    if (!pr) return "";
+    /* the reminder_queue row if they owe, and a stand-in if they do
+       not — the card is the same card either way */
+    var d = pr.due || { amount: 0, days_since: 0, sport: pr.sport,
+                        member_name: pr.name, enrollment_id: pr.enrollment_id,
+                        phone: pr.phone, already_sent: false };
     var w = S.famInfo || {};
     var reg = (S.duesReg || []).filter(function (r) {
-      return r.enrollment_id === d.enrollment_id;
+      return r.enrollment_id === pr.enrollment_id;
     })[0];
 
     /* how long they have been coming */
@@ -1440,20 +1547,41 @@
         stat(best || "\u2013", "best run") +
       "</div>" +
 
-      '<div class="fowe"><span>Owing</span><b>' + inr(d.amount) + "</b>" +
-        "<i>" + d.days_since + " day" + (d.days_since === 1 ? "" : "s") + " late</i></div>" +
+      /* Two states, written out flat rather than nested. The first
+         version of this was three ternaries inside each other and it
+         did not even parse. */
+      (pr.due
+        ? '<div class="fowe"><span>Owing</span><b>' + inr(d.amount) + "</b>" +
+          "<i>" + d.days_since + " day" + (d.days_since === 1 ? "" : "s") + " late</i></div>"
+        : '<div class="fowe ok"><span>In tune</span><b>\u2713</b><i>' +
+          (pr.renewal_on
+            ? "next " + new Date(pr.renewal_on).toLocaleDateString("en-IN",
+                { day: "numeric", month: "short" })
+            : "nothing owing") + "</i></div>") +
 
-      (d.blocked_reason === "missing_phone"
-        ? '<div class="note" style="margin:0 0 10px">No phone number for this family, ' +
-          "so there is nobody to message.</div>"
-        : '<a class="btn bow wa" target="_blank" rel="noopener" href="' + esc(waLink(d)) + '"' +
-          ' data-sent="' + d.enrollment_id + '" data-amt="' + d.amount + '"' +
-          ' data-ph="' + esc(d.phone || "") + '">Send the reminder</a>') +
-      '<button class="btn bow paid" data-paid="' + d.enrollment_id + '" data-amt="' + d.amount +
-        '" data-nm="' + esc(d.member_name) + '" data-sport="' + esc(d.sport || "") +
-        '">They have paid</button>' +
+      famActions(pr, d) +
       '<button class="btn plec" id="famClose">Close</button>' +
     "</div></div>";
+  }
+
+  /* What he can do about this family. A settled one can still pay
+     early, which is the only reason that button is there at all. */
+  function famActions(pr, d) {
+    if (!pr.due) {
+      return '<button class="btn bow paid" data-paid="' + pr.enrollment_id +
+        '" data-nm="' + esc(pr.name) + '" data-sport="' + esc(pr.sport || "") +
+        '">Record a payment</button>';
+    }
+    var ask = d.blocked_reason === "missing_phone"
+      ? '<div class="note" style="margin:0 0 10px">No phone number for this family, ' +
+        "so there is nobody to message.</div>"
+      : '<a class="btn bow wa" target="_blank" rel="noopener" href="' + esc(waLink(d)) + '"' +
+        ' data-sent="' + d.enrollment_id + '" data-amt="' + d.amount + '"' +
+        ' data-ph="' + esc(d.phone || "") + '">Send the reminder</a>';
+    return ask +
+      '<button class="btn bow paid" data-paid="' + d.enrollment_id + '" data-amt="' + d.amount +
+      '" data-nm="' + esc(d.member_name) + '" data-sport="' + esc(d.sport || "") +
+      '">They have paid</button>';
   }
 
   function loadMoney() {
@@ -2146,7 +2274,7 @@
     if (!MZ.signedIn()) return gate();
     drawTabs();
     var sub = S.tab === "register" ? "Attendance register"
-            : S.tab === "dues" ? "Fees to collect"
+            : S.tab === "dues" ? "Everyone on the roll"
             : S.tab === "add"  ? "A new student"
             : "Money this month";
     var inner = S.tab === "add" ? viewAdd()
@@ -2271,7 +2399,7 @@
     }
     /* Opening a family on the tuner plays their child's instrument. */
     if ((el = t.closest("[data-fam]"))) {
-      var fd = S.dues && S.dues[+el.getAttribute("data-fam")];
+      var fd = S.people && S.people[+el.getAttribute("data-fam")];
       return fd ? playInstrument(fd.sport, 0.65) : pluck(64, 0.55);
     }
     /* A day on the waveform sounds like what it did: a struck note
@@ -2315,7 +2443,7 @@
     if (fam) {
       S.fam = +fam.getAttribute("data-fam");
       S.famInfo = null;
-      var row = S.dues[S.fam];
+      var row = S.people && S.people[S.fam];
       /* How long they have been coming is not in reminder_queue() —
          it is on the member, and reminder_queue does not promise a
          member_id either. The register row for the same enrolment

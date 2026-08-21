@@ -512,9 +512,8 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
     ] : [];
     api.S.tab = "dues"; api.enter(); await tick(); await tick();
     const h = byId("root").innerHTML;
-    const cols = [...h.matchAll(/class="ndl[^"]*" style="left:[\d.]+%;background:([^"]+)"/g)]
-      .map((m) => m[1]);
-    assert(cols.length === 3, "three families, " + cols.length + " needles");
+    const cols = [...h.matchAll(/--mark:([^"';]+)/g)].map((m) => m[1].trim());
+    assert(cols.length === 3, "three families, " + cols.length + " marks");
     assert(!cols.some((c) => /--ok/.test(c)),
       "an overdue family is coloured green: " + cols.join(", "));
     /* and it has to be monotonic — later is never lighter */
@@ -696,28 +695,51 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
   });
 
   /* ---- 3. dues ---- */
-  await check("dues shows what reminder_queue returns, unfiltered", async () => {
+  await check("the members tab shows everyone, and never drops a name reminder_queue gave it", async () => {
     signIn();
-    nextBody = [
-      { enrollment_id: 5, member_name: "Chitra", parent_name: "Uma", phone: "9000000665",
-        sport: "Violin", amount: 1500, days_since: 1, due_date: "2026-08-18" },
-      { enrollment_id: 6, member_name: "Deepak", phone: "9000000001",
-        sport: "Piano", amount: 2500, days_since: 40, due_date: "2026-07-10" },
-    ];
-    api.S.tab = "dues"; api.enter(); await tick(); await tick();
+    nextBody = (url) => {
+      if (url.includes("reminder_queue")) return [
+        { enrollment_id: 5, member_name: "Chitra", parent_name: "Uma", phone: "9000000665",
+          sport: "Violin", amount: 1500, days_since: 1, due_date: "2026-08-18" },
+        { enrollment_id: 6, member_name: "Deepak", phone: "9000000001",
+          sport: "Piano", amount: 2500, days_since: 40, due_date: "2026-07-10" },
+      ];
+      if (url.includes("/members")) return [
+        /* settled, and NOT in the queue — the old tab could not show them */
+        { id: 1, name: "Aarthi", phone: "9000000111", status: "active",
+          enrollments: [{ id: 1, sport: "Piano", batch_id: 1, status: "active",
+                          renewal_on: "2026-09-19" }] },
+        { id: 5, name: "Chitra", phone: "9000000665", status: "active",
+          enrollments: [{ id: 5, sport: "Violin", batch_id: 1, status: "active" }] },
+        /* a stopped enrolment must not appear at all */
+        { id: 9, name: "Ghost", phone: "9000000999", status: "active",
+          enrollments: [{ id: 9, sport: "Drums", batch_id: 1, status: "stopped" }] },
+      ];
+      return [];
+    };
+    api.S.tab = "dues"; api.enter();
+    for (let i = 0; i < 10; i++) await tick();
     const h = byId("root").innerHTML;
-    assert(h.includes("Chitra") && h.includes("Deepak"), "a name is missing from the dues list");
+    assert(h.includes("Aarthi"), "a settled member is missing — the tab is still a dues list");
+    assert(/in tune/i.test(h), "nothing is marked as in tune");
+    assert(!h.includes("Ghost"), "a stopped enrolment is still on the roll");
+    /* Deepak is in the queue but NOT in the member list. He must still
+       appear, or this screen and the WhatsApp message disagree. */
+    assert(h.includes("Chitra") && h.includes("Deepak"),
+      "a name reminder_queue returned was dropped");
     /* 40 days late must still be chased: the +15 stop belongs to the
        ladder, and this tenant is not on the ladder. */
-    assert(h.includes("40 days flat"), "the long-overdue student was dropped");
-    assert(h.includes("2 out of tune") && h.includes("₹4,000"), "the total is wrong");
+    assert(/40 days/.test(h), "the long-overdue student was dropped");
+    assert(h.includes("₹4,000"), "the total owing is wrong");
+    assert(/Out of tune \u2014 2/.test(h), "the out-of-tune count is wrong");
 
-    /* The needle has to be further from centre for 40 days than for 1,
-       or the meter is decoration. */
-    const lefts = [...h.matchAll(/class="ndl[^"]*" style="left:([\d.]+)%/g)].map((m) => +m[1]);
-    assert(lefts.length === 2, "two students, " + lefts.length + " needles");
-    assert(lefts[1] < lefts[0] - 10,
+    /* The mark has to sit further from centre for 40 days than for 1,
+       or the scale is decoration. */
+    const lefts = [...h.matchAll(/class="mtrack"><i style="left:([\d.]+)%/g)].map((m) => +m[1]);
+    assert(lefts.length >= 3, "three rows, " + lefts.length + " marks");
+    assert(lefts[0] < lefts[1] - 10,
       "40 days does not read as flatter than 1 day: " + lefts.join(" vs "));
+    assert(lefts[lefts.length - 1] === 50, "a settled member is not at dead centre");
   });
 
   await check("the WhatsApp link carries the country code and no stray characters", async () => {

@@ -1238,24 +1238,64 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
    need the outline that forced the extra layer. */
 .btn.plec:active { transform: scale(.97); background: linear-gradient(180deg, #CDBFEE, #BCACE6); }
 
-/* ---------- the tuner row ---------- */
-.card.tuner .tn-row {
-  display: block; width: 100%;
+/* ---------- one dial, then a strip of names ----------
+   The per-row meter is gone: eleven ticks, a gate and a needle on
+   every one of ninety-six rows was ninety-six tuners, and the
+   furniture drowned what each row was actually saying. */
+.card.tuner .face { position: relative; margin: 2px auto 0; max-width: 290px; }
+.card.tuner .face svg { width: 100%; height: auto; display: block; }
+.card.tuner .face .bg { fill: none; stroke: var(--rule); stroke-width: 9; stroke-linecap: round; }
+.card.tuner .face .ok { fill: none; stroke: rgba(29,107,74,.30); stroke-width: 9; stroke-linecap: round; }
+.card.tuner .face .tk line { stroke: var(--rule); stroke-width: 1.6; }
+.card.tuner .face .ndl { stroke-width: 3.4; stroke-linecap: round;
+  transition: all .6s cubic-bezier(.22,1.3,.36,1); }
+.card.tuner .face .hub { fill: var(--ink); }
+/* Below the dial, not inside it. A needle sweeps the whole radius, so
+   anything on that axis gets a line drawn straight through it. */
+.card.tuner .reading { text-align: center; margin-top: -6px; display: flex;
+  align-items: baseline; justify-content: center; gap: 8px; }
+.card.tuner .reading b { font: 700 30px/1 inherit; font-variant-numeric: tabular-nums; }
+.card.tuner .reading span { font-size: 11.5px; font-weight: 700;
+  letter-spacing: .14em; text-transform: uppercase; }
+.card.tuner .facesub { text-align: center; color: var(--ink-3); font-size: 13.5px;
+  font-weight: 600; margin-top: 2px; }
+
+.msec { font-size: 10.5px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--ink-3); padding: 16px 2px 4px; }
+
+/* one thin row per member: a note, a name, one mark on a shared
+   scale, and what it costs */
+.mrow {
+  display: flex; align-items: center; gap: 10px; width: 100%;
   background: none; border: 0; border-bottom: 1px solid var(--line);
-  padding: 12px 2px 13px; text-align: left; color: inherit;
-  border-left: 3px solid var(--hue); border-radius: 2px; padding-left: 11px;
+  padding: 9px 2px 9px 11px; text-align: left; color: inherit;
+  border-left: 3px solid var(--hue); border-radius: 2px; min-height: 54px;
 }
-.card.tuner .tn-row:last-of-type { border-bottom: 0; }
-.card.tuner .tn-row:active { background: rgba(150,132,92,.12); }
-.card.tuner .tn-who { flex: 1; min-width: 0; }
-.card.tuner .tn-who b { display: block; font-size: 16px; font-weight: 700;
+.mrow:active { background: rgba(150,132,92,.12); }
+.mnote { width: 26px; height: 26px; flex: none; border: 1.5px solid currentColor;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font: 600 13px/1 "Cormorant Garamond", Georgia, serif; color: var(--ok); }
+.mwho { flex: 1 1 auto; min-width: 0; }
+.mwho b { display: block; font-size: 15.5px; font-weight: 700;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.card.tuner .tn-who span { display: block; font-size: 12.5px; color: var(--ink-3);
+.mwho span { display: block; font-size: 12px; color: var(--ink-3);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.card.tuner .tn-row .tn-meter { flex: none; width: min(140px, 30vw); height: 40px; margin: 0; }
-.card.tuner .tn-row .tn-cents { font-size: 9.5px; }
-.card.tuner .tn-amt { flex: none; text-align: right; }
-.card.tuner .tn-amt b { font-size: 15.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* the shared scale. One hairline, one dot, no repeated furniture. */
+.mtrack { position: relative; flex: 0 0 auto; width: min(104px, 26vw); height: 22px; }
+.mtrack::before { content: ""; position: absolute; left: 0; right: 0; top: 50%;
+  height: 1px; background: var(--rule); }
+.mtrack::after { content: ""; position: absolute; left: 50%; top: 4px; bottom: 4px;
+  width: 1.4px; margin-left: -.7px; background: var(--rule); }
+.mtrack i { position: absolute; top: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px;
+  border-radius: 50%; background: var(--mark, var(--ok));
+  transition: left .5s cubic-bezier(.22,1.3,.36,1); }
+.mrow.ok .mtrack i { background: var(--ok); box-shadow: 0 0 0 3px rgba(29,107,74,.16); }
+
+.mamt { flex: 0 0 auto; text-align: right; min-width: 62px; }
+.mamt b { display: block; font-size: 14.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mamt span { display: block; font-size: 11px; color: var(--ink-3); font-weight: 600; }
+.mrow.ok .mamt b { color: var(--ok); font-size: 17px; }
 
 /* ---------- the family card ---------- */
 .card.fam { width: 100%; max-width: 460px; }
@@ -1275,6 +1315,9 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
 .fst span { display: block; font-size: 10.5px; color: var(--ink-3); line-height: 1.25;
   margin-top: 3px; }
 
+.fowe.ok { background: var(--ok-bg); }
+.fowe.ok b { color: var(--ok); }
+.fowe.ok i { color: var(--ok); }
 .fowe { display: flex; align-items: baseline; gap: 9px; padding: 12px 13px; margin-bottom: 14px;
   background: var(--no-bg); border-radius: 12px; }
 .fowe span { font-size: 13.5px; color: var(--ink-2); font-weight: 600; }
