@@ -190,11 +190,21 @@ button { cursor: pointer; }
 .daybar .d { flex: 1; text-align: center; }
 .daybar .d b { display: block; font-size: 19px; }
 .daybar .d span { font-size: 13px; color: var(--ink-3); }
+/* Keys, like everything else in this bar. These were var(--card) on a
+   card with a hairline border — the same object painted in the same
+   colour as the thing behind it, which is why the whole top of the
+   screen read as faded. */
 .daybar button {
-  width: var(--tap); height: var(--tap); border-radius: 13px;
-  border: 1px solid var(--line); background: var(--card); font-size: 22px; color: var(--ink);
+  width: var(--tap); height: var(--tap);
+  border: 1px solid #C9BC9C; border-bottom: 4px solid #AE9E78;
+  border-radius: 4px 4px 12px 12px;
+  background: linear-gradient(180deg, #FFFEFA 0%, #F3EAD5 100%);
+  box-shadow: 0 1px 2px rgba(90,70,30,.10);
+  font-size: 22px; color: var(--ink-2); line-height: 1;
+  transition: transform .09s ease-out, border-bottom-width .09s;
 }
-.daybar button:disabled { opacity: .3; }
+.daybar button:active:not(:disabled) { transform: translateY(2px); border-bottom-width: 2px; }
+.daybar button:disabled { opacity: .34; border-bottom-width: 1px; box-shadow: none; }
 
 /* ---------- student rows: the thing he touches most ---------- */
 .srow {
@@ -486,10 +496,29 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
 .acts .paid { background: var(--brand); border-color: var(--brand); color: #fff; }
 
 /* ---------- money ---------- */
-.figs { display: flex; gap: 10px; margin-bottom: 4px; }
-.fig { flex: 1; }
-.fig b { display: block; font-size: 21px; font-variant-numeric: tabular-nums; }
-.fig span { font-size: 12.5px; color: var(--ink-3); }
+/* THREE FIGURES, NOT ONE LONG NUMBER.
+   At 21px on a 375px phone the three amounts measured 107 + 87 + 107 px
+   in boxes of exactly 107 + 87 + 107 — zero slack, the text touching
+   its own box on every side. They read as one run-on figure.
+
+   So: the number sizes with the screen instead of overflowing it, each
+   fact gets a rule beside it so the eye separates them, and the labels
+   drop back a step. */
+.figs {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  margin: 2px 0 4px; align-items: start;
+}
+.fig { padding: 5px 8px; min-width: 0; }
+.fig:first-child { padding-left: 2px; }
+.fig:last-child  { padding-right: 2px; }
+.fig + .fig { border-left: 1px solid var(--rule); }
+.fig b {
+  display: block; font-size: clamp(16px, 4.6vw, 23px); line-height: 1.2;
+  letter-spacing: -.015em; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.fig span { display: block; font-size: 11.5px; color: var(--ink-3);
+  margin-top: 3px; font-weight: 600; }
 .fig.in b  { color: var(--ok); }
 .fig.out b { color: var(--no); }
 .field { display: block; margin-bottom: 10px; }
@@ -1585,21 +1614,29 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
   display: flex; flex-direction: column; align-items: center; gap: 3px;
   min-width: 56px; min-height: 56px; z-index: 3;
 }
+/* A TUNING PEG IS BRASS.
+   This one was pale cream on a cream card with a thin purple cross on
+   it — the same washed-out problem as the keys, on the one control that
+   adds a student. A peg is machine head hardware: it is the brightest,
+   hardest thing on an instrument. So it is brass now, the same brass as
+   the dial, which makes it the one warm metal object in the bar and
+   impossible to miss. */
 .peg .pin {
-  width: 30px; height: 30px; border-radius: 50%;
-  background: radial-gradient(circle at 36% 30%, #FFFCF2, #E2D4B4 68%, #C9B891);
-  box-shadow: 0 2px 0 #AD9B76, 0 3px 7px rgba(74,60,32,.28),
-              inset 0 1px 0 rgba(255,255,255,.9);
+  width: 34px; height: 34px; border-radius: 50%;
+  background: radial-gradient(circle at 33% 27%,
+              #FCEEB8 0%, #DCB63F 34%, #B08A24 62%, #7E5F10 100%);
+  box-shadow: 0 2px 0 #63490C, 0 3px 8px rgba(74,52,14,.36),
+              inset 0 1px 0 rgba(255,255,255,.55);
   position: relative;
 }
 /* the slot the string goes through, and the + that says what it does */
 .peg .pin::before, .peg .pin::after {
-  content: ""; position: absolute; left: 50%; top: 50%; background: var(--brand);
-  border-radius: 1px;
+  content: ""; position: absolute; left: 50%; top: 50%; background: #FFFBEC;
+  border-radius: 1px; box-shadow: 0 1px 1px rgba(70,50,10,.45);
 }
-.peg .pin::before { width: 13px; height: 2.4px; margin: -1.2px 0 0 -6.5px; }
-.peg .pin::after  { width: 2.4px; height: 13px; margin: -6.5px 0 0 -1.2px; }
-.peg .lbl { font-size: 10.5px; font-weight: 700; color: var(--ink-3); letter-spacing: .04em; }
+.peg .pin::before { width: 15px; height: 2.8px; margin: -1.4px 0 0 -7.5px; }
+.peg .pin::after  { width: 2.8px; height: 15px; margin: -7.5px 0 0 -1.4px; }
+.peg .lbl { font-size: 10.5px; font-weight: 700; color: var(--ink-2); letter-spacing: .04em; }
 .peg:active .pin { transform: translateY(2px); box-shadow: 0 0 0 #0000, inset 0 2px 5px rgba(0,0,0,.3); }
 .daybar { position: relative; padding-right: 62px; }
 
@@ -1642,19 +1679,36 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
 
 /* One day / Month as two piano keys: white for the day you are on,
    and the one you are NOT on stands up. */
-.sub-toggle { display: flex; gap: 3px; }
+/* A KEY YOU CAN SEE IS PRESSED.
+
+   These were cream on cream: the selected key was rgb(237,229,210) on a
+   rgb(249,244,231) card — twelve values apart in each channel — and the
+   unselected ones were LIGHTER than the card they sat on. Measured, not
+   felt. Nothing about that says "this one is chosen"; it just reads as
+   a faded old control, which is exactly what it was called.
+
+   Now the unselected key is an ivory key with a real rim and a real
+   edge under it, and the selected one goes down and lights in the
+   app's own purple. There is never any doubt which one is down. */
+.sub-toggle { display: flex; gap: 4px; }
 .sub-toggle button {
-  min-height: 46px; padding: 0 12px; border: 1px solid var(--rule);
-  border-bottom: 4px solid #D8CDB6; border-radius: 3px 3px 9px 9px;
-  background: linear-gradient(180deg, #FFFDF8, #F6F0E1);
+  min-height: 46px; padding: 0 13px;
+  border: 1px solid #C9BC9C; border-bottom: 4px solid #AE9E78;
+  border-radius: 3px 3px 10px 10px;
+  background: linear-gradient(180deg, #FFFEFA 0%, #F3EAD5 100%);
+  box-shadow: 0 1px 2px rgba(90,70,30,.10);
   color: var(--ink-2); font-size: 13.5px; font-weight: 700;
   white-space: nowrap;                     /* "One day" was wrapping to two lines */
-  transition: transform .09s ease-out, border-bottom-width .09s, background .14s;
+  transition: transform .09s ease-out, border-bottom-width .09s,
+              background .14s, color .14s;
 }
+.sub-toggle button:active { transform: translateY(2px); border-bottom-width: 2px; }
 .sub-toggle button.on {
   transform: translateY(3px); border-bottom-width: 1px;
-  background: linear-gradient(180deg, #EDE5D2, #E4DAC2);
-  box-shadow: inset 0 4px 8px rgba(80,64,38,.24); color: var(--brand);
+  border-color: #4A3193;
+  background: linear-gradient(180deg, #6A4EC2 0%, #513391 100%);
+  color: #FFFFFF;
+  box-shadow: inset 0 3px 7px rgba(26,12,62,.42), 0 1px 0 rgba(255,255,255,.45);
 }
 
 /* ---------- the tuner fills its row ---------- */
@@ -1739,15 +1793,33 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
 /* A PENCIL, not a tuning peg. The register is a setlist and the way a
    name gets onto a setlist is that somebody writes it — which is the
    same pencil that ticks and strikes on the sheet below. */
-.peg svg { width: 26px; height: 26px; display: block; fill: none;
-  stroke: var(--brand); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+/* THE PENCIL NEEDED SOMETHING TO SIT ON.
+   It was a 1.6px purple outline floating on cream with no surface at
+   all — findable if you knew, invisible if you did not, and the one
+   control that adds a student. It is a key now, like everything else
+   in this bar, and the pencil on it is filled rather than drawn. */
+.peg svg { width: 25px; height: 25px; display: block; fill: none;
+  stroke: var(--brand); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  transition: transform .09s ease-out; }
 .peg .pin { display: none; }
-.peg { gap: 2px; }
-.peg:active svg { transform: translate(1px, 1px) rotate(-6deg); }
+.peg {
+  gap: 1px; padding: 5px 9px 4px;
+  border: 1px solid #C9BC9C; border-bottom: 4px solid #AE9E78;
+  border-radius: 4px 4px 12px 12px;
+  background: linear-gradient(180deg, #FFFEFA 0%, #F3EAD5 100%);
+  box-shadow: 0 1px 2px rgba(90,70,30,.10);
+  transition: transform .09s ease-out, border-bottom-width .09s;
+}
+.peg:active { transform: translateY(2px); border-bottom-width: 2px; }
+.peg:active svg { transform: rotate(-8deg); }
 
 /* the date is a button now */
-.daybar .d { background: none; border: 0; padding: 4px 6px; flex: 1; min-width: 0;
-  text-align: center; border-radius: 10px; }
+/* The date in the middle is a label you can tap, not a key. It resets
+   the border and the background — and it has to reset the SHADOW too,
+   or it keeps the key's drop shadow with nothing under it and reads as
+   a faint empty box. */
+.daybar .d { background: none; border: 0; box-shadow: none; padding: 4px 6px;
+  flex: 1; min-width: 0; height: auto; text-align: center; border-radius: 10px; }
 .daybar .d:active { background: rgba(150,132,92,.16); }
 
 /* twelve months, one tap to any of them */
@@ -1795,7 +1867,8 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
 .sub-toggle.ledger button { flex: 1 1 0; }
 .sub-toggle .n { font-style: normal; font-size: 11px; font-weight: 700;
   color: var(--ink-3); margin-left: 3px; }
-.sub-toggle button.on .n { color: var(--brand); }
+/* on a purple key the count was brand purple on brand purple */
+.sub-toggle button.on .n { color: #EADFFF; }
 
 /* the add-expense pair sits side by side above 420px: two short
    fields stacked was most of the scroll on this tab */

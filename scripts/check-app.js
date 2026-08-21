@@ -24,7 +24,8 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const cloudSrc = fs.readFileSync(path.join(ROOT, "assets/js/cloud.js"), "utf8");
-const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+const html = fs.readFileSync(path.join(ROOT, "app.html"), "utf8");
+const siteSrc = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
 const cssSrc = fs.readFileSync(path.join(ROOT, "assets/css/app.css"), "utf8");
 let appSrc = html.slice(html.lastIndexOf("<script>") + 8, html.lastIndexOf("</script>"));
 
@@ -87,7 +88,7 @@ const ctx = {
                   removeItem: (k) => { delete store[k]; } },
   sessionStorage: { getItem: (k) => (k in sess ? sess[k] : null),
                     setItem: (k, v) => { sess[k] = String(v); }, removeItem() {} },
-  location: { pathname: "/index.html", reload() {}, href: "http://x/" },
+  location: { pathname: "/app.html", reload() {}, href: "http://x/" },
   navigator: { userAgent: "node" },
   encodeURIComponent, decodeURIComponent, URL, URLSearchParams, Intl,
   fetch(url, opt) {
@@ -118,11 +119,26 @@ vm.createContext(ctx);
 
 try { vm.runInContext(cloudSrc, ctx, { filename: "cloud.js" }); }
 catch (e) { console.error("cloud.js threw on load: " + e.message); process.exit(1); }
-try { vm.runInContext(appSrc, ctx, { filename: "index.html" }); }
+try { vm.runInContext(appSrc, ctx, { filename: "app.html" }); }
 catch (e) { console.error("the app threw on load: " + e.message); process.exit(1); }
 
 let failed = 0;
 function assert(c, m) { if (!c) throw new Error(m); }
+/* THE LAST RULE IS THE ONE THAT WINS. This stylesheet overrides itself
+   several times over — .sub-toggle button.on and .peg each have an
+   early rule and a later one that beats it — so a check that reads the
+   FIRST match is checking a rule the browser ignores. That is the
+   "answering about the wrong object" trap, in CSS. */
+function lastRule(selector) {
+  /* anchored to the START OF A LINE, not to a preceding "}": every rule
+     in this stylesheet is introduced by a comment, so "}" never
+     immediately precedes the ones that matter. */
+  const re = new RegExp("(^|\\n)" + selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") +
+                        "\\s*\\{([^}]*)\\}", "g");
+  let m, body = null;
+  while ((m = re.exec(cssSrc))) body = m[2];
+  return body;
+}
 async function check(name, fn) {
   try { await fn(); console.log("  ok   " + name); }
   catch (e) { failed += 1; console.log("  FAIL " + name + "\n       " + e.message); }
@@ -1429,6 +1445,94 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
        inside the media query, or the register drifts on a phone only */
     assert(!/@media[^{]*\{[^}]*max-height: 44px/.test(cssSrc.replace(/\n/g, "")),
       "a row height lock moved inside a media query — the two tables will drift at one width");
+  });
+
+  /* THE FRONT DOOR. The root is the school's page for parents; the app
+     is behind it. Both halves are easy to break by moving one file, and
+     the failure is silent — a parent lands on a sign-in screen, or the
+     owner lands on a marketing page he cannot get past. */
+  await check("the root is the school's page and the app is behind it", () => {
+    assert(/<title>Mezzo School of Music \u2014 Coimbatore<\/title>/.test(siteSrc),
+      "the root is no longer the landing page");
+    assert(/class="signin" href="app\.html"/.test(siteSrc),
+      "the landing page has no way in to the app");
+    assert(!/\.\.\/assets\//.test(siteSrc),
+      "the landing page still points one level up for its assets — it is at the root now");
+
+    /* signed in, the root must hand over before anything paints */
+    const head = siteSrc.slice(0, siteSrc.indexOf("</head>"));
+    assert(/localStorage\.getItem\("mz-session"\)/.test(head) &&
+           /location\.replace\("app\.html"\)/.test(head),
+      "a signed-in visit to the root does not reach the app");
+    assert(/access_token !== "preview"/.test(head),
+      "a leftover fixture token would be let through to the real app");
+
+    /* and out again */
+    assert(/MZ\.signOut\(\); location\.replace\("\.\/"\)/.test(appSrc),
+      "signing out leaves him on a sign-in screen instead of the school's page");
+
+    /* the published fixture copy is gone */
+    assert(!fs.existsSync(path.join(ROOT, "try")),
+      "/try/ is back — a public URL showing a populated copy of a client's app");
+    assert(!/try\//.test(fs.readFileSync(path.join(ROOT, "scripts/dev-preview.js"), "utf8")
+             .replace(/\/\*[\s\S]*?\*\//g, "")),
+      "the preview script still writes a published copy");
+  });
+
+  /* "Looks old, maybe brightness or colour." It was measurable: the
+     SELECTED toggle was rgb(237,229,210) on a rgb(249,244,231) card —
+     twelve values apart in each channel — and the unselected ones were
+     LIGHTER than the card behind them. A selection you cannot see is
+     not a selection. */
+  await check("a chosen key is obviously the chosen one", () => {
+    const on = lastRule(".sub-toggle button.on") || "";
+    const hexes = (on.match(/#[0-9A-Fa-f]{6}/g) || []).map((h) => [
+      parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
+    const card = [249, 244, 231];
+    /* the card is the thing it sits on; the chosen key must be nowhere
+       near it */
+    const far = hexes.filter((c) =>
+      Math.abs(c[0] - card[0]) + Math.abs(c[1] - card[1]) + Math.abs(c[2] - card[2]) > 180);
+    assert(far.length >= 1,
+      "the chosen key is within a whisker of the card it sits on again — " +
+      "that is the washed-out look, and it is measurable");
+    assert(/color: #FFFFFF/.test(on), "the chosen key's label is not legible on it");
+
+    /* and the unchosen ones must not be brighter than the card */
+    const off = lastRule(".sub-toggle button") || "";
+    assert(/border-bottom: 4px solid/.test(off),
+      "the keys lost the edge that makes them read as objects");
+  });
+
+  /* The Add button was a 1.6px purple outline floating on cream with no
+     surface: the one control that adds a student, and nothing said it
+     was a control at all. */
+  await check("every control in the day bar has a surface", () => {
+    [".peg", ".daybar button"].forEach((sel) => {
+      const rule = lastRule(sel);
+      assert(rule, "missing rule: " + sel);
+      assert(/background: linear-gradient/.test(rule),
+        sel + " has no surface — it is a line drawing on cream again");
+      assert(/border-bottom: 4px solid/.test(rule),
+        sel + " has no edge, so it does not read as something you press");
+    });
+    /* the date is a label, and must not keep the key's shadow */
+    const d = cssSrc.slice(cssSrc.indexOf(".daybar .d { background: none"));
+    assert(/box-shadow: none/.test(d.slice(0, 200)),
+      "the date keeps the key's drop shadow with no key under it — a faint empty box");
+  });
+
+  /* Three amounts at 21px measured 107+87+107 in boxes of exactly
+     107+87+107: zero slack, touching on every side, reading as one
+     run-on number. */
+  await check("the month's three figures are three figures", () => {
+    const f = cssSrc.slice(cssSrc.indexOf(".figs {"), cssSrc.indexOf(".field {"));
+    assert(/font-size: clamp\(/.test(f),
+      "the figures are back on a fixed size and will overflow a phone");
+    assert(/\.fig \+ \.fig \{ border-left/.test(f),
+      "nothing separates the three amounts, so they read as one number");
+    assert(/grid-template-columns: repeat\(3, 1fr\)/.test(f),
+      "the three figures are no longer three equal columns");
   });
 
   console.log(failed ? "\n" + failed + " failed" : "\nall app checks passed");

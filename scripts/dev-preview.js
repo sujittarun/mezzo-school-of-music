@@ -7,7 +7,7 @@
  * credentials for a live tenant — which is a bad habit to build for an
  * app whose whole job is eighty families' money and attendance.
  *
- * So this takes the real index.html, the real cloud.js and the real
+ * So this takes the real app.html, the real cloud.js and the real
  * page script — nothing is reimplemented — and swaps exactly one
  * thing: fetch. Every screen renders from fixtures, signed in as
  * nobody, against a database that does not exist.
@@ -18,10 +18,10 @@ const fs = require("fs");
 const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
-const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+const html = fs.readFileSync(path.join(ROOT, "app.html"), "utf8");
 const app = html.slice(html.lastIndexOf("<script>") + 8, html.lastIndexOf("</script>"));
 
-/* THE STYLESHEET COMES FROM index.html, not from a string in here.
+/* THE STYLESHEET COMES FROM app.html, not from a string in here.
    This file had its own hardcoded ?v= stamp, so the moment the app's
    stamp moved the preview was rendering the real markup against stale
    CSS — and an audit run against it would have been auditing a build
@@ -31,7 +31,7 @@ const cssHref = (html.match(/href="(assets\/css\/app\.css[^"]*)"/) || [])[1] ||
 
 /* Everything the real page puts in <body> before #root — the SVG
    filter defs and the feature test that switches refraction on. Taken
-   from index.html rather than copied, because a preview that has
+   from app.html rather than copied, because a preview that has
    drifted from the page it previews is worse than no preview: it was
    already reporting no refraction on a page that has it. */
 const headOfBody = (function () {
@@ -248,7 +248,7 @@ localStorage.setItem("mz-session", JSON.stringify({
   role: "staff", tenant: "mezzo"
 }));
 /* Take it back on the way out. The preview shares an origin with the
-   real app, so a fake session left in localStorage makes index.html
+   real app, so a fake session left in localStorage makes app.html
    boot straight past the sign-in screen into a register that cannot
    load — which looks exactly like a bug in the app, and is not. */
 addEventListener("pagehide", function () { localStorage.removeItem("mz-session"); });
@@ -292,18 +292,16 @@ window.fetch = function (url) {
 
 fs.writeFileSync(path.join(ROOT, "_dev-preview.html"), build(""));
 
-/* A PUBLISHED copy, so the ninety-six children can be tried on a real
-   iPad without a login and — the point — without writing one fake row
-   into mezzo. That tenant holds a paying client's eighty real
-   families; ninety-six invented ones alongside them is not a test,
-   it is a data incident, and reminder_queue() would start offering
-   WhatsApp links to invented phone numbers.
-   Assets live one level up from /try/. */
-fs.mkdirSync(path.join(ROOT, "try"), { recursive: true });
-/* ONE <base>, not a prefix per asset. Prefixing the stylesheet and
-   the scripts by hand missed every image the app builds at runtime —
-   the logo in the header came out a broken-image box on the iPad, and
-   nothing in this script could have known about it. A base URL fixes
-   every relative path at once, including the ones not written here. */
-fs.writeFileSync(path.join(ROOT, "try", "index.html"), build('<base href="../">'));
-console.log("wrote _dev-preview.html and try/index.html");
+/* THERE IS NO PUBLISHED COPY ANY MORE.
+
+   /try/ was a build of this file with fixtures in it, served from the
+   live site so ninety-six invented children could be looked at on a
+   real iPad without a login. It did its job and the owner asked for it
+   to go — a public URL that shows a populated version of a client's app
+   is a thing that gets mistaken for the client's app.
+
+   _dev-preview.html stays. It is gitignored, it is served from
+   localhost, and it is what every check in this session was verified
+   against. Nothing is lost from testing; what is gone is the published
+   copy of it. */
+console.log("wrote _dev-preview.html");
