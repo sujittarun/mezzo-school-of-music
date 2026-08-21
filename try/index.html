@@ -129,6 +129,8 @@ window.fetch = function (url) {
     fam: null,                // the family card that is open: an index into S.dues
     famInfo: null,            // that member's row, once it lands
     money: null,
+    exEdit: null,             // the expense being changed
+    exKill: null,             // the expense being removed, awaiting a yes
     ref: null,
     busy: {},                 // enrollment_id -> true while a mark is in flight
     err: ""
@@ -844,9 +846,18 @@ window.fetch = function (url) {
       "</div>";
     }
 
-    body += '<div class="sub-toggle">' +
-      '<button data-mode="today"' + (S.mode === "today" ? ' class="on"' : "") + ">One day</button>" +
-      '<button data-mode="month"' + (S.mode === "month" ? ' class="on"' : "") + ">Whole month</button>" +
+    /* THE TOGGLE AND THE SEARCH SHARE A ROW.
+       Three full-width bands — date, mode, search — pushed the sheet
+       180px down the screen before a single name appeared, on the one
+       tab he opens every afternoon. They are one band now. */
+    body += '<div class="band">' +
+      '<div class="sub-toggle">' +
+        '<button data-mode="today"' + (S.mode === "today" ? ' class="on"' : "") + ">One day</button>" +
+        '<button data-mode="month"' + (S.mode === "month" ? ' class="on"' : "") + ">Month</button>" +
+      "</div>" +
+      (S.register && S.register.rows.length > 12
+        ? '<input class="search" id="q" placeholder="Find a name…" value="' + esc(S.q) + '" />'
+        : "") +
     "</div>";
 
     if (!S.register) return body + '<div class="note">Loading…</div>';
@@ -903,9 +914,6 @@ window.fetch = function (url) {
         return (r.member_name || "").toLowerCase().indexOf(q) >= 0 ||
                (r.sport || "").toLowerCase().indexOf(q) >= 0;
       });
-    }
-    if (S.register.rows.length > 12) {
-      body += '<input class="search" id="q" placeholder="Find a student or instrument…" value="' + esc(S.q) + '" />';
     }
     if (!S.register.rows.length) {
       return body + '<div class="card"><div class="note">No students yet.<br><br>' +
@@ -1304,7 +1312,13 @@ window.fetch = function (url) {
            a wall of green and violet. They live in the family's own
            card now: the list is for SEEING who is flat, the card is
            for doing something about it. */
+        /* THE METER GETS ITS OWN LINE.
+           Beside the name and the amount it was squeezed to 96px in a
+           326px row — a dial that small is a decoration, not a
+           reading. On its own line it is as wide as the row on any
+           screen, which is the whole point of a tuner. */
         return '<button class="due tuned tn-row" data-fam="' + i + '" style="--hue:' + hue + '">' +
+          '<span class="tn-top">' +
           '<span class="tn-note" style="color:' + col + '">' +
             (TUNER_NOTE[d.sport] || "\u266a") + "</span>" +
           '<span class="tn-who"><b>' + esc(d.member_name) + "</b>" +
@@ -1313,13 +1327,13 @@ window.fetch = function (url) {
                the row only needs to say that it happened. */
             "<span>" + esc(d.sport || "") +
             (d.already_sent ? " \u00b7 asked" : "") + "</span></span>" +
+          '<span class="tn-amt"><b>' + inr(d.amount) + "</b></span></span>" +
           '<span class="tn-meter"><span class="tn-ticks">' + ticks +
             '<span class="tn-gate"></span></span>' +
             '<span class="ndl' + (off > 0.12 ? " off" : "") +
               '" style="left:' + left + '%;background:' + col + '"></span>' +
             '<span class="tn-cents">' + d.days_since + " day" + (d.days_since === 1 ? "" : "s") +
             " flat</span></span>" +
-          '<span class="tn-amt"><b>' + inr(d.amount) + "</b></span>" +
         "</button>";
       }).join("") +
       '<button class="btn plec" data-other="1" style="margin-top:14px">' +
@@ -1393,10 +1407,10 @@ window.fetch = function (url) {
       (d.blocked_reason === "missing_phone"
         ? '<div class="note" style="margin:0 0 10px">No phone number for this family, ' +
           "so there is nobody to message.</div>"
-        : '<a class="btn key wa" target="_blank" rel="noopener" href="' + esc(waLink(d)) + '"' +
+        : '<a class="btn bow wa" target="_blank" rel="noopener" href="' + esc(waLink(d)) + '"' +
           ' data-sent="' + d.enrollment_id + '" data-amt="' + d.amount + '"' +
           ' data-ph="' + esc(d.phone || "") + '">Send the reminder</a>') +
-      '<button class="btn key paid" data-paid="' + d.enrollment_id + '" data-amt="' + d.amount +
+      '<button class="btn bow paid" data-paid="' + d.enrollment_id + '" data-amt="' + d.amount +
         '" data-nm="' + esc(d.member_name) + '" data-sport="' + esc(d.sport || "") +
         '">They have paid</button>' +
       '<button class="btn plec" id="famClose">Close</button>' +
@@ -1571,14 +1585,34 @@ window.fetch = function (url) {
           '<input id="exAmt" type="number" inputmode="numeric" min="1" placeholder="0" /></label>' +
         '<label class="field"><span>What for</span>' +
           '<input id="exWhat" placeholder="Guitar strings, rent, electricity…" /></label>' +
-        '<button class="btn" id="exSave">Save expense</button>' +
+        '<button class="btn bow" id="exSave">Save expense</button>' +
       "</div>" +
       (S.money.spent.length
         ? '<div class="card"><h3 style="font-size:15px;margin-bottom:6px">Spent this month</h3>' +
           S.money.spent.map(function (e) {
+            /* An expense typed wrong stayed wrong for ever: there was
+               no way to change it and no way to take it off. Editing
+               is inline; removing asks once, because money leaving the
+               books by accident is worse than one extra tap. */
+            if (S.exEdit === e.id) {
+              return '<div class="srow exedit">' +
+                '<input id="exeWhat" value="' + esc(e.detail || e.category || "") + '" />' +
+                '<input id="exeAmt" type="number" inputmode="numeric" value="' + Number(e.amount) + '" />' +
+                '<button class="mini go" data-exsave="' + e.id + '">Save</button>' +
+                '<button class="mini" data-excancel="1">Cancel</button></div>';
+            }
+            if (S.exKill === e.id) {
+              return '<div class="srow exedit"><div class="nm"><b>Remove ' +
+                esc(e.detail || e.category) + "?</b><span>" + inr(e.amount) + "</span></div>" +
+                '<button class="mini bad" data-exkillyes="' + e.id + '">Remove</button>' +
+                '<button class="mini" data-excancel="1">Keep</button></div>';
+            }
             return '<div class="srow"><div class="nm"><b>' + esc(e.detail || e.category) + "</b>" +
               "<span>" + new Date(e.on_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) +
-              "</span></div><b>" + inr(e.amount) + "</b></div>";
+              "</span></div><b>" + inr(e.amount) + "</b>" +
+              '<button class="mini" data-exedit="' + e.id + '" aria-label="Change">Change</button>' +
+              '<button class="mini" data-exkill="' + e.id + '" aria-label="Remove">\u00d7</button>' +
+            "</div>";
           }).join("") + "</div>"
         : "") +
       (S.money.paid.length
@@ -1896,8 +1930,8 @@ window.fetch = function (url) {
       '<div class="muted" style="margin:-2px 0 14px">The fee is set from the ' +
         "instrument \u2014 you do not need to enter it. The next reminder falls " +
         (S.nsPlan || 1) + ((S.nsPlan || 1) === 1 ? " month" : " months") + " after they start.</div>" +
-      '<button class="btn" id="nsSave">Save student</button>' +
-      '<button class="btn ghost" id="nsCancel" style="margin-top:8px">Cancel</button></div>';
+      '<button class="btn bow" id="nsSave">Save student</button>' +
+      '<button class="btn plec" id="nsCancel" style="margin-top:10px">Cancel</button></div>';
   }
 
   /* ---------- render ---------- */
@@ -2101,6 +2135,26 @@ window.fetch = function (url) {
     if (t.closest("#nsCancel")) { S.tab = "register"; render(); return; }
     if (t.closest("#nsSave")) { saveStudent(); return; }
     if (t.closest("#exSave")) { saveExpense(); return; }
+    var ee = t.closest("[data-exedit]");
+    if (ee) { S.exEdit = +ee.getAttribute("data-exedit"); S.exKill = null; render(); return; }
+    var ek = t.closest("[data-exkill]");
+    if (ek) { S.exKill = +ek.getAttribute("data-exkill"); S.exEdit = null; render(); return; }
+    if (t.closest("[data-excancel]")) { S.exEdit = null; S.exKill = null; render(); return; }
+    var es = t.closest("[data-exsave]");
+    if (es) {
+      var id = +es.getAttribute("data-exsave");
+      MZ.editExpense(id, {
+        amount: +((document.getElementById("exeAmt") || {}).value || 0),
+        detail: (document.getElementById("exeWhat") || {}).value || ""
+      }).then(function () { S.exEdit = null; toast("Changed"); loadMoney(); }).catch(fail);
+      return;
+    }
+    var ky = t.closest("[data-exkillyes]");
+    if (ky) {
+      MZ.removeExpense(+ky.getAttribute("data-exkillyes"))
+        .then(function () { S.exKill = null; toast("Removed"); loadMoney(); }).catch(fail);
+      return;
+    }
 
     /* WhatsApp is a real <a> so the OS opens it. window.open returns
        null whenever noopener is set — that is success, not failure —

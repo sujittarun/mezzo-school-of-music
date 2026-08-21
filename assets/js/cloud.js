@@ -129,6 +129,7 @@
   function get(p)        { return req(p); }
   function post(p, b)    { return req(p, { method: "POST",  body: b, prefer: "return=representation" }); }
   function patch(p, b)   { return req(p, { method: "PATCH", body: b, prefer: "return=representation" }); }
+  function del(p)        { return req(p, { method: "DELETE" }); }
   function rpc(fn, args) { return req("/rpc/" + fn, { method: "POST", body: args || {} }); }
 
   var T = "tenant_id=eq." + TENANT;
@@ -430,6 +431,26 @@
     }).then(function (r) { report("expense_added", {}); return r; });
   }
 
+  /* An expense typed wrong is money that is wrong until somebody can
+     change it, and there was no way to. Both writes carry the tenant
+     in the URL: an id is global on this platform, so a DELETE without
+     one would reach into another academy's books. */
+  function editExpense(id, a) {
+    var body = {};
+    if (a.amount != null) {
+      if (!(a.amount > 0)) return Promise.reject(new Error("Enter an amount."));
+      body.amount = Math.round(a.amount);
+    }
+    if (a.detail != null) body.detail = String(a.detail).trim() || null;
+    if (!Object.keys(body).length) return Promise.resolve(null);
+    return patch("/expenses?" + T + "&id=eq." + id, body)
+      .then(function (r) { report("expense_edited", {}); return r; });
+  }
+  function removeExpense(id) {
+    return del("/expenses?" + T + "&id=eq." + id)
+      .then(function (r) { report("expense_removed", {}); return r; });
+  }
+
   /* ---------------- who is late ----------------
      reminder_queue() decides. This tenant's config says "simple, 1 day",
      so what comes back is already exactly the list he asked for — no
@@ -472,6 +493,7 @@
     mark: mark, register: register,
     feeFor: feeFor, takePayment: takePayment, payments: payments,
     expenses: expenses, addExpense: addExpense,
+    editExpense: editExpense, removeExpense: removeExpense,
     dues: dues, logReminder: logReminder,
     todayIso: todayIso, iso: iso, monthOn: monthOn, monthRange: monthRange,
     dayLabel: dayLabel, dayKey: dayKey

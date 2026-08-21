@@ -1222,7 +1222,9 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
    whole 64px is still the target. */
 .btn.plec {
   position: relative; border: 0; padding: 0;
-  background: #EDE7FA;
+  /* #EDE7FA was almost the colour of the card behind it, so the pick
+     read as a watermark rather than a control. */
+  background: linear-gradient(180deg, #DED4F4, #CDBFEE);
   clip-path: polygon(9% 0, 91% 0, 100% 34%, 50% 100%, 0 34%);
   width: 100%; max-width: 218px; margin: 0 auto; display: block;
   height: 64px; color: var(--brand); font-size: 15.5px; font-weight: 700;
@@ -1234,11 +1236,11 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
    background and the plectrum simply vanished — which is what it did
    the first time. A pick is a solid object anyway, so it does not
    need the outline that forced the extra layer. */
-.btn.plec:active { transform: scale(.97); background: #E4DAF6; }
+.btn.plec:active { transform: scale(.97); background: linear-gradient(180deg, #CDBFEE, #BCACE6); }
 
 /* ---------- the tuner row ---------- */
 .card.tuner .tn-row {
-  display: flex; align-items: center; gap: 10px; width: 100%;
+  display: block; width: 100%;
   background: none; border: 0; border-bottom: 1px solid var(--line);
   padding: 12px 2px 13px; text-align: left; color: inherit;
   border-left: 3px solid var(--hue); border-radius: 2px; padding-left: 11px;
@@ -1374,3 +1376,79 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
 .peg .lbl { font-size: 10.5px; font-weight: 700; color: var(--ink-3); letter-spacing: .04em; }
 .peg:active .pin { transform: translateY(2px); box-shadow: 0 0 0 #0000, inset 0 2px 5px rgba(0,0,0,.3); }
 .daybar { position: relative; padding-right: 62px; }
+
+/* ============================================================
+   THE BOW — the main action of a screen
+
+   A wide button is a long thin thing, and the long thin thing in this
+   building is a bow. So: a frog at the near end (the block you hold),
+   a stick that tapers to a point at the far end, and the hair running
+   its length.
+
+   It reads as a rectangle's opposite — nothing else in the app comes
+   to a point — while keeping every pixel of a 56px target. The taper
+   only takes the far corner, so no label ever runs into it.
+   ============================================================ */
+.btn.bow {
+  position: relative; border: 0; padding: 0 34px 0 22px;
+  min-height: 56px; width: 100%; display: block; text-align: left;
+  font-size: 16.5px; font-weight: 700; line-height: 56px;
+  text-decoration: none; margin-bottom: 10px; color: #fff;
+  background: var(--brand);
+  /* the frog, and the hair */
+  background-image:
+    linear-gradient(90deg, rgba(0,0,0,.26) 0 13px, rgba(0,0,0,0) 13px),
+    linear-gradient(180deg, rgba(0,0,0,0) 62%, rgba(255,255,255,.34) 62% 64%, rgba(0,0,0,0) 64%);
+  clip-path: polygon(0 0, calc(100% - 26px) 0, 100% 50%, calc(100% - 26px) 100%, 0 100%);
+  transition: transform .1s ease-out, filter .14s;
+}
+.btn.bow:active { transform: translateX(3px); filter: brightness(.93); }
+.btn.bow.wa   { background: #128C7E; }
+.btn.bow.paid { background: var(--brand); }
+.btn.bow:disabled { opacity: .5; }
+
+/* ---------- the day bar and the band under it ---------- */
+.band { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+.band .sub-toggle { flex: 0 0 auto; margin: 0; }
+.band .search { flex: 1 1 auto; margin: 0; min-height: 46px; }
+
+/* One day / Month as two piano keys: white for the day you are on,
+   and the one you are NOT on stands up. */
+.sub-toggle { display: flex; gap: 3px; }
+.sub-toggle button {
+  min-height: 46px; padding: 0 12px; border: 1px solid var(--rule);
+  border-bottom: 4px solid #D8CDB6; border-radius: 3px 3px 9px 9px;
+  background: linear-gradient(180deg, #FFFDF8, #F6F0E1);
+  color: var(--ink-2); font-size: 13.5px; font-weight: 700;
+  white-space: nowrap;                     /* "One day" was wrapping to two lines */
+  transition: transform .09s ease-out, border-bottom-width .09s, background .14s;
+}
+.sub-toggle button.on {
+  transform: translateY(3px); border-bottom-width: 1px;
+  background: linear-gradient(180deg, #EDE5D2, #E4DAC2);
+  box-shadow: inset 0 4px 8px rgba(80,64,38,.24); color: var(--brand);
+}
+
+/* ---------- the tuner fills its row ---------- */
+.card.tuner .tn-top { display: flex; align-items: center; gap: 10px; }
+.card.tuner .tn-who { flex: 1 1 auto; min-width: 0; }
+.card.tuner .tn-row .tn-meter { display: block; width: 100%; height: 44px; margin: 4px 0 0; }
+.card.tuner .tn-row .tn-cents { font-size: 10.5px; letter-spacing: .1em; }
+.card.tuner .tn-row .tn-tk { top: 8px; height: 9px; }
+.card.tuner .tn-row .tn-tk.mid { top: 3px; height: 19px; }
+.card.tuner .tn-row .tn-gate { top: 1px; width: 26px; height: 23px; margin-left: -13px; }
+.card.tuner .tn-row .ndl { top: 0; height: 25px; width: 3px; margin-left: -1.5px; }
+
+/* ---------- changing or removing an expense ---------- */
+.mini {
+  flex: 0 0 auto; min-height: 40px; padding: 0 12px; margin-left: 8px;
+  border: 1px solid var(--rule); border-radius: 10px; background: #FFFDF6;
+  color: var(--ink-2); font-size: 13px; font-weight: 700;
+}
+.mini.go  { background: var(--brand); border-color: var(--brand); color: #fff; }
+.mini.bad { background: var(--no);    border-color: var(--no);    color: #fff; }
+.srow.exedit { gap: 6px; flex-wrap: wrap; }
+.srow.exedit input {
+  flex: 1 1 90px; min-width: 0; min-height: 44px; padding: 0 11px;
+  border: 1px solid var(--rule); border-radius: 10px; background: #FFFDF6; font-size: 15px;
+}
