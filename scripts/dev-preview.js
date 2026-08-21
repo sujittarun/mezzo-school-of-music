@@ -156,11 +156,12 @@ const fixtures = {
            .map((n, i) => ({ id: i + 1, code: n.toLowerCase(), name: n, icon: null, sort: i }))
 };
 
-const out = `<!doctype html>
+function build(base) {
+return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mezzo — preview (fixtures, not real data)</title>
-<link rel="stylesheet" href="assets/css/app.css">
+<link rel="stylesheet" href="${base}assets/css/app.css?v=20260821b">
 </head><body>
 ${headOfBody}
 <div id="root"></div><div class="tabs" id="tabs" hidden></div>
@@ -194,10 +195,21 @@ window.fetch = function (url) {
     json: function () { return Promise.resolve(body); } });
 };
 </script>
-<script src="assets/js/cloud.js"></script>
-<script src="assets/js/glass.js"></script>
+<script src="${base}assets/js/cloud.js"></script>
+<script src="${base}assets/js/glass.js"></script>
 <script>${app}</script>
 </body></html>`;
+}
 
-fs.writeFileSync(path.join(ROOT, "_dev-preview.html"), out);
-console.log("wrote _dev-preview.html — open /_dev-preview.html on the dev server");
+fs.writeFileSync(path.join(ROOT, "_dev-preview.html"), build(""));
+
+/* A PUBLISHED copy, so the ninety-six children can be tried on a real
+   iPad without a login and — the point — without writing one fake row
+   into mezzo. That tenant holds a paying client's eighty real
+   families; ninety-six invented ones alongside them is not a test,
+   it is a data incident, and reminder_queue() would start offering
+   WhatsApp links to invented phone numbers.
+   Assets live one level up from /try/. */
+fs.mkdirSync(path.join(ROOT, "try"), { recursive: true });
+fs.writeFileSync(path.join(ROOT, "try", "index.html"), build("../"));
+console.log("wrote _dev-preview.html and try/index.html");

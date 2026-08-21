@@ -1,0 +1,1844 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mezzo — preview (fixtures, not real data)</title>
+<link rel="stylesheet" href="../assets/css/app.css?v=20260821b">
+</head><body>
+
+<!-- ============================================================
+     REAL REFRACTION.
+     A displacement map, fed to the backdrop. The map is neutral grey
+     (128,128) through the middle and ramps to black/full in the outer
+     14%, so the picture behind the pane is BENT at the bezel and left
+     alone in the centre — which is what a pane of glass actually does,
+     and what a blur can only imply.
+
+     Scale 8, measured against 14 and 22 side by side over this
+     background: 14 smears, 22 melts, 8 bends.
+
+     Only Chromium honours url() in backdrop-filter today. The script
+     below feature-tests it and adds .has-refraction; without that
+     class the CSS bevel does the job instead, so Safari — which is
+     what he actually uses — gets the fallback and never gets a
+     broken-looking pane.
+     ============================================================ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <filter id="mz-glass" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feImage href="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27100%27%20height%3D%27100%27%3E%3Cdefs%3E%3ClinearGradient%20id%3D%27gx%27%20x1%3D%270%27%20y1%3D%270%27%20x2%3D%271%27%20y2%3D%270%27%3E%3Cstop%20offset%3D%270%27%20stop-color%3D%27%23000000%27%2F%3E%3Cstop%20offset%3D%270.14%27%20stop-color%3D%27%23800000%27%2F%3E%3Cstop%20offset%3D%270.86%27%20stop-color%3D%27%23800000%27%2F%3E%3Cstop%20offset%3D%271%27%20stop-color%3D%27%23ff0000%27%2F%3E%3C%2FlinearGradient%3E%3ClinearGradient%20id%3D%27gy%27%20x1%3D%270%27%20y1%3D%270%27%20x2%3D%270%27%20y2%3D%271%27%3E%3Cstop%20offset%3D%270%27%20stop-color%3D%27%23000000%27%2F%3E%3Cstop%20offset%3D%270.14%27%20stop-color%3D%27%23008000%27%2F%3E%3Cstop%20offset%3D%270.86%27%20stop-color%3D%27%23008000%27%2F%3E%3Cstop%20offset%3D%271%27%20stop-color%3D%27%2300ff00%27%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%27100%27%20height%3D%27100%27%20fill%3D%27url%28%23gx%29%27%2F%3E%3Crect%20width%3D%27100%27%20height%3D%27100%27%20fill%3D%27url%28%23gy%29%27%20style%3D%27mix-blend-mode%3Ascreen%27%2F%3E%3C%2Fsvg%3E" result="m" preserveAspectRatio="none" x="0%" y="0%" width="100%" height="100%"/>
+    <feDisplacementMap in="SourceGraphic" in2="m" scale="8" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</defs></svg>
+<script>
+  /* CSS.supports() LIES HERE, AND I CHECKED ON THE DEVICE.
+     iPadOS 18.3 Safari answers YES to backdrop-filter: url() and then
+     renders no backdrop effect at all — and because the url() sits in
+     the same filter list as the blur, it drops the blur with it. The
+     result on his actual iPad was flat translucent boxes with no
+     glass whatsoever: worse than never having tried.
+
+     So the support query is not enough. -webkit-touch-callout is a
+     WebKit-only property, which makes it a reliable tell for the
+     engine that has this bug — and it correctly also covers Chrome
+     and Edge on iOS, which are WebKit underneath and share it.
+
+     Verified both ways: Chromium true, iPad Safari 18.3 false. */
+  try {
+    var C = window.CSS;
+    if (C && C.supports &&
+        C.supports("backdrop-filter", "url(#mz-glass)") &&
+        !C.supports("-webkit-touch-callout", "none")) {
+      document.documentElement.className += " has-refraction";
+    }
+  } catch (e) {}
+</script>
+
+<div id="root"></div><div class="tabs" id="tabs" hidden></div>
+<script>
+/* signed in as nobody, against nothing */
+localStorage.setItem("mz-session", JSON.stringify({
+  access_token: "preview", refresh_token: "preview",
+  expires_at: Date.now() + 864e5, email: "preview@example.invalid",
+  role: "staff", tenant: "mezzo"
+}));
+/* Take it back on the way out. The preview shares an origin with the
+   real app, so a fake session left in localStorage makes index.html
+   boot straight past the sign-in screen into a register that cannot
+   load — which looks exactly like a bug in the app, and is not. */
+addEventListener("pagehide", function () { localStorage.removeItem("mz-session"); });
+var FIX = {"register":[{"enrollment_id":1,"member_id":1,"member_name":"Aarthi","sport":"Piano","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"absent","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"absent","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"absent","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":12,"present_days":12},{"enrollment_id":2,"member_id":2,"member_name":"Bharath","sport":"Piano","batch_id":1,"marks":{"2026-08-03":"absent","2026-08-04":"absent","2026-08-10":"present"},"months_enrolled":23,"present_days":1},{"enrollment_id":3,"member_id":3,"member_name":"Chitra","sport":"Piano","batch_id":2,"marks":{"2026-08-01":"present","2026-08-08":"present","2026-08-15":"present"},"months_enrolled":25,"present_days":3},{"enrollment_id":4,"member_id":4,"member_name":"Deepak","sport":"Piano","batch_id":1,"marks":{"2026-08-05":"present","2026-08-06":"present","2026-08-10":"present","2026-08-11":"absent","2026-08-12":"absent","2026-08-18":"present","2026-08-20":"present"},"months_enrolled":9,"present_days":5},{"enrollment_id":5,"member_id":5,"member_name":"Eshwari","sport":"Piano","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":6,"present_days":15},{"enrollment_id":6,"member_id":6,"member_name":"Farhan","sport":"Piano","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"absent","2026-08-05":"present","2026-08-06":"present","2026-08-07":"absent","2026-08-10":"present","2026-08-11":"present","2026-08-12":"absent","2026-08-14":"absent","2026-08-19":"present"},"months_enrolled":7,"present_days":6},{"enrollment_id":7,"member_id":7,"member_name":"Gowri","sport":"Piano","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":16,"present_days":15},{"enrollment_id":8,"member_id":8,"member_name":"Hari","sport":"Piano","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"absent","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"absent","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":1,"present_days":13},{"enrollment_id":9,"member_id":9,"member_name":"Ilango","sport":"Piano","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"absent","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"absent"},"months_enrolled":4,"present_days":13},{"enrollment_id":10,"member_id":10,"member_name":"Janani","sport":"Piano","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"absent","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":26,"present_days":14},{"enrollment_id":11,"member_id":11,"member_name":"Karthik","sport":"Piano","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":19,"present_days":15},{"enrollment_id":12,"member_id":12,"member_name":"Lakshmi","sport":"Piano","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"absent","2026-08-14":"present","2026-08-17":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":14,"present_days":12},{"enrollment_id":13,"member_id":13,"member_name":"Mani","sport":"Piano","batch_id":2,"marks":{"2026-08-01":"present","2026-08-08":"present","2026-08-15":"present"},"months_enrolled":3,"present_days":3},{"enrollment_id":14,"member_id":14,"member_name":"Nithya","sport":"Piano","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"absent","2026-08-12":"absent","2026-08-13":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":14,"present_days":11},{"enrollment_id":15,"member_id":15,"member_name":"Oviya","sport":"Piano","batch_id":2,"marks":{"2026-08-01":"present","2026-08-08":"present","2026-08-15":"present"},"months_enrolled":22,"present_days":3},{"enrollment_id":16,"member_id":16,"member_name":"Prakash","sport":"Piano","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":16,"present_days":15},{"enrollment_id":17,"member_id":17,"member_name":"Ramya","sport":"Piano","batch_id":1,"marks":{"2026-08-03":"absent","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":3,"present_days":14},{"enrollment_id":18,"member_id":18,"member_name":"Sanjay","sport":"Piano","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"absent","2026-08-11":"absent","2026-08-12":"present","2026-08-14":"present","2026-08-17":"absent","2026-08-20":"absent","2026-08-21":"present"},"months_enrolled":12,"present_days":7},{"enrollment_id":19,"member_id":19,"member_name":"Tara","sport":"Piano","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"absent","2026-08-06":"present","2026-08-07":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present"},"months_enrolled":19,"present_days":12},{"enrollment_id":20,"member_id":20,"member_name":"Udhay","sport":"Piano","batch_id":2,"marks":{"2026-08-01":"present","2026-08-08":"present"},"months_enrolled":4,"present_days":2},{"enrollment_id":21,"member_id":21,"member_name":"Vidya","sport":"Piano","batch_id":2,"marks":{"2026-08-01":"present","2026-08-08":"present","2026-08-15":"present"},"months_enrolled":6,"present_days":3},{"enrollment_id":22,"member_id":22,"member_name":"Yazhini","sport":"Piano","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":6,"present_days":15},{"enrollment_id":23,"member_id":23,"member_name":"Abhinav","sport":"Guitar","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"absent","2026-08-10":"present","2026-08-12":"present","2026-08-14":"present","2026-08-21":"absent"},"months_enrolled":22,"present_days":6},{"enrollment_id":24,"member_id":24,"member_name":"Bhavana","sport":"Guitar","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"absent","2026-08-07":"absent","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"absent","2026-08-18":"absent","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":10,"present_days":11},{"enrollment_id":25,"member_id":25,"member_name":"Charu","sport":"Guitar","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"absent","2026-08-11":"present","2026-08-12":"absent","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":9,"present_days":13},{"enrollment_id":26,"member_id":26,"member_name":"Dhanush","sport":"Guitar","batch_id":1,"marks":{"2026-08-03":"absent","2026-08-04":"present","2026-08-05":"absent","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"absent","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":22,"present_days":12},{"enrollment_id":27,"member_id":27,"member_name":"Ezhil","sport":"Guitar","batch_id":2,"marks":{"2026-08-01":"present","2026-08-08":"present","2026-08-15":"present"},"months_enrolled":24,"present_days":3},{"enrollment_id":28,"member_id":28,"member_name":"Ganesh","sport":"Guitar","batch_id":1,"marks":{"2026-08-03":"absent","2026-08-04":"absent","2026-08-05":"present","2026-08-06":"absent","2026-08-07":"absent","2026-08-10":"present","2026-08-11":"present","2026-08-13":"present","2026-08-18":"absent","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":5,"present_days":6},{"enrollment_id":29,"member_id":29,"member_name":"Harini","sport":"Guitar","batch_id":1,"marks":{"2026-08-03":"absent","2026-08-04":"present","2026-08-05":"absent","2026-08-06":"absent","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"absent","2026-08-13":"absent"},"months_enrolled":10,"present_days":4},{"enrollment_id":30,"member_id":30,"member_name":"Indira","sport":"Guitar","batch_id":1,"marks":{"2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"absent"},"months_enrolled":13,"present_days":6},{"enrollment_id":31,"member_id":31,"member_name":"Jeeva","sport":"Guitar","batch_id":2,"marks":{"2026-08-01":"present","2026-08-08":"present","2026-08-15":"present"},"months_enrolled":10,"present_days":3},{"enrollment_id":32,"member_id":32,"member_name":"Kavya","sport":"Guitar","batch_id":2,"marks":{"2026-08-01":"absent","2026-08-08":"present","2026-08-15":"present"},"months_enrolled":23,"present_days":2},{"enrollment_id":33,"member_id":33,"member_name":"Lalitha","sport":"Guitar","batch_id":2,"marks":{"2026-08-01":"present","2026-08-08":"absent","2026-08-15":"present"},"months_enrolled":7,"present_days":2},{"enrollment_id":34,"member_id":34,"member_name":"Madhan","sport":"Guitar","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"absent","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"absent","2026-08-21":"present"},"months_enrolled":26,"present_days":13},{"enrollment_id":35,"member_id":35,"member_name":"Nandini","sport":"Guitar","batch_id":2,"marks":{"2026-08-01":"present","2026-08-08":"present","2026-08-15":"present"},"months_enrolled":11,"present_days":3},{"enrollment_id":36,"member_id":36,"member_name":"Oorja","sport":"Guitar","batch_id":2,"marks":{"2026-08-01":"present","2026-08-08":"present","2026-08-15":"present"},"months_enrolled":16,"present_days":3},{"enrollment_id":37,"member_id":37,"member_name":"Pavithra","sport":"Guitar","batch_id":1,"marks":{"2026-08-03":"absent","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"absent","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"absent","2026-08-18":"absent","2026-08-19":"absent","2026-08-20":"absent","2026-08-21":"present"},"months_enrolled":11,"present_days":8},{"enrollment_id":38,"member_id":38,"member_name":"Raghav","sport":"Guitar","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-06":"absent","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"absent","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present"},"months_enrolled":25,"present_days":9},{"enrollment_id":39,"member_id":39,"member_name":"Sneha","sport":"Guitar","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"absent","2026-08-06":"absent","2026-08-10":"present","2026-08-11":"present","2026-08-12":"absent","2026-08-14":"absent","2026-08-17":"absent","2026-08-18":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":25,"present_days":7},{"enrollment_id":40,"member_id":40,"member_name":"Thamarai","sport":"Guitar","batch_id":2,"marks":{"2026-08-01":"present","2026-08-08":"present","2026-08-15":"absent"},"months_enrolled":4,"present_days":2},{"enrollment_id":41,"member_id":41,"member_name":"Uma","sport":"Keyboard","batch_id":1,"marks":{"2026-08-03":"absent","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"absent","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"absent","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"absent"},"months_enrolled":21,"present_days":11},{"enrollment_id":42,"member_id":42,"member_name":"Varun","sport":"Keyboard","batch_id":2,"marks":{"2026-08-08":"absent"},"months_enrolled":19,"present_days":0},{"enrollment_id":43,"member_id":43,"member_name":"Yamini","sport":"Keyboard","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"absent","2026-08-07":"present","2026-08-10":"present","2026-08-14":"absent","2026-08-18":"present","2026-08-19":"absent","2026-08-20":"absent"},"months_enrolled":7,"present_days":6},{"enrollment_id":44,"member_id":44,"member_name":"Anand","sport":"Keyboard","batch_id":1,"marks":{"2026-08-03":"absent","2026-08-04":"present","2026-08-05":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"absent","2026-08-14":"present"},"months_enrolled":4,"present_days":5},{"enrollment_id":45,"member_id":45,"member_name":"Bhargav","sport":"Keyboard","batch_id":2,"marks":{"2026-08-01":"present","2026-08-08":"present","2026-08-15":"present"},"months_enrolled":26,"present_days":3},{"enrollment_id":46,"member_id":46,"member_name":"Chandra","sport":"Keyboard","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-06":"present","2026-08-10":"present","2026-08-11":"present","2026-08-13":"absent","2026-08-14":"absent","2026-08-17":"present","2026-08-21":"absent"},"months_enrolled":8,"present_days":6},{"enrollment_id":47,"member_id":47,"member_name":"Divya","sport":"Keyboard","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"absent","2026-08-07":"present","2026-08-10":"absent","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"absent","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":21,"present_days":12},{"enrollment_id":48,"member_id":48,"member_name":"Elango","sport":"Keyboard","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":26,"present_days":15},{"enrollment_id":49,"member_id":49,"member_name":"Gayathri","sport":"Keyboard","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"absent","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":5,"present_days":14},{"enrollment_id":50,"member_id":50,"member_name":"Hemanth","sport":"Keyboard","batch_id":1,"marks":{"2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-10":"present","2026-08-11":"absent","2026-08-12":"absent","2026-08-14":"present","2026-08-18":"absent","2026-08-19":"present","2026-08-20":"absent"},"months_enrolled":10,"present_days":6},{"enrollment_id":51,"member_id":51,"member_name":"Ishwarya","sport":"Keyboard","batch_id":2,"marks":{"2026-08-01":"present","2026-08-08":"present","2026-08-15":"present"},"months_enrolled":24,"present_days":3},{"enrollment_id":52,"member_id":52,"member_name":"Jayanth","sport":"Keyboard","batch_id":2,"marks":{"2026-08-01":"present","2026-08-08":"present"},"months_enrolled":5,"present_days":2},{"enrollment_id":53,"member_id":53,"member_name":"Keerthi","sport":"Keyboard","batch_id":2,"marks":{"2026-08-01":"present","2026-08-08":"present","2026-08-15":"present"},"months_enrolled":25,"present_days":3},{"enrollment_id":54,"member_id":54,"member_name":"Lavanya","sport":"Keyboard","batch_id":2,"marks":{"2026-08-01":"absent","2026-08-08":"present","2026-08-15":"present"},"months_enrolled":19,"present_days":2},{"enrollment_id":55,"member_id":55,"member_name":"Mohan","sport":"Violin","batch_id":2,"marks":{"2026-08-01":"present","2026-08-08":"present","2026-08-15":"present"},"months_enrolled":10,"present_days":3},{"enrollment_id":56,"member_id":56,"member_name":"Naveen","sport":"Violin","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":14,"present_days":15},{"enrollment_id":57,"member_id":57,"member_name":"Padma","sport":"Violin","batch_id":2,"marks":{"2026-08-01":"present","2026-08-08":"present","2026-08-15":"absent"},"months_enrolled":15,"present_days":2},{"enrollment_id":58,"member_id":58,"member_name":"Rajesh","sport":"Violin","batch_id":1,"marks":{"2026-08-03":"absent","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"absent","2026-08-17":"absent","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":16,"present_days":12},{"enrollment_id":59,"member_id":59,"member_name":"Sundar","sport":"Violin","batch_id":1,"marks":{"2026-08-03":"present","2026-08-05":"present","2026-08-06":"absent","2026-08-07":"present","2026-08-10":"absent","2026-08-11":"present","2026-08-12":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":2,"present_days":9},{"enrollment_id":60,"member_id":60,"member_name":"Tanvi","sport":"Violin","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"absent","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":13,"present_days":14},{"enrollment_id":61,"member_id":61,"member_name":"Usha","sport":"Violin","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"absent","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"absent","2026-08-20":"present","2026-08-21":"absent"},"months_enrolled":15,"present_days":12},{"enrollment_id":62,"member_id":62,"member_name":"Vignesh","sport":"Violin","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":21,"present_days":15},{"enrollment_id":63,"member_id":63,"member_name":"Anjali","sport":"Violin","batch_id":1,"marks":{"2026-08-03":"absent","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"absent","2026-08-11":"present","2026-08-12":"present","2026-08-18":"absent","2026-08-20":"absent"},"months_enrolled":18,"present_days":6},{"enrollment_id":64,"member_id":64,"member_name":"Balaji","sport":"Violin","batch_id":2,"marks":{"2026-08-08":"present","2026-08-15":"present"},"months_enrolled":20,"present_days":2},{"enrollment_id":65,"member_id":65,"member_name":"Chetan","sport":"Violin","batch_id":1,"marks":{"2026-08-03":"absent","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"absent","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":6,"present_days":13},{"enrollment_id":66,"member_id":66,"member_name":"Deepika","sport":"Violin","batch_id":1,"marks":{"2026-08-04":"present","2026-08-05":"absent","2026-08-06":"present","2026-08-11":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-21":"present"},"months_enrolled":18,"present_days":8},{"enrollment_id":67,"member_id":67,"member_name":"Ganga","sport":"Violin","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":16,"present_days":15},{"enrollment_id":68,"member_id":68,"member_name":"Haritha","sport":"Vocals","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"absent","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":19,"present_days":14},{"enrollment_id":69,"member_id":69,"member_name":"Iniya","sport":"Vocals","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"absent","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"absent","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":21,"present_days":13},{"enrollment_id":70,"member_id":70,"member_name":"Jagan","sport":"Vocals","batch_id":2,"marks":{"2026-08-01":"present","2026-08-08":"present","2026-08-15":"absent"},"months_enrolled":16,"present_days":2},{"enrollment_id":71,"member_id":71,"member_name":"Kalyani","sport":"Vocals","batch_id":2,"marks":{"2026-08-01":"absent","2026-08-08":"present"},"months_enrolled":10,"present_days":1},{"enrollment_id":72,"member_id":72,"member_name":"Lokesh","sport":"Vocals","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":18,"present_days":15},{"enrollment_id":73,"member_id":73,"member_name":"Meera","sport":"Vocals","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"absent","2026-08-05":"present","2026-08-06":"present","2026-08-07":"absent","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":10,"present_days":13},{"enrollment_id":74,"member_id":74,"member_name":"Nithin","sport":"Vocals","batch_id":1,"marks":{"2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"absent","2026-08-10":"present","2026-08-12":"absent","2026-08-13":"present","2026-08-14":"present","2026-08-20":"present"},"months_enrolled":3,"present_days":7},{"enrollment_id":75,"member_id":75,"member_name":"Poorna","sport":"Vocals","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":3,"present_days":15},{"enrollment_id":76,"member_id":76,"member_name":"Rekha","sport":"Vocals","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"absent","2026-08-11":"present","2026-08-12":"absent","2026-08-14":"absent","2026-08-17":"present","2026-08-21":"present"},"months_enrolled":4,"present_days":8},{"enrollment_id":77,"member_id":77,"member_name":"Sathya","sport":"Vocals","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"absent","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"absent","2026-08-14":"present","2026-08-17":"present","2026-08-18":"absent","2026-08-19":"absent","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":23,"present_days":11},{"enrollment_id":78,"member_id":78,"member_name":"Tejas","sport":"Vocals","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"absent","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"absent"},"months_enrolled":22,"present_days":13},{"enrollment_id":79,"member_id":79,"member_name":"Vasanth","sport":"Vocals","batch_id":2,"marks":{"2026-08-01":"present","2026-08-08":"present","2026-08-15":"present"},"months_enrolled":2,"present_days":3},{"enrollment_id":80,"member_id":80,"member_name":"Yuvan","sport":"Ukulele","batch_id":1,"marks":{"2026-08-03":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-14":"absent","2026-08-17":"present","2026-08-21":"present"},"months_enrolled":22,"present_days":7},{"enrollment_id":81,"member_id":81,"member_name":"Aditi","sport":"Ukulele","batch_id":1,"marks":{"2026-08-03":"absent","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"absent","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"absent","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":5,"present_days":12},{"enrollment_id":82,"member_id":82,"member_name":"Bhuvana","sport":"Ukulele","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"absent","2026-08-06":"absent","2026-08-10":"present","2026-08-11":"absent","2026-08-12":"absent","2026-08-13":"present","2026-08-14":"present","2026-08-20":"present","2026-08-21":"absent"},"months_enrolled":22,"present_days":5},{"enrollment_id":83,"member_id":83,"member_name":"Chinmay","sport":"Ukulele","batch_id":2,"marks":{"2026-08-01":"present","2026-08-08":"absent","2026-08-15":"present"},"months_enrolled":9,"present_days":2},{"enrollment_id":84,"member_id":84,"member_name":"Devika","sport":"Ukulele","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"absent","2026-08-06":"absent","2026-08-07":"present","2026-08-10":"absent","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-18":"present","2026-08-21":"present"},"months_enrolled":22,"present_days":8},{"enrollment_id":85,"member_id":85,"member_name":"Girish","sport":"Ukulele","batch_id":2,"marks":{"2026-08-01":"present"},"months_enrolled":12,"present_days":1},{"enrollment_id":86,"member_id":86,"member_name":"Hasini","sport":"Ukulele","batch_id":1,"marks":{"2026-08-03":"present","2026-08-05":"present","2026-08-06":"absent","2026-08-07":"present","2026-08-10":"absent","2026-08-12":"absent","2026-08-18":"present","2026-08-19":"absent"},"months_enrolled":19,"present_days":4},{"enrollment_id":87,"member_id":87,"member_name":"Kiran","sport":"Ukulele","batch_id":1,"marks":{"2026-08-03":"absent","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-12":"present","2026-08-13":"absent","2026-08-14":"absent","2026-08-17":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":2,"present_days":9},{"enrollment_id":88,"member_id":88,"member_name":"Malar","sport":"Ukulele","batch_id":1,"marks":{"2026-08-03":"absent","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"absent","2026-08-21":"present"},"months_enrolled":17,"present_days":13},{"enrollment_id":89,"member_id":89,"member_name":"Nirmala","sport":"Drums","batch_id":2,"marks":{"2026-08-01":"absent","2026-08-08":"present","2026-08-15":"present"},"months_enrolled":8,"present_days":2},{"enrollment_id":90,"member_id":90,"member_name":"Preethi","sport":"Drums","batch_id":1,"marks":{"2026-08-03":"present","2026-08-05":"absent","2026-08-06":"present","2026-08-07":"present","2026-08-10":"absent","2026-08-12":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present"},"months_enrolled":6,"present_days":8},{"enrollment_id":91,"member_id":91,"member_name":"Rithika","sport":"Drums","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"absent","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"absent","2026-08-13":"present","2026-08-14":"present","2026-08-17":"absent","2026-08-18":"present","2026-08-19":"present"},"months_enrolled":18,"present_days":10},{"enrollment_id":92,"member_id":92,"member_name":"Shankar","sport":"Drums","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-10":"present","2026-08-11":"absent","2026-08-12":"absent","2026-08-13":"absent","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"absent","2026-08-21":"present"},"months_enrolled":7,"present_days":10},{"enrollment_id":93,"member_id":93,"member_name":"Swathi","sport":"Drums","batch_id":2,"marks":{"2026-08-01":"present","2026-08-08":"present","2026-08-15":"present"},"months_enrolled":12,"present_days":3},{"enrollment_id":94,"member_id":94,"member_name":"Vaishali","sport":"Drums","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":1,"present_days":15},{"enrollment_id":95,"member_id":95,"member_name":"Arjun","sport":"Drums","batch_id":1,"marks":{"2026-08-03":"absent","2026-08-04":"present","2026-08-05":"absent","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":16,"present_days":13},{"enrollment_id":96,"member_id":96,"member_name":"Nivetha","sport":"Drums","batch_id":1,"marks":{"2026-08-03":"present","2026-08-04":"present","2026-08-05":"present","2026-08-06":"present","2026-08-07":"present","2026-08-10":"present","2026-08-11":"present","2026-08-12":"present","2026-08-13":"present","2026-08-14":"present","2026-08-17":"present","2026-08-18":"present","2026-08-19":"present","2026-08-20":"present","2026-08-21":"present"},"months_enrolled":10,"present_days":15}],"dues":[{"enrollment_id":4,"member_name":"Deepak","parent_name":"Parent Deepak","sport":"Piano","amount":2500,"days_since":1,"due_date":"2026-08-21","phone":"9000001003","already_sent":true},{"enrollment_id":11,"member_name":"Karthik","parent_name":"Parent Karthik","sport":"Piano","amount":2500,"days_since":4,"due_date":"2026-08-18","phone":"9000001010","already_sent":false},{"enrollment_id":18,"member_name":"Sanjay","parent_name":"Parent Sanjay","sport":"Piano","amount":2500,"days_since":7,"due_date":"2026-08-15","phone":"9000001017","already_sent":false},{"enrollment_id":25,"member_name":"Charu","parent_name":"Parent Charu","sport":"Guitar","amount":1500,"days_since":10,"due_date":"2026-08-12","phone":"9000001024","already_sent":false},{"enrollment_id":32,"member_name":"Kavya","parent_name":"Parent Kavya","sport":"Guitar","amount":1500,"days_since":13,"due_date":"2026-08-09","phone":"9000001031","already_sent":true},{"enrollment_id":39,"member_name":"Sneha","parent_name":"Parent Sneha","sport":"Guitar","amount":1500,"days_since":16,"due_date":"2026-08-06","phone":"9000001038","already_sent":false},{"enrollment_id":46,"member_name":"Chandra","parent_name":"Parent Chandra","sport":"Keyboard","amount":1500,"days_since":19,"due_date":"2026-08-03","phone":"9000001045","already_sent":false},{"enrollment_id":53,"member_name":"Keerthi","parent_name":"Parent Keerthi","sport":"Keyboard","amount":1500,"days_since":22,"due_date":"2026-08-01","phone":"9000001052","already_sent":false},{"enrollment_id":60,"member_name":"Tanvi","parent_name":"Parent Tanvi","sport":"Violin","amount":1500,"days_since":25,"due_date":"2026-08-01","phone":"9000001059","already_sent":true},{"enrollment_id":67,"member_name":"Ganga","parent_name":"Parent Ganga","sport":"Violin","amount":1500,"days_since":2,"due_date":"2026-08-20","phone":"9000001066","already_sent":false},{"enrollment_id":74,"member_name":"Nithin","parent_name":"Parent Nithin","sport":"Vocals","amount":1500,"days_since":5,"due_date":"2026-08-17","phone":"9000001073","already_sent":false},{"enrollment_id":81,"member_name":"Aditi","parent_name":"Parent Aditi","sport":"Ukulele","amount":1500,"days_since":8,"due_date":"2026-08-14","phone":"9000001080","already_sent":false},{"enrollment_id":88,"member_name":"Malar","parent_name":"Parent Malar","sport":"Ukulele","amount":1500,"days_since":11,"due_date":"2026-08-11","phone":"9000001087","already_sent":true},{"enrollment_id":95,"member_name":"Arjun","parent_name":"Parent Arjun","sport":"Drums","amount":1500,"days_since":14,"due_date":"2026-08-08","phone":"9000001094","already_sent":false}],"payments":[{"id":1,"amount":2500,"on_date":"2026-08-01","mode":"Cash","kind":"fee","status":"paid","member_id":1,"enrollment_id":1,"member_name":"Aarthi","sport":"Piano"},{"id":2,"amount":2500,"on_date":"2026-08-04","mode":"UPI","kind":"fee","status":"paid","member_id":2,"enrollment_id":2,"member_name":"Bharath","sport":"Piano"},{"id":3,"amount":2500,"on_date":"2026-08-07","mode":"UPI","kind":"fee","status":"paid","member_id":3,"enrollment_id":3,"member_name":"Chitra","sport":"Piano"},{"id":4,"amount":2500,"on_date":"2026-08-10","mode":"Cash","kind":"fee","status":"paid","member_id":5,"enrollment_id":5,"member_name":"Eshwari","sport":"Piano"},{"id":5,"amount":2500,"on_date":"2026-08-13","mode":"UPI","kind":"fee","status":"paid","member_id":6,"enrollment_id":6,"member_name":"Farhan","sport":"Piano"},{"id":6,"amount":2500,"on_date":"2026-08-16","mode":"UPI","kind":"fee","status":"paid","member_id":7,"enrollment_id":7,"member_name":"Gowri","sport":"Piano"},{"id":7,"amount":2500,"on_date":"2026-08-19","mode":"Cash","kind":"fee","status":"paid","member_id":8,"enrollment_id":8,"member_name":"Hari","sport":"Piano"},{"id":8,"amount":2500,"on_date":"2026-08-02","mode":"UPI","kind":"fee","status":"paid","member_id":9,"enrollment_id":9,"member_name":"Ilango","sport":"Piano"},{"id":9,"amount":2500,"on_date":"2026-08-05","mode":"UPI","kind":"fee","status":"paid","member_id":10,"enrollment_id":10,"member_name":"Janani","sport":"Piano"},{"id":10,"amount":2500,"on_date":"2026-08-08","mode":"Cash","kind":"fee","status":"paid","member_id":12,"enrollment_id":12,"member_name":"Lakshmi","sport":"Piano"},{"id":11,"amount":2500,"on_date":"2026-08-11","mode":"UPI","kind":"fee","status":"paid","member_id":13,"enrollment_id":13,"member_name":"Mani","sport":"Piano"},{"id":12,"amount":2500,"on_date":"2026-08-14","mode":"UPI","kind":"fee","status":"paid","member_id":14,"enrollment_id":14,"member_name":"Nithya","sport":"Piano"},{"id":13,"amount":2500,"on_date":"2026-08-17","mode":"Cash","kind":"fee","status":"paid","member_id":15,"enrollment_id":15,"member_name":"Oviya","sport":"Piano"},{"id":14,"amount":2500,"on_date":"2026-08-20","mode":"UPI","kind":"fee","status":"paid","member_id":16,"enrollment_id":16,"member_name":"Prakash","sport":"Piano"},{"id":15,"amount":2500,"on_date":"2026-08-03","mode":"UPI","kind":"fee","status":"paid","member_id":17,"enrollment_id":17,"member_name":"Ramya","sport":"Piano"},{"id":16,"amount":2500,"on_date":"2026-08-06","mode":"Cash","kind":"fee","status":"paid","member_id":19,"enrollment_id":19,"member_name":"Tara","sport":"Piano"},{"id":17,"amount":2500,"on_date":"2026-08-09","mode":"UPI","kind":"fee","status":"paid","member_id":20,"enrollment_id":20,"member_name":"Udhay","sport":"Piano"},{"id":18,"amount":2500,"on_date":"2026-08-12","mode":"UPI","kind":"fee","status":"paid","member_id":21,"enrollment_id":21,"member_name":"Vidya","sport":"Piano"},{"id":19,"amount":2500,"on_date":"2026-08-15","mode":"Cash","kind":"fee","status":"paid","member_id":22,"enrollment_id":22,"member_name":"Yazhini","sport":"Piano"},{"id":20,"amount":1500,"on_date":"2026-08-18","mode":"UPI","kind":"fee","status":"paid","member_id":23,"enrollment_id":23,"member_name":"Abhinav","sport":"Guitar"},{"id":21,"amount":1500,"on_date":"2026-08-01","mode":"UPI","kind":"fee","status":"paid","member_id":24,"enrollment_id":24,"member_name":"Bhavana","sport":"Guitar"},{"id":22,"amount":1500,"on_date":"2026-08-04","mode":"Cash","kind":"fee","status":"paid","member_id":26,"enrollment_id":26,"member_name":"Dhanush","sport":"Guitar"},{"id":23,"amount":1500,"on_date":"2026-08-07","mode":"UPI","kind":"fee","status":"paid","member_id":27,"enrollment_id":27,"member_name":"Ezhil","sport":"Guitar"},{"id":24,"amount":1500,"on_date":"2026-08-10","mode":"UPI","kind":"fee","status":"paid","member_id":28,"enrollment_id":28,"member_name":"Ganesh","sport":"Guitar"},{"id":25,"amount":1500,"on_date":"2026-08-13","mode":"Cash","kind":"fee","status":"paid","member_id":29,"enrollment_id":29,"member_name":"Harini","sport":"Guitar"},{"id":26,"amount":1500,"on_date":"2026-08-16","mode":"UPI","kind":"fee","status":"paid","member_id":30,"enrollment_id":30,"member_name":"Indira","sport":"Guitar"},{"id":27,"amount":1500,"on_date":"2026-08-19","mode":"UPI","kind":"fee","status":"paid","member_id":31,"enrollment_id":31,"member_name":"Jeeva","sport":"Guitar"},{"id":28,"amount":1500,"on_date":"2026-08-02","mode":"Cash","kind":"fee","status":"paid","member_id":33,"enrollment_id":33,"member_name":"Lalitha","sport":"Guitar"},{"id":29,"amount":1500,"on_date":"2026-08-05","mode":"UPI","kind":"fee","status":"paid","member_id":34,"enrollment_id":34,"member_name":"Madhan","sport":"Guitar"},{"id":30,"amount":1500,"on_date":"2026-08-08","mode":"UPI","kind":"fee","status":"paid","member_id":35,"enrollment_id":35,"member_name":"Nandini","sport":"Guitar"},{"id":31,"amount":1500,"on_date":"2026-08-11","mode":"Cash","kind":"fee","status":"paid","member_id":36,"enrollment_id":36,"member_name":"Oorja","sport":"Guitar"},{"id":32,"amount":1500,"on_date":"2026-08-14","mode":"UPI","kind":"fee","status":"paid","member_id":37,"enrollment_id":37,"member_name":"Pavithra","sport":"Guitar"},{"id":33,"amount":1500,"on_date":"2026-08-17","mode":"UPI","kind":"fee","status":"paid","member_id":38,"enrollment_id":38,"member_name":"Raghav","sport":"Guitar"},{"id":34,"amount":1500,"on_date":"2026-08-20","mode":"Cash","kind":"fee","status":"paid","member_id":40,"enrollment_id":40,"member_name":"Thamarai","sport":"Guitar"},{"id":35,"amount":1500,"on_date":"2026-08-03","mode":"UPI","kind":"fee","status":"paid","member_id":41,"enrollment_id":41,"member_name":"Uma","sport":"Keyboard"},{"id":36,"amount":1500,"on_date":"2026-08-06","mode":"UPI","kind":"fee","status":"paid","member_id":42,"enrollment_id":42,"member_name":"Varun","sport":"Keyboard"},{"id":37,"amount":1500,"on_date":"2026-08-09","mode":"Cash","kind":"fee","status":"paid","member_id":43,"enrollment_id":43,"member_name":"Yamini","sport":"Keyboard"},{"id":38,"amount":1500,"on_date":"2026-08-12","mode":"UPI","kind":"fee","status":"paid","member_id":44,"enrollment_id":44,"member_name":"Anand","sport":"Keyboard"},{"id":39,"amount":1500,"on_date":"2026-08-15","mode":"UPI","kind":"fee","status":"paid","member_id":45,"enrollment_id":45,"member_name":"Bhargav","sport":"Keyboard"},{"id":40,"amount":1500,"on_date":"2026-08-18","mode":"Cash","kind":"fee","status":"paid","member_id":47,"enrollment_id":47,"member_name":"Divya","sport":"Keyboard"},{"id":41,"amount":1500,"on_date":"2026-08-01","mode":"UPI","kind":"fee","status":"paid","member_id":48,"enrollment_id":48,"member_name":"Elango","sport":"Keyboard"},{"id":42,"amount":1500,"on_date":"2026-08-04","mode":"UPI","kind":"fee","status":"paid","member_id":49,"enrollment_id":49,"member_name":"Gayathri","sport":"Keyboard"},{"id":43,"amount":1500,"on_date":"2026-08-07","mode":"Cash","kind":"fee","status":"paid","member_id":50,"enrollment_id":50,"member_name":"Hemanth","sport":"Keyboard"},{"id":44,"amount":1500,"on_date":"2026-08-10","mode":"UPI","kind":"fee","status":"paid","member_id":51,"enrollment_id":51,"member_name":"Ishwarya","sport":"Keyboard"},{"id":45,"amount":1500,"on_date":"2026-08-13","mode":"UPI","kind":"fee","status":"paid","member_id":52,"enrollment_id":52,"member_name":"Jayanth","sport":"Keyboard"},{"id":46,"amount":1500,"on_date":"2026-08-16","mode":"Cash","kind":"fee","status":"paid","member_id":54,"enrollment_id":54,"member_name":"Lavanya","sport":"Keyboard"},{"id":47,"amount":1500,"on_date":"2026-08-19","mode":"UPI","kind":"fee","status":"paid","member_id":55,"enrollment_id":55,"member_name":"Mohan","sport":"Violin"},{"id":48,"amount":1500,"on_date":"2026-08-02","mode":"UPI","kind":"fee","status":"paid","member_id":56,"enrollment_id":56,"member_name":"Naveen","sport":"Violin"},{"id":49,"amount":1500,"on_date":"2026-08-05","mode":"Cash","kind":"fee","status":"paid","member_id":57,"enrollment_id":57,"member_name":"Padma","sport":"Violin"},{"id":50,"amount":1500,"on_date":"2026-08-08","mode":"UPI","kind":"fee","status":"paid","member_id":58,"enrollment_id":58,"member_name":"Rajesh","sport":"Violin"},{"id":51,"amount":1500,"on_date":"2026-08-11","mode":"UPI","kind":"fee","status":"paid","member_id":59,"enrollment_id":59,"member_name":"Sundar","sport":"Violin"},{"id":52,"amount":1500,"on_date":"2026-08-14","mode":"Cash","kind":"fee","status":"paid","member_id":61,"enrollment_id":61,"member_name":"Usha","sport":"Violin"},{"id":53,"amount":1500,"on_date":"2026-08-17","mode":"UPI","kind":"fee","status":"paid","member_id":62,"enrollment_id":62,"member_name":"Vignesh","sport":"Violin"},{"id":54,"amount":1500,"on_date":"2026-08-20","mode":"UPI","kind":"fee","status":"paid","member_id":63,"enrollment_id":63,"member_name":"Anjali","sport":"Violin"},{"id":55,"amount":1500,"on_date":"2026-08-03","mode":"Cash","kind":"fee","status":"paid","member_id":64,"enrollment_id":64,"member_name":"Balaji","sport":"Violin"},{"id":56,"amount":1500,"on_date":"2026-08-06","mode":"UPI","kind":"fee","status":"paid","member_id":65,"enrollment_id":65,"member_name":"Chetan","sport":"Violin"},{"id":57,"amount":1500,"on_date":"2026-08-09","mode":"UPI","kind":"fee","status":"paid","member_id":66,"enrollment_id":66,"member_name":"Deepika","sport":"Violin"},{"id":58,"amount":1500,"on_date":"2026-08-12","mode":"Cash","kind":"fee","status":"paid","member_id":68,"enrollment_id":68,"member_name":"Haritha","sport":"Vocals"},{"id":59,"amount":1500,"on_date":"2026-08-15","mode":"UPI","kind":"fee","status":"paid","member_id":69,"enrollment_id":69,"member_name":"Iniya","sport":"Vocals"},{"id":60,"amount":1500,"on_date":"2026-08-18","mode":"UPI","kind":"fee","status":"paid","member_id":70,"enrollment_id":70,"member_name":"Jagan","sport":"Vocals"},{"id":61,"amount":1500,"on_date":"2026-08-01","mode":"Cash","kind":"fee","status":"paid","member_id":71,"enrollment_id":71,"member_name":"Kalyani","sport":"Vocals"},{"id":62,"amount":1500,"on_date":"2026-08-04","mode":"UPI","kind":"fee","status":"paid","member_id":72,"enrollment_id":72,"member_name":"Lokesh","sport":"Vocals"}],"expenses":[{"id":1,"category":"Rent","detail":"Studio rent","amount":18000,"mode":"UPI","on_date":"2026-08-02"},{"id":2,"category":"Utility","detail":"Electricity","amount":3400,"mode":"UPI","on_date":"2026-08-04"},{"id":3,"category":"Upkeep","detail":"Piano tuning","amount":2200,"mode":"Cash","on_date":"2026-08-06"},{"id":4,"category":"Supplies","detail":"Guitar strings x6","amount":1450,"mode":"Cash","on_date":"2026-08-08"},{"id":5,"category":"Supplies","detail":"Violin rosin, bows","amount":980,"mode":"Cash","on_date":"2026-08-09"},{"id":6,"category":"Upkeep","detail":"Drum head replace","amount":2650,"mode":"UPI","on_date":"2026-08-11"},{"id":7,"category":"Utility","detail":"Internet","amount":1100,"mode":"UPI","on_date":"2026-08-12"},{"id":8,"category":"Supplies","detail":"Printed music","amount":1650,"mode":"Cash","on_date":"2026-08-14"},{"id":9,"category":"Upkeep","detail":"Keyboard stand","amount":1900,"mode":"UPI","on_date":"2026-08-16"},{"id":10,"category":"Utility","detail":"Water","amount":450,"mode":"Cash","on_date":"2026-08-17"},{"id":11,"category":"Supplies","detail":"Ukulele strings","amount":620,"mode":"Cash","on_date":"2026-08-18"},{"id":12,"category":"Upkeep","detail":"Aircon service","amount":2800,"mode":"UPI","on_date":"2026-08-19"}],"members":[{"id":1,"name":"Aarthi","phone":"9000001000","parent_name":"Parent Aarthi","parent_phone":"9000001000","enrollments":[{"id":1,"sport":"Piano","batch_id":1,"status":"active"}]},{"id":2,"name":"Bharath","phone":"9000001001","parent_name":"Parent Bharath","parent_phone":"9000001001","enrollments":[{"id":2,"sport":"Piano","batch_id":1,"status":"active"}]},{"id":3,"name":"Chitra","phone":"9000001002","parent_name":"Parent Chitra","parent_phone":"9000001002","enrollments":[{"id":3,"sport":"Piano","batch_id":2,"status":"active"}]},{"id":4,"name":"Deepak","phone":"9000001003","parent_name":"Parent Deepak","parent_phone":"9000001003","enrollments":[{"id":4,"sport":"Piano","batch_id":1,"status":"active"}]},{"id":5,"name":"Eshwari","phone":"9000001004","parent_name":"Parent Eshwari","parent_phone":"9000001004","enrollments":[{"id":5,"sport":"Piano","batch_id":1,"status":"active"}]},{"id":6,"name":"Farhan","phone":"9000001005","parent_name":"Parent Farhan","parent_phone":"9000001005","enrollments":[{"id":6,"sport":"Piano","batch_id":1,"status":"active"}]},{"id":7,"name":"Gowri","phone":"9000001006","parent_name":"Parent Gowri","parent_phone":"9000001006","enrollments":[{"id":7,"sport":"Piano","batch_id":1,"status":"active"}]},{"id":8,"name":"Hari","phone":"9000001007","parent_name":"Parent Hari","parent_phone":"9000001007","enrollments":[{"id":8,"sport":"Piano","batch_id":1,"status":"active"}]},{"id":9,"name":"Ilango","phone":"9000001008","parent_name":"Parent Ilango","parent_phone":"9000001008","enrollments":[{"id":9,"sport":"Piano","batch_id":1,"status":"active"}]},{"id":10,"name":"Janani","phone":"9000001009","parent_name":"Parent Janani","parent_phone":"9000001009","enrollments":[{"id":10,"sport":"Piano","batch_id":1,"status":"active"}]},{"id":11,"name":"Karthik","phone":"9000001010","parent_name":"Parent Karthik","parent_phone":"9000001010","enrollments":[{"id":11,"sport":"Piano","batch_id":1,"status":"active"}]},{"id":12,"name":"Lakshmi","phone":"9000001011","parent_name":"Parent Lakshmi","parent_phone":"9000001011","enrollments":[{"id":12,"sport":"Piano","batch_id":1,"status":"active"}]},{"id":13,"name":"Mani","phone":"9000001012","parent_name":"Parent Mani","parent_phone":"9000001012","enrollments":[{"id":13,"sport":"Piano","batch_id":2,"status":"active"}]},{"id":14,"name":"Nithya","phone":"9000001013","parent_name":"Parent Nithya","parent_phone":"9000001013","enrollments":[{"id":14,"sport":"Piano","batch_id":1,"status":"active"}]},{"id":15,"name":"Oviya","phone":"9000001014","parent_name":"Parent Oviya","parent_phone":"9000001014","enrollments":[{"id":15,"sport":"Piano","batch_id":2,"status":"active"}]},{"id":16,"name":"Prakash","phone":"9000001015","parent_name":"Parent Prakash","parent_phone":"9000001015","enrollments":[{"id":16,"sport":"Piano","batch_id":1,"status":"active"}]},{"id":17,"name":"Ramya","phone":"9000001016","parent_name":"Parent Ramya","parent_phone":"9000001016","enrollments":[{"id":17,"sport":"Piano","batch_id":1,"status":"active"}]},{"id":18,"name":"Sanjay","phone":"9000001017","parent_name":"Parent Sanjay","parent_phone":"9000001017","enrollments":[{"id":18,"sport":"Piano","batch_id":1,"status":"active"}]},{"id":19,"name":"Tara","phone":"9000001018","parent_name":"Parent Tara","parent_phone":"9000001018","enrollments":[{"id":19,"sport":"Piano","batch_id":1,"status":"active"}]},{"id":20,"name":"Udhay","phone":"9000001019","parent_name":"Parent Udhay","parent_phone":"9000001019","enrollments":[{"id":20,"sport":"Piano","batch_id":2,"status":"active"}]},{"id":21,"name":"Vidya","phone":"9000001020","parent_name":"Parent Vidya","parent_phone":"9000001020","enrollments":[{"id":21,"sport":"Piano","batch_id":2,"status":"active"}]},{"id":22,"name":"Yazhini","phone":"9000001021","parent_name":"Parent Yazhini","parent_phone":"9000001021","enrollments":[{"id":22,"sport":"Piano","batch_id":1,"status":"active"}]},{"id":23,"name":"Abhinav","phone":"9000001022","parent_name":"Parent Abhinav","parent_phone":"9000001022","enrollments":[{"id":23,"sport":"Guitar","batch_id":1,"status":"active"}]},{"id":24,"name":"Bhavana","phone":"9000001023","parent_name":"Parent Bhavana","parent_phone":"9000001023","enrollments":[{"id":24,"sport":"Guitar","batch_id":1,"status":"active"}]},{"id":25,"name":"Charu","phone":"9000001024","parent_name":"Parent Charu","parent_phone":"9000001024","enrollments":[{"id":25,"sport":"Guitar","batch_id":1,"status":"active"}]},{"id":26,"name":"Dhanush","phone":"9000001025","parent_name":"Parent Dhanush","parent_phone":"9000001025","enrollments":[{"id":26,"sport":"Guitar","batch_id":1,"status":"active"}]},{"id":27,"name":"Ezhil","phone":"9000001026","parent_name":"Parent Ezhil","parent_phone":"9000001026","enrollments":[{"id":27,"sport":"Guitar","batch_id":2,"status":"active"}]},{"id":28,"name":"Ganesh","phone":"9000001027","parent_name":"Parent Ganesh","parent_phone":"9000001027","enrollments":[{"id":28,"sport":"Guitar","batch_id":1,"status":"active"}]},{"id":29,"name":"Harini","phone":"9000001028","parent_name":"Parent Harini","parent_phone":"9000001028","enrollments":[{"id":29,"sport":"Guitar","batch_id":1,"status":"active"}]},{"id":30,"name":"Indira","phone":"9000001029","parent_name":"Parent Indira","parent_phone":"9000001029","enrollments":[{"id":30,"sport":"Guitar","batch_id":1,"status":"active"}]},{"id":31,"name":"Jeeva","phone":"9000001030","parent_name":"Parent Jeeva","parent_phone":"9000001030","enrollments":[{"id":31,"sport":"Guitar","batch_id":2,"status":"active"}]},{"id":32,"name":"Kavya","phone":"9000001031","parent_name":"Parent Kavya","parent_phone":"9000001031","enrollments":[{"id":32,"sport":"Guitar","batch_id":2,"status":"active"}]},{"id":33,"name":"Lalitha","phone":"9000001032","parent_name":"Parent Lalitha","parent_phone":"9000001032","enrollments":[{"id":33,"sport":"Guitar","batch_id":2,"status":"active"}]},{"id":34,"name":"Madhan","phone":"9000001033","parent_name":"Parent Madhan","parent_phone":"9000001033","enrollments":[{"id":34,"sport":"Guitar","batch_id":1,"status":"active"}]},{"id":35,"name":"Nandini","phone":"9000001034","parent_name":"Parent Nandini","parent_phone":"9000001034","enrollments":[{"id":35,"sport":"Guitar","batch_id":2,"status":"active"}]},{"id":36,"name":"Oorja","phone":"9000001035","parent_name":"Parent Oorja","parent_phone":"9000001035","enrollments":[{"id":36,"sport":"Guitar","batch_id":2,"status":"active"}]},{"id":37,"name":"Pavithra","phone":"9000001036","parent_name":"Parent Pavithra","parent_phone":"9000001036","enrollments":[{"id":37,"sport":"Guitar","batch_id":1,"status":"active"}]},{"id":38,"name":"Raghav","phone":"9000001037","parent_name":"Parent Raghav","parent_phone":"9000001037","enrollments":[{"id":38,"sport":"Guitar","batch_id":1,"status":"active"}]},{"id":39,"name":"Sneha","phone":"9000001038","parent_name":"Parent Sneha","parent_phone":"9000001038","enrollments":[{"id":39,"sport":"Guitar","batch_id":1,"status":"active"}]},{"id":40,"name":"Thamarai","phone":"9000001039","parent_name":"Parent Thamarai","parent_phone":"9000001039","enrollments":[{"id":40,"sport":"Guitar","batch_id":2,"status":"active"}]},{"id":41,"name":"Uma","phone":"9000001040","parent_name":"Parent Uma","parent_phone":"9000001040","enrollments":[{"id":41,"sport":"Keyboard","batch_id":1,"status":"active"}]},{"id":42,"name":"Varun","phone":"9000001041","parent_name":"Parent Varun","parent_phone":"9000001041","enrollments":[{"id":42,"sport":"Keyboard","batch_id":2,"status":"active"}]},{"id":43,"name":"Yamini","phone":"9000001042","parent_name":"Parent Yamini","parent_phone":"9000001042","enrollments":[{"id":43,"sport":"Keyboard","batch_id":1,"status":"active"}]},{"id":44,"name":"Anand","phone":"9000001043","parent_name":"Parent Anand","parent_phone":"9000001043","enrollments":[{"id":44,"sport":"Keyboard","batch_id":1,"status":"active"}]},{"id":45,"name":"Bhargav","phone":"9000001044","parent_name":"Parent Bhargav","parent_phone":"9000001044","enrollments":[{"id":45,"sport":"Keyboard","batch_id":2,"status":"active"}]},{"id":46,"name":"Chandra","phone":"9000001045","parent_name":"Parent Chandra","parent_phone":"9000001045","enrollments":[{"id":46,"sport":"Keyboard","batch_id":1,"status":"active"}]},{"id":47,"name":"Divya","phone":"9000001046","parent_name":"Parent Divya","parent_phone":"9000001046","enrollments":[{"id":47,"sport":"Keyboard","batch_id":1,"status":"active"}]},{"id":48,"name":"Elango","phone":"9000001047","parent_name":"Parent Elango","parent_phone":"9000001047","enrollments":[{"id":48,"sport":"Keyboard","batch_id":1,"status":"active"}]},{"id":49,"name":"Gayathri","phone":"9000001048","parent_name":"Parent Gayathri","parent_phone":"9000001048","enrollments":[{"id":49,"sport":"Keyboard","batch_id":1,"status":"active"}]},{"id":50,"name":"Hemanth","phone":"9000001049","parent_name":"Parent Hemanth","parent_phone":"9000001049","enrollments":[{"id":50,"sport":"Keyboard","batch_id":1,"status":"active"}]},{"id":51,"name":"Ishwarya","phone":"9000001050","parent_name":"Parent Ishwarya","parent_phone":"9000001050","enrollments":[{"id":51,"sport":"Keyboard","batch_id":2,"status":"active"}]},{"id":52,"name":"Jayanth","phone":"9000001051","parent_name":"Parent Jayanth","parent_phone":"9000001051","enrollments":[{"id":52,"sport":"Keyboard","batch_id":2,"status":"active"}]},{"id":53,"name":"Keerthi","phone":"9000001052","parent_name":"Parent Keerthi","parent_phone":"9000001052","enrollments":[{"id":53,"sport":"Keyboard","batch_id":2,"status":"active"}]},{"id":54,"name":"Lavanya","phone":"9000001053","parent_name":"Parent Lavanya","parent_phone":"9000001053","enrollments":[{"id":54,"sport":"Keyboard","batch_id":2,"status":"active"}]},{"id":55,"name":"Mohan","phone":"9000001054","parent_name":"Parent Mohan","parent_phone":"9000001054","enrollments":[{"id":55,"sport":"Violin","batch_id":2,"status":"active"}]},{"id":56,"name":"Naveen","phone":"9000001055","parent_name":"Parent Naveen","parent_phone":"9000001055","enrollments":[{"id":56,"sport":"Violin","batch_id":1,"status":"active"}]},{"id":57,"name":"Padma","phone":"9000001056","parent_name":"Parent Padma","parent_phone":"9000001056","enrollments":[{"id":57,"sport":"Violin","batch_id":2,"status":"active"}]},{"id":58,"name":"Rajesh","phone":"9000001057","parent_name":"Parent Rajesh","parent_phone":"9000001057","enrollments":[{"id":58,"sport":"Violin","batch_id":1,"status":"active"}]},{"id":59,"name":"Sundar","phone":"9000001058","parent_name":"Parent Sundar","parent_phone":"9000001058","enrollments":[{"id":59,"sport":"Violin","batch_id":1,"status":"active"}]},{"id":60,"name":"Tanvi","phone":"9000001059","parent_name":"Parent Tanvi","parent_phone":"9000001059","enrollments":[{"id":60,"sport":"Violin","batch_id":1,"status":"active"}]},{"id":61,"name":"Usha","phone":"9000001060","parent_name":"Parent Usha","parent_phone":"9000001060","enrollments":[{"id":61,"sport":"Violin","batch_id":1,"status":"active"}]},{"id":62,"name":"Vignesh","phone":"9000001061","parent_name":"Parent Vignesh","parent_phone":"9000001061","enrollments":[{"id":62,"sport":"Violin","batch_id":1,"status":"active"}]},{"id":63,"name":"Anjali","phone":"9000001062","parent_name":"Parent Anjali","parent_phone":"9000001062","enrollments":[{"id":63,"sport":"Violin","batch_id":1,"status":"active"}]},{"id":64,"name":"Balaji","phone":"9000001063","parent_name":"Parent Balaji","parent_phone":"9000001063","enrollments":[{"id":64,"sport":"Violin","batch_id":2,"status":"active"}]},{"id":65,"name":"Chetan","phone":"9000001064","parent_name":"Parent Chetan","parent_phone":"9000001064","enrollments":[{"id":65,"sport":"Violin","batch_id":1,"status":"active"}]},{"id":66,"name":"Deepika","phone":"9000001065","parent_name":"Parent Deepika","parent_phone":"9000001065","enrollments":[{"id":66,"sport":"Violin","batch_id":1,"status":"active"}]},{"id":67,"name":"Ganga","phone":"9000001066","parent_name":"Parent Ganga","parent_phone":"9000001066","enrollments":[{"id":67,"sport":"Violin","batch_id":1,"status":"active"}]},{"id":68,"name":"Haritha","phone":"9000001067","parent_name":"Parent Haritha","parent_phone":"9000001067","enrollments":[{"id":68,"sport":"Vocals","batch_id":1,"status":"active"}]},{"id":69,"name":"Iniya","phone":"9000001068","parent_name":"Parent Iniya","parent_phone":"9000001068","enrollments":[{"id":69,"sport":"Vocals","batch_id":1,"status":"active"}]},{"id":70,"name":"Jagan","phone":"9000001069","parent_name":"Parent Jagan","parent_phone":"9000001069","enrollments":[{"id":70,"sport":"Vocals","batch_id":2,"status":"active"}]},{"id":71,"name":"Kalyani","phone":"9000001070","parent_name":"Parent Kalyani","parent_phone":"9000001070","enrollments":[{"id":71,"sport":"Vocals","batch_id":2,"status":"active"}]},{"id":72,"name":"Lokesh","phone":"9000001071","parent_name":"Parent Lokesh","parent_phone":"9000001071","enrollments":[{"id":72,"sport":"Vocals","batch_id":1,"status":"active"}]},{"id":73,"name":"Meera","phone":"9000001072","parent_name":"Parent Meera","parent_phone":"9000001072","enrollments":[{"id":73,"sport":"Vocals","batch_id":1,"status":"active"}]},{"id":74,"name":"Nithin","phone":"9000001073","parent_name":"Parent Nithin","parent_phone":"9000001073","enrollments":[{"id":74,"sport":"Vocals","batch_id":1,"status":"active"}]},{"id":75,"name":"Poorna","phone":"9000001074","parent_name":"Parent Poorna","parent_phone":"9000001074","enrollments":[{"id":75,"sport":"Vocals","batch_id":1,"status":"active"}]},{"id":76,"name":"Rekha","phone":"9000001075","parent_name":"Parent Rekha","parent_phone":"9000001075","enrollments":[{"id":76,"sport":"Vocals","batch_id":1,"status":"active"}]},{"id":77,"name":"Sathya","phone":"9000001076","parent_name":"Parent Sathya","parent_phone":"9000001076","enrollments":[{"id":77,"sport":"Vocals","batch_id":1,"status":"active"}]},{"id":78,"name":"Tejas","phone":"9000001077","parent_name":"Parent Tejas","parent_phone":"9000001077","enrollments":[{"id":78,"sport":"Vocals","batch_id":1,"status":"active"}]},{"id":79,"name":"Vasanth","phone":"9000001078","parent_name":"Parent Vasanth","parent_phone":"9000001078","enrollments":[{"id":79,"sport":"Vocals","batch_id":2,"status":"active"}]},{"id":80,"name":"Yuvan","phone":"9000001079","parent_name":"Parent Yuvan","parent_phone":"9000001079","enrollments":[{"id":80,"sport":"Ukulele","batch_id":1,"status":"active"}]},{"id":81,"name":"Aditi","phone":"9000001080","parent_name":"Parent Aditi","parent_phone":"9000001080","enrollments":[{"id":81,"sport":"Ukulele","batch_id":1,"status":"active"}]},{"id":82,"name":"Bhuvana","phone":"9000001081","parent_name":"Parent Bhuvana","parent_phone":"9000001081","enrollments":[{"id":82,"sport":"Ukulele","batch_id":1,"status":"active"}]},{"id":83,"name":"Chinmay","phone":"9000001082","parent_name":"Parent Chinmay","parent_phone":"9000001082","enrollments":[{"id":83,"sport":"Ukulele","batch_id":2,"status":"active"}]},{"id":84,"name":"Devika","phone":"9000001083","parent_name":"Parent Devika","parent_phone":"9000001083","enrollments":[{"id":84,"sport":"Ukulele","batch_id":1,"status":"active"}]},{"id":85,"name":"Girish","phone":"9000001084","parent_name":"Parent Girish","parent_phone":"9000001084","enrollments":[{"id":85,"sport":"Ukulele","batch_id":2,"status":"active"}]},{"id":86,"name":"Hasini","phone":"9000001085","parent_name":"Parent Hasini","parent_phone":"9000001085","enrollments":[{"id":86,"sport":"Ukulele","batch_id":1,"status":"active"}]},{"id":87,"name":"Kiran","phone":"9000001086","parent_name":"Parent Kiran","parent_phone":"9000001086","enrollments":[{"id":87,"sport":"Ukulele","batch_id":1,"status":"active"}]},{"id":88,"name":"Malar","phone":"9000001087","parent_name":"Parent Malar","parent_phone":"9000001087","enrollments":[{"id":88,"sport":"Ukulele","batch_id":1,"status":"active"}]},{"id":89,"name":"Nirmala","phone":"9000001088","parent_name":"Parent Nirmala","parent_phone":"9000001088","enrollments":[{"id":89,"sport":"Drums","batch_id":2,"status":"active"}]},{"id":90,"name":"Preethi","phone":"9000001089","parent_name":"Parent Preethi","parent_phone":"9000001089","enrollments":[{"id":90,"sport":"Drums","batch_id":1,"status":"active"}]},{"id":91,"name":"Rithika","phone":"9000001090","parent_name":"Parent Rithika","parent_phone":"9000001090","enrollments":[{"id":91,"sport":"Drums","batch_id":1,"status":"active"}]},{"id":92,"name":"Shankar","phone":"9000001091","parent_name":"Parent Shankar","parent_phone":"9000001091","enrollments":[{"id":92,"sport":"Drums","batch_id":1,"status":"active"}]},{"id":93,"name":"Swathi","phone":"9000001092","parent_name":"Parent Swathi","parent_phone":"9000001092","enrollments":[{"id":93,"sport":"Drums","batch_id":2,"status":"active"}]},{"id":94,"name":"Vaishali","phone":"9000001093","parent_name":"Parent Vaishali","parent_phone":"9000001093","enrollments":[{"id":94,"sport":"Drums","batch_id":1,"status":"active"}]},{"id":95,"name":"Arjun","phone":"9000001094","parent_name":"Parent Arjun","parent_phone":"9000001094","enrollments":[{"id":95,"sport":"Drums","batch_id":1,"status":"active"}]},{"id":96,"name":"Nivetha","phone":"9000001095","parent_name":"Parent Nivetha","parent_phone":"9000001095","enrollments":[{"id":96,"sport":"Drums","batch_id":1,"status":"active"}]}],"centres":[{"id":1,"code":"main","name":"Thadagam Road","short_name":"Main","sort":1}],"batches":[{"id":1,"code":"weekday","name":"Mon–Fri 3–8pm","short_name":"Mon–Fri","days":[1,2,3,4,5],"start_time":"15:00","end_time":"20:00","sort":1},{"id":2,"code":"saturday","name":"Saturday 10am–8pm","short_name":"Saturday","days":[6],"start_time":"10:00","end_time":"20:00","sort":2}],"sports":[{"id":1,"code":"piano","name":"Piano","icon":null,"sort":0},{"id":2,"code":"keyboard","name":"Keyboard","icon":null,"sort":1},{"id":3,"code":"guitar","name":"Guitar","icon":null,"sort":2},{"id":4,"code":"violin","name":"Violin","icon":null,"sort":3},{"id":5,"code":"ukulele","name":"Ukulele","icon":null,"sort":4},{"id":6,"code":"drums","name":"Drums","icon":null,"sort":5},{"id":7,"code":"vocals","name":"Vocals","icon":null,"sort":6}]};
+window.fetch = function (url) {
+  url = String(url);
+  var body = [];
+  if (url.indexOf("attendance_month") > -1) body = FIX.register;
+  else if (url.indexOf("reminder_queue") > -1) body = FIX.dues;
+  else if (url.indexOf("/payments") > -1)     body = FIX.payments;
+  else if (url.indexOf("/expenses") > -1)     body = FIX.expenses;
+  else if (url.indexOf("/members") > -1)      body = FIX.members;
+  else if (url.indexOf("/centres") > -1)      body = FIX.centres;
+  else if (url.indexOf("/batches") > -1)      body = FIX.batches;
+  else if (url.indexOf("/sports") > -1)       body = FIX.sports;
+  else if (url.indexOf("/events") > -1)       body = {};
+  return Promise.resolve({ ok: true, status: 200,
+    text: function () { return Promise.resolve(JSON.stringify(body)); },
+    json: function () { return Promise.resolve(body); } });
+};
+</script>
+<script src="../assets/js/cloud.js"></script>
+<script src="../assets/js/glass.js"></script>
+<script>
+/* ============================================================
+   MEZZO — the whole app.
+
+   Three tabs and nothing else. Everything on screen is either
+   something he taps or a number he reads; there is no navigation to
+   learn and no screen he can end up on without a way back, because
+   the tabs never leave.
+
+   Money is never computed here. resolve_fee prices a student,
+   record_fee_payment writes the rupees, reminder_queue decides who is
+   late — and this tenant's config already says "one nudge, one day
+   late", so the list that comes back IS his list. Filtering it here
+   would be how his screen and his WhatsApp start disagreeing.
+   ============================================================ */
+(function () {
+  "use strict";
+  var root = document.getElementById("root"), tabs = document.getElementById("tabs");
+
+  var S = {
+    tab: "register",
+    mode: "today",            // today | month
+    day: MZ.todayIso(),
+    month: null,              // {y, m}
+    q: "",
+    fresh: false,             // true for exactly one render, after a tab change
+    pay: null,                // the payment being taken: {enrollment,name,amount,months,mode}
+    picker: null,             // the student list, when choosing who paid
+    who: null,                // the student card: {enrollment,member,name,sport,batch,phone}
+    pulse: null,              // {sport, kind} — the section to play after the next paint
+    fIns: null,               // instrument filter, null = all
+    fBat: null,               // batch filter, null = all
+    showOff: false,
+    register: null,           // rows from attendance_month
+    dues: null,
+    money: null,
+    ref: null,
+    busy: {},                 // enrollment_id -> true while a mark is in flight
+    err: ""
+  };
+  (function () { var d = new Date(); S.month = { y: d.getFullYear(), m: d.getMonth() + 1 }; })();
+
+  /* ---------- the instruments ----------
+     Eight instruments, eight colours and eight notes. This is the only
+     place either is decided.
+
+     The colour is not decoration. He teaches eight instruments to
+     eighty children and the one thing a register cannot tell him at a
+     glance is WHICH — so the colour carries that, down the side of
+     every row, through the month grid, into the dues list and the
+     money. Scanning becomes seeing.
+
+     The note is the same idea for the ear. Marking a piano student
+     sounds like a piano and a guitar student like a plucked string, so
+     a mis-tap is something he HEARS before he sees it — on a register
+     where a wrong tap marks a child absent, that is worth more than it
+     costs.
+
+     PLATFORM.md is explicit that this belongs here: "A batch's colour
+     satisfies none of them, and belongs in the app." */
+  /* Pitched for a DARK surface. The first set of these was mixed for
+     white cards and went muddy the moment the app turned dark — a hue
+     that reads as "violin" at 40% lightness on white is a smudge on
+     #14101F. Every one is lifted until it holds its own against the
+     background it actually sits on. */
+  /* Each instrument carries three things: the colour it is drawn in,
+     the note it sounds when it is touched, and a mark of itself. The
+     marks are deliberately crude — at 22px a violin and a ukulele are
+     the same figure of eight, so what tells them apart is the neck,
+     the scroll and above all the colour. The icon is reinforcement,
+     not the label; the word is right beside it. */
+  /* The marks, kept out of the table so the table stays readable as a
+     table. Crude on purpose: at 26px a violin and a ukulele are the
+     same figure of eight, and what really tells them apart is the
+     colour and the word beside them. */
+  var I_PIANO  = '<rect x="2.5" y="7" width="19" height="10" rx="1.6"/><path d="M8.8 7v6M15.2 7v6"/><path d="M6.4 7v4.2h2V7M12 7v4.2h2V7M17.6 7v4.2h2V7" fill="currentColor" stroke="none" opacity=".85"/>';
+  var I_KEYB   = '<rect x="2.5" y="6" width="19" height="8" rx="1.4"/><path d="M7 6v4.5M12 6v4.5M17 6v4.5"/><path d="M8.5 18h7M12 14v4"/>';
+  var I_GUITAR = '<path d="M17.4 1.8 12.2 8.8"/><path d="M16.2 1.6 18.8 3.4"/>' +
+                 '<circle cx="9.6" cy="16.6" r="5"/><circle cx="12.9" cy="12.2" r="3.3"/>' +
+                 '<circle cx="10.8" cy="14.6" r="1.4"/>';
+  var I_VIOLIN = '<path d="M16.6 2.2c1.4-.5 2.6.6 2 1.9L13 12"/><circle cx="9.4" cy="16.6" r="5"/><circle cx="12.9" cy="12" r="3.4"/><path d="M8 15.2v3M11.4 15.2v3"/>';
+  /* A ukulele was the same drawing as a guitar, one pixel smaller —
+     at 25px they were one icon in two colours, which is exactly the
+     Guitar/Drums colour collision again in a different medium. So the
+     difference is made GROSS: the guitar gets a long neck and a
+     headstock, the ukulele a stubby one and four tuning pegs. */
+  var I_UKE    = '<path d="M13.4 8.6 15.6 4.6"/><path d="M14.4 4.9 17 6.4"/>' +
+                 '<circle cx="10.4" cy="15.6" r="5.6"/><circle cx="10.4" cy="15.6" r="1.7"/>';
+  var I_DRUM   = '<circle cx="12" cy="14" r="6.6"/><circle cx="12" cy="14" r="3"/><path d="M5.4 14v3.4M18.6 14v3.4"/><path d="M4 6.6 9 11M20 6.6 15 11"/>';
+  var I_VOCAL  = '<rect x="9.2" y="2.4" width="5.6" height="10" rx="2.8"/><path d="M5.8 11.2a6.2 6.2 0 0 0 12.4 0"/><path d="M12 17.4V21M9 21h6"/>';
+  var I_FLUTE  = '<path d="M3.4 15.6 20.6 8.4"/><circle cx="8.2" cy="13.6" r=".9"/><circle cx="11.6" cy="12.2" r=".9"/><circle cx="15" cy="10.8" r=".9"/>';
+
+  /* THE EIGHT HUES, re-cut for paper.
+     These were pastels — lifted right up because they sat on dark
+     violet. On cream every one of them washed out, and two of them
+     were the same colour: Guitar #F5B25E and Drums #EDA05C are 19.8
+     apart in RGB, which is not a difference, it is a rounding error.
+     Two section headings on one sheet cannot be that close.
+
+     Re-cut dark enough for cream (every one measured 4.0:1 or better
+     against #F9F4E7) and spread properly round the wheel — the
+     closest pair is now Violin/Vocals at 37.1, nearly double the old
+     worst case. Drums went slate on purpose: it is hardware, and a
+     neutral is the one thing guaranteed not to collide with the six
+     warm-to-cool instruments either side of it. */
+  var INSTRUMENT = {
+    Piano:    { hue: "#4A46B8", note: 60, icon: I_PIANO },
+    Keyboard: { hue: "#0E7C86", note: 62, icon: I_KEYB },
+    Guitar:   { hue: "#9A6B12", note: 64, icon: I_GUITAR },
+    Violin:   { hue: "#B0344A", note: 67, icon: I_VIOLIN },
+    Ukulele:  { hue: "#C25A17", note: 69, icon: I_UKE },
+    Drums:    { hue: "#4F5B66", note: 48, icon: I_DRUM },
+    Vocals:   { hue: "#A8306E", note: 72, icon: I_VOCAL },
+    Flute:    { hue: "#2E7D46", note: 71, icon: I_FLUTE }
+  };
+  function inst(name) {
+    return INSTRUMENT[name] || { hue: "#6B5CA5", note: 65, icon: '<circle cx="12" cy="12" r="7"/>' };
+  }
+  function svgIcon(ins) {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true">' + (ins.icon || "") + "</svg>";
+  }
+
+  /* ---------- small helpers ---------- */
+  function esc(s) { var d = document.createElement("i"); d.textContent = String(s == null ? "" : s); return d.innerHTML; }
+  function inr(n) { return "₹" + Number(n || 0).toLocaleString("en-IN"); }
+  function el(html) { var d = document.createElement("div"); d.innerHTML = html; return d.firstElementChild; }
+  function dayName(iso) {
+    var p = iso.split("-"), d = new Date(+p[0], +p[1] - 1, +p[2]);
+    return d.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" });
+  }
+  function isSunday(iso) { var p = iso.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]).getDay() === 0; }
+  function isoDow(iso) {                       // 1 = Monday … 7 = Sunday
+    var p = iso.split("-"), d = new Date(+p[0], +p[1] - 1, +p[2]).getDay();
+    return d === 0 ? 7 : d;
+  }
+  /* Does this student's class actually run on that day?
+     Weekday students do not come on Saturday and Saturday students do
+     not come midweek. Showing all 80 names every day is noise; worse,
+     an unmarked circle against a child who was never expected reads as
+     "you forgot to mark them", which is the opposite of the truth. */
+  function runsOn(batchId, iso) {
+    var bs = (S.ref && S.ref.batches) || [];
+    for (var i = 0; i < bs.length; i++) {
+      if (bs[i].id === batchId) {
+        var d = bs[i].days;
+        /* No day pattern is not "no days" — it is "we do not know", and
+           the safe answer to not knowing is to show the child. Reading
+           an empty array as "never" would empty his whole register on a
+           day the reference data came back thin. */
+        if (!d || !d.length) return true;
+        return d.indexOf(isoDow(iso)) >= 0;
+      }
+    }
+    return true;                               // unknown batch: never hide a child
+  }
+  function shiftDay(iso, by) {
+    var p = iso.split("-"), d = new Date(+p[0], +p[1] - 1, +p[2]);
+    d.setDate(d.getDate() + by); return MZ.iso(d);
+  }
+  var toastT = null;
+  function toast(msg) {
+    var old = document.querySelector(".toast"); if (old) old.remove();
+    var t = el('<div class="toast">' + esc(msg) + "</div>");
+    document.body.appendChild(t);
+    clearTimeout(toastT); toastT = setTimeout(function () { t.remove(); }, 2200);
+  }
+  function fail(e) {
+    S.err = (e && e.message) || "Something went wrong. Check the internet and try again.";
+    render();
+  }
+
+  /* ---------- sign in ----------
+     The one screen that is allowed to be theatrical. He sees it once a
+     day for four seconds; the three tabs behind it are where he works
+     and they stay calm. A mis-tap here costs a retry, not a child's
+     attendance record, which is why the budget for delight is spent
+     at this end of the app and not the other.
+
+     The password field IS a keyboard. There is still a real
+     <input type="password"> sitting over the keys — transparent text,
+     gold caret — so password managers, autofill and screen readers all
+     behave exactly as they did. The keys are what you see instead of
+     dots, and each character presses the next one and sounds its note. */
+
+  /* Twelve white keys and the eight black ones that belong between
+     them, as MIDI numbers, so a password plays up the scale. */
+  var WHITE = [60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77, 79];
+  var BLACK_AFTER = [0, 1, 3, 4, 5, 7, 8, 10];
+  var BLACK = [61, 63, 66, 68, 70, 73, 75, 78];
+  /* White keys only. Running up every key including the blacks made a
+     password of eight characters land on a scatter of black and white
+     that read as noise; eight white keys in a row reads as progress,
+     and it walks up a plain major scale, which is also the nicest
+     thing to hear. The black keys are still drawn — a keyboard without
+     them is not a keyboard — they just never light. */
+  var ORDER = WHITE.slice();
+
+  function keyboardHtml() {
+    var w = 100 / WHITE.length, bw = w * 0.62, html = "";
+    for (var i = 0; i < WHITE.length; i++) {
+      html += '<i class="kw" data-note="' + WHITE[i] + '" style="left:' + (i * w) +
+              "%;width:" + w + '%"></i>';
+    }
+    for (var j = 0; j < BLACK_AFTER.length; j++) {
+      var left = (BLACK_AFTER[j] + 1) * w - bw / 2;
+      html += '<i class="kb" data-note="' + BLACK[j] + '" style="left:' + left +
+              "%;width:" + bw + '%"></i>';
+    }
+    return html;
+  }
+
+  /* A note, synthesised. No audio file, and wrapped so that a browser
+     without Web Audio — or a test harness with no browser at all —
+     simply gets silence instead of a sign-in screen that will not load. */
+  var AC = null;
+  function tone(midi, level) {
+    level = level === undefined ? 1 : level;
+    try {
+      var C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return;
+      if (!AC) AC = new C();
+      if (AC.state === "suspended") AC.resume();
+      var t = AC.currentTime, f = 440 * Math.pow(2, (midi - 69) / 12);
+      [[1, 0.11 * level], [2.01, 0.04 * level], [3, 0.012 * level]].forEach(function (h) {
+        var o = AC.createOscillator(), g = AC.createGain();
+        o.type = "sine"; o.frequency.value = f * h[0];
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(h[1], t + 0.006);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+        o.connect(g); g.connect(AC.destination);
+        o.start(t); o.stop(t + 1.15);
+      });
+    } catch (e) { /* a sign-in must never fail because of a sound */ }
+  }
+
+  /* ============================================================
+     THE SOUND OF THE APP
+
+     Every sound is synthesised — there is no audio file in this repo,
+     so nothing to download, nothing to fail on a bad connection, and
+     nothing that needs a licence.
+
+     The rule that decides what each sound IS: a sound should be the
+     sound of the ACT, not a notification about it.
+
+       Attendance is paper.  He is ticking names on a sheet, so the
+                             mark sounds like graphite: a short bright
+                             scratch, two strokes for a tick, one long
+                             drag for a strike-off, a soft brush to
+                             rub one out. The instrument's own note
+                             sits UNDER it, quiet, so the section is
+                             still audible without the register
+                             turning into a xylophone.
+       Dues is the tuner.    Collecting glides a flat note up into
+                             true — the same idea as the tuner screen,
+                             in the ear instead of the eye.
+       Money is wood.        A ledger stamp: low, short, done.
+
+     Nothing here is louder than 0.3 peak except a deliberate accent,
+     and everything is under 700ms. This is used between students, in
+     a room with a child in it.
+     ============================================================ */
+  var NOISE = null;
+  function ac() {
+    try {
+      var C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return null;
+      if (!AC) AC = new C();
+      if (AC.state === "suspended") AC.resume();
+      return AC;
+    } catch (e) { return null; }
+  }
+  /* One second of white noise, made once and replayed at different
+     speeds and through different filters. Every paper sound in the app
+     comes out of this one buffer. */
+  function noiseBuf(a) {
+    if (NOISE) return NOISE;
+    var n = a.sampleRate, b = a.createBuffer(1, n, a.sampleRate), d = b.getChannelData(0);
+    for (var i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    return (NOISE = b);
+  }
+  /* One stroke of something rough across something dry.
+     dur   how long the stroke takes
+     hz    where the grain sits — graphite is bright, paper is dull
+     peak  loudness
+     rate  playback speed, varied per call so two ticks in a row are
+           never the same stroke twice. A pencil is never identical. */
+  function stroke(dur, hz, peak, rate, delay) {
+    var a = ac(); if (!a) return;
+    var t = a.currentTime + (delay || 0);
+    var src = a.createBufferSource(); src.buffer = noiseBuf(a);
+    src.playbackRate.value = rate || (0.85 + Math.random() * 0.4);
+    var bp = a.createBiquadFilter(); bp.type = "bandpass";
+    bp.frequency.value = hz; bp.Q.value = 0.8;
+    var hp = a.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = hz * 0.4;
+    var g = a.createGain();
+    /* ramp UP then down: that is what makes it a drag rather than a
+       click. A click is an envelope with no rise. */
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(peak, t + dur * 0.34);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(bp); bp.connect(hp); hp.connect(g); g.connect(a.destination);
+    src.start(t); src.stop(t + dur + 0.02);
+  }
+  /* A tick is TWO strokes — a short one down, a long one up — and it
+     is the double stroke that makes it read as a tick rather than as
+     a scratch. */
+  function pencilTick() { stroke(0.055, 3200, 0.22); stroke(0.115, 4200, 0.26, null, 0.052); }
+  /* Struck off: one drag, longer and lower, pressed harder. */
+  function pencilStrike() { stroke(0.20, 1900, 0.30, 0.7); }
+  /* Rubbed out: dull, quiet, no grain. */
+  function paperBrush() { stroke(0.13, 900, 0.13, 0.55); }
+  /* A plucked string: a bright transient that dies fast, through a
+     filter that closes as it decays — which is what a real string
+     does and what a plain sine never does. */
+  function pluck(midi, level) {
+    var a = ac(); if (!a) return;
+    level = level === undefined ? 1 : level;
+    var t = a.currentTime, f = 440 * Math.pow(2, (midi - 69) / 12);
+    var o = a.createOscillator(); o.type = "sawtooth"; o.frequency.value = f;
+    var lp = a.createBiquadFilter(); lp.type = "lowpass";
+    lp.frequency.setValueAtTime(f * 7, t);
+    lp.frequency.exponentialRampToValueAtTime(Math.max(f * 1.2, 200), t + 0.42);
+    var g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.26 * level, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.62);
+    o.connect(lp); lp.connect(g); g.connect(a.destination);
+    o.start(t); o.stop(t + 0.7);
+    stroke(0.03, 5200, 0.05 * level);      /* the nail on the string */
+  }
+  /* A bowed swell: slow in, slow out, no transient. */
+  function bow(midi, level) {
+    var a = ac(); if (!a) return;
+    level = level === undefined ? 1 : level;
+    var t = a.currentTime, f = 440 * Math.pow(2, (midi - 69) / 12);
+    [[1, 0.16], [2, 0.05], [3.01, 0.02]].forEach(function (h) {
+      var o = a.createOscillator(); o.type = "sine"; o.frequency.value = f * h[0];
+      var g = a.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(h[1] * level, t + 0.13);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.62);
+      o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.68);
+    });
+  }
+  /* Flat, and then true. The tuner's whole idea, in the ear. */
+  function intoTune(midi, cents, level) {
+    var a = ac(); if (!a) return;
+    var t = a.currentTime, f = 440 * Math.pow(2, (midi - 69) / 12);
+    var o = a.createOscillator(); o.type = "triangle";
+    o.frequency.setValueAtTime(f * Math.pow(2, -cents / 1200), t);
+    o.frequency.exponentialRampToValueAtTime(f, t + 0.46);
+    var g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.20 * (level || 1), t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.95);
+  }
+  /* A struck piano string: three partials, the upper ones slightly
+     SHARP of the harmonic. Real strings are stiff and their overtones
+     run sharp, which is the whole reason a piano sounds like a piano
+     and a stack of pure sines sounds like a test tone. */
+  function struck(midi, level) {
+    var a = ac(); if (!a) return;
+    level = level === undefined ? 1 : level;
+    var t = a.currentTime, f = 440 * Math.pow(2, (midi - 69) / 12);
+    [[1, 0.17, 1.0], [2.004, 0.06, 0.7], [3.012, 0.022, 0.45]].forEach(function (h) {
+      var o = a.createOscillator(); o.type = "sine"; o.frequency.value = f * h[0];
+      var g = a.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(h[1] * level, t + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.85 * h[2]);
+      o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.9);
+    });
+  }
+  /* A struck head: the pitch DROPS as the skin relaxes, and the noise
+     is low and short. Nothing here is bandpassed up where the pencil
+     lives, so a drum can never be mistaken for paper. */
+  function hit(midi, level) {
+    var a = ac(); if (!a) return;
+    level = level === undefined ? 1 : level;
+    var t = a.currentTime, f = 440 * Math.pow(2, (midi - 69) / 12);
+    var o = a.createOscillator(); o.type = "sine";
+    o.frequency.setValueAtTime(f * 1.9, t);
+    o.frequency.exponentialRampToValueAtTime(f * 0.75, t + 0.14);
+    var g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.30 * level, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.30);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.34);
+    stroke(0.05, 420, 0.14 * level, 0.4);          /* the skin, not the pencil */
+  }
+  /* A flute is mostly air: a soft sine with breath either side of it. */
+  function breath(midi, level) {
+    var a = ac(); if (!a) return;
+    level = level === undefined ? 1 : level;
+    var t = a.currentTime, f = 440 * Math.pow(2, (midi - 69) / 12);
+    var o = a.createOscillator(); o.type = "sine"; o.frequency.value = f;
+    var g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.17 * level, t + 0.06);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.46);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.5);
+    stroke(0.14, 2000, 0.045 * level, 0.35);       /* the breath across the lip */
+  }
+  /* An electric keyboard: square, steady, no decay to speak of. It is
+     the one voice here that does not die away, which is exactly what
+     tells it apart from the piano beside it. */
+  function reed(midi, level) {
+    var a = ac(); if (!a) return;
+    level = level === undefined ? 1 : level;
+    var t = a.currentTime, f = 440 * Math.pow(2, (midi - 69) / 12);
+    var o = a.createOscillator(); o.type = "square"; o.frequency.value = f;
+    var lp = a.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = f * 4;
+    var g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.11 * level, t + 0.012);
+    g.gain.setValueAtTime(0.11 * level, t + 0.24);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.40);
+    o.connect(lp); lp.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.44);
+  }
+  /* A sung note: two formants over the fundamental, which is roughly
+     what makes a vowel a vowel. */
+  function voiceNote(midi, level) {
+    var a = ac(); if (!a) return;
+    level = level === undefined ? 1 : level;
+    var t = a.currentTime, f = 440 * Math.pow(2, (midi - 69) / 12);
+    var o = a.createOscillator(); o.type = "sawtooth"; o.frequency.value = f;
+    var g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.16 * level, t + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+    var out = g;
+    [[720, 5], [1180, 7]].forEach(function (fm) {          /* an "ah" */
+      var bp = a.createBiquadFilter(); bp.type = "peaking";
+      bp.frequency.value = fm[0]; bp.Q.value = fm[1]; bp.gain.value = 11;
+      out.connect(bp); out = bp;
+    });
+    o.connect(g); out.connect(a.destination); o.start(t); o.stop(t + 0.6);
+  }
+
+  /* The ledger stamp. Low, wooden, over before you notice it. */
+  function woodThunk(level) {
+    var a = ac(); if (!a) return;
+    level = level === undefined ? 1 : level;
+    var t = a.currentTime;
+    var o = a.createOscillator(); o.type = "sine";
+    o.frequency.setValueAtTime(190, t);
+    o.frequency.exponentialRampToValueAtTime(96, t + 0.11);
+    var g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.26 * level, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.26);
+    stroke(0.035, 1400, 0.10 * level, 0.5);
+  }
+
+  function gate() {
+    tabs.hidden = true;
+    root.innerHTML =
+      '<div class="gate"><div class="ginner">' +
+        '<img src="assets/img/logo-white.png" alt="" />' +
+        "<h1>Mezzo School of Music</h1>" +
+        "<p>Sign in to open the register</p>" +
+        (S.err ? '<div class="err">' + esc(S.err) + "</div>" : "") +
+        '<label class="field"><span>Email</span>' +
+          '<div class="sf"><input id="em" type="email" autocomplete="username" inputmode="email" />' +
+          '<svg class="wire" viewBox="0 0 300 20" preserveAspectRatio="none" aria-hidden="true">' +
+          '<path vector-effect="non-scaling-stroke" d="M0 10 C 75 8.6 75 8.6 150 10 C 225 11.4 225 11.4 300 10"/></svg></div></label>' +
+        '<label class="field"><span>Password</span>' +
+          '<div class="pf" id="pf"><div class="pkeys" id="pkeys">' + keyboardHtml() + "</div>" +
+          '<input id="pw" type="password" autocomplete="current-password" /></div></label>' +
+        '<button class="btn" id="go">Sign in</button>' +
+      "</div></div>";
+    /* Never a value= on these two. This repo is public, and a prefilled
+       password here is a live credential on the open web that stays in
+       git history after it is removed. */
+    var go = document.getElementById("go");
+    var pw = document.getElementById("pw");
+    var keys = document.getElementById("pkeys");
+
+    /* Press one more key per character, release on delete. Long
+       passwords wrap round the keyboard rather than running out of it. */
+    var was = 0;
+    if (pw && keys) {
+      pw.oninput = function () {
+        var n = pw.value.length, all = keys.children;
+        for (var i = 0; i < all.length; i++) all[i].className = all[i].className.replace(" on", "");
+        for (var k = 0; k < n; k++) {
+          var note = ORDER[k % ORDER.length];
+          for (var j = 0; j < all.length; j++) {
+            if (+all[j].getAttribute("data-note") === note) { all[j].className += " on"; break; }
+          }
+        }
+        if (n > was) tone(ORDER[(n - 1) % ORDER.length]);
+        was = n;
+      };
+    }
+
+    /* The email field is a string, and every letter plucks it. You
+       WRITE your name on a string and you PLAY your password on the
+       keys — that is the whole idea, and both halves have to respond
+       per character or the idea is only half there.
+
+       Two things keep it from becoming a nuisance. It is much quieter
+       than the keys, and it is throttled: an email address typed at
+       speed would otherwise fire thirty notes in two seconds, which is
+       a machine gun, not an instrument. The notes are a low pentatonic
+       so any order of them is consonant — you cannot play a wrong one. */
+    var PLUCK = [45, 47, 50, 52, 55];          /* A minor pentatonic, low */
+    var em = document.getElementById("em");
+    var wire = document.querySelector(".wire");
+    var wirePath = wire && wire.querySelector("path");
+    var lastPluck = 0, twang = null;
+
+    /* RESTARTING AN ANIMATION BY TOGGLING A CLASS IS NOT RELIABLE.
+       The old way was remove the class, read offsetWidth to force a
+       reflow, add it back. That works in Chrome and does nothing in
+       WebKit — and he is on an iPad, so for him the string moved once,
+       on the first letter, and then never again however hard he typed.
+       Two reasons it was never going to hold: the animation is on the
+       <path> but the reflow was forced on its parent <svg>, and SVG
+       elements do not reliably have offsetWidth at all.
+
+       So the animation is driven directly instead. Cancel the running
+       one, start a new one — no classes, no reflow, no guessing about
+       what a browser decided to batch. */
+    /* NO TWO PLUCKS ARE THE SAME.
+       The first version rang down an identical curve every time —
+       same amplitude, same direction, same shape — so however often
+       you plucked it, it moved in exactly one way and read as a
+       mechanism rather than a string.
+
+       A real string does not do that. Where you catch it decides the
+       shape of the wave, how hard decides the amplitude, and it never
+       lands twice in the same place. So each keystroke picks a fresh
+       one: the belly of the wave moves along the string, the pull goes
+       up or down, and both the size and the ring-down time vary. */
+    function wave() {
+      var at   = 0.22 + Math.random() * 0.56;      /* where it was caught */
+      var x    = 300 * at;
+      var lift = 10 - Math.random() * 4;
+      var up   = Math.random() < 0.5 ? -1 : 1;
+      var y    = 10 + lift * up;
+      /* one belly, at a different place along the string each time */
+      return "M0 10 C " + (x * 0.45).toFixed(1) + " 10 " + (x * 0.7).toFixed(1) + " " + y.toFixed(1) +
+             " " + x.toFixed(1) + " " + y.toFixed(1) +
+             " C " + (x + (300 - x) * 0.3).toFixed(1) + " " + y.toFixed(1) +
+             " " + (x + (300 - x) * 0.55).toFixed(1) + " 10 300 10";
+    }
+
+    function pluckString() {
+      if (!wirePath) return;
+      wirePath.setAttribute("d", wave());          /* a new shape to ring down */
+      if (!wirePath.animate) return;               /* very old browser: shape only */
+
+      var amp  = 0.75 + Math.random() * 0.5;
+      var dir  = Math.random() < 0.5 ? -1 : 1;
+      var dur  = 430 + Math.random() * 220;
+      var frames = [], n = 7;
+      for (var i = 0; i <= n; i++) {
+        /* an exponential decay, alternating sides, ending at rest */
+        var k = i === n ? 1 : (1 - i / n) * amp * (i % 2 ? -dir : dir) + (i === 0 ? 0 : 0);
+        frames.push({ transform: "scaleY(" + (i === n ? 1 : (k * 4).toFixed(2)) + ")",
+                      offset: i / n });
+      }
+      if (twang) twang.cancel();
+      twang = wirePath.animate(frames, { duration: dur, easing: "cubic-bezier(.25,.7,.4,1)" });
+    }
+
+    if (em && wire) {
+      em.oninput = function () {
+        pluckString();
+        var now = +new Date();
+        if (now - lastPluck > 55) {
+          lastPluck = now;
+          /* Was tone(..., 0.42) — a bare sine at under half level,
+             which under a guitar-string animation was barely there.
+             A pluck has a transient and a filter that closes as it
+             dies, so it carries at a fraction of the loudness a sine
+             needs, and it is the sound the band is drawing. */
+          pluck(PLUCK[em.value.length % PLUCK.length], 0.95);
+        }
+      };
+    }
+
+    /* Right password: the keys run up the scale under your hand and
+       settle on a chord. Wrong one: a dull low pair and a shake, which
+       is what a wrong note actually sounds like. */
+    function glissando() {
+      var all = keys ? keys.children : [];
+      ORDER.forEach(function (note, i) {
+        setTimeout(function () {
+          tone(note);
+          for (var j = 0; j < all.length; j++) {
+            if (+all[j].getAttribute("data-note") === note) {
+              all[j].className += " on";
+              break;
+            }
+          }
+        }, i * 34);
+      });
+      setTimeout(function () { [60, 64, 67, 72].forEach(function (n) { tone(n); }); }, ORDER.length * 34 + 90);
+    }
+    function wrongNote() {
+      tone(47); tone(48);                      /* a semitone apart, on purpose */
+      var pf = document.getElementById("pf");
+      if (pf) { pf.classList.remove("shake"); void pf.offsetWidth; pf.classList.add("shake"); }
+    }
+
+    function submit() {
+      var email = document.getElementById("em").value.trim();
+      var pass = pw.value;
+      if (!email || !pass) { S.err = "Enter the email and password."; return render(); }
+      go.disabled = true; go.textContent = "Signing in…";
+      MZ.signIn(email, pass).then(function () {
+        S.err = "";
+        glissando();
+        /* Let it finish playing before the screen changes under it. */
+        setTimeout(boot, 700);
+      }).catch(function (e) {
+        go.disabled = false; go.textContent = "Sign in"; wrongNote(); fail(e);
+      });
+    }
+    go.onclick = submit;
+    pw.onkeydown = function (e) { if (e.key === "Enter") submit(); };
+  }
+
+  /* ---------- chrome ---------- */
+  function header(sub) {
+    return '<div class="top">' +
+      '<img src="assets/img/logo-white.png" alt="" />' +
+      '<div class="t"><b>Mezzo</b><span>' + esc(sub) + "</span></div>" +
+      '<button id="out">Sign out</button></div>';
+  }
+  function drawTabs() {
+    tabs.hidden = false;
+    /* Three marks, drawn in the same hairline as the violin on his
+       card, and each one earns its tab rather than illustrating it:
+       a metronome counts days the way it counts beats, a bell rings
+       until somebody answers, and a drum head seen face-on is also
+       the shape of a coin. */
+    var ICON = {
+      /* Was a metronome, and at 26px a metronome is a triangle with a
+         line through it — it said "music", not "attendance", and the
+         tab already says Attendance in words underneath. This is the
+         thing he actually does: a sheet with staff lines and a tick
+         struck across the corner of it. */
+      register: '<svg viewBox="0 0 24 24"><path d="M14.6 3.2H6.2a1.8 1.8 0 0 0-1.8 1.8v14a1.8 1.8 0 0 0 1.8 1.8h7.6"/>' +
+                '<path d="M7.6 8.4h6.6M7.6 12h6.6M7.6 15.6h3.4"/>' +
+                '<path d="M12.9 16.6 15.8 19.6 21.2 12.4" stroke-width="2.1"/></svg>',
+      dues:     '<svg viewBox="0 0 24 24"><path d="M12 3.2a6.6 6.6 0 0 1 6.6 6.6c0 4 1.2 5.6 2.2 6.6H3.2c1-1 2.2-2.6 2.2-6.6A6.6 6.6 0 0 1 12 3.2z"/><path d="M10 19.4a2.1 2.1 0 0 0 4 0"/><path d="M12 3.2V1.6"/></svg>',
+      money:    '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.6"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21"/></svg>'
+    };
+    var T = [["register", "Attendance"], ["dues", "Dues"], ["money", "Money"]];
+    tabs.innerHTML = T.map(function (t) {
+      return '<button data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' class="on"' : "") +
+        '><span class="ic">' + ICON[t[0]] + "</span>" + t[1] + "</button>";
+    }).join("");
+  }
+
+  /* ============================================================
+     TAB 1 — REGISTER
+     Opens on today, because 99 times out of 100 that is why the app
+     is open. The month grid is one tap away and reads the SAME
+     function, so the two can never disagree.
+     ============================================================ */
+  function loadRegister() {
+    S.register = null;
+    var r = S.mode === "today"
+      ? { from: S.day, to: S.day }
+      : MZ.monthRange(S.month.y, S.month.m);
+    return MZ.register(r.from, r.to).then(function (rows) {
+      S.register = { rows: rows || [], from: r.from, to: r.to };
+      render();
+    }).catch(fail);
+  }
+
+  /* One filter word. The ring is drawn, not printed: the same
+     stroke-dashoffset trick as the tick, so choosing a filter looks
+     like circling something rather than a button lighting up.
+
+     The <svg> carries an explicit width. It is a REPLACED element, so
+     left+right do not stretch it — without a width it falls back to
+     its intrinsic viewBox size and the ring runs off the page. */
+  function word(val, label, on, attr, hue) {
+    return '<button class="' + (on ? "on" : "") + '" data-' + attr + '="' + val + '"' +
+      (hue ? ' style="--marker:' + hue + '"' : "") + ">" + label +
+      '<svg class="ring" viewBox="0 0 120 34" preserveAspectRatio="none" aria-hidden="true">' +
+      '<path d="M60 3 C 22 3, 3 9, 3 17 C 3 26, 26 31, 62 31 C 96 31, 117 26, 117 17 ' +
+      'C 117 9, 98 4, 57 3"/></svg></button>';
+  }
+
+  function viewRegister() {
+    var body = "";
+    if (S.mode === "today") {
+      body += '<div class="daybar">' +
+        '<button data-day="-1">‹</button>' +
+        '<div class="d"><b>' + esc(dayName(S.day)) + "</b><span>" +
+          (S.day === MZ.todayIso() ? "Today" : (isSunday(S.day) ? "Sunday · closed" : "")) +
+        "</span></div>" +
+        '<button data-day="1"' + (S.day >= MZ.todayIso() ? " disabled" : "") + ">›</button>" +
+      "</div>";
+    } else {
+      var mn = new Date(S.month.y, S.month.m - 1, 1)
+        .toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+      body += '<div class="daybar">' +
+        '<button data-mon="-1">‹</button>' +
+        '<div class="d"><b>' + esc(mn) + "</b><span>whole month</span></div>" +
+        '<button data-mon="1">›</button>' +
+      "</div>";
+    }
+
+    body += '<div class="sub-toggle">' +
+      '<button data-mode="today"' + (S.mode === "today" ? ' class="on"' : "") + ">One day</button>" +
+      '<button data-mode="month"' + (S.mode === "month" ? ' class="on"' : "") + ">Whole month</button>" +
+    "</div>";
+
+    if (!S.register) return body + '<div class="note">Loading…</div>';
+
+    var rows = S.register.rows;
+
+    /* THE FILTER, WRITTEN IN THE MARGIN AND CIRCLED.
+
+       A setlist does not have a row of buttons on it. It has words in
+       the margin with one of them circled, which is exactly what a
+       filter is. So the control is a line of small marker words and
+       the selection is a hand-drawn ring — the third ink mark on the
+       page, alongside the tick and the strike. Nothing new to learn:
+       whoever understands "struck out means away" already understands
+       "circled means that is what I am looking at".
+
+       Two groups on one line, split by a pencil slash:
+         · the INSTRUMENTS, built from who is actually in front of him
+           today — three words on a quiet Tuesday, seven on a Saturday,
+           never a fixed wall of eight
+         · the BATCH, weekday against Saturday, which is the one thing
+           the day cannot tell him in month view and the thing he asked
+           for by name
+
+       Each word is 40px tall rather than the 48 this app holds itself
+       to everywhere else. A mis-tap here shows the wrong list for a
+       second; a mis-tap on the register marks a child absent. Those
+       are not the same risk and should not cost the same screen. */
+    var present = [];
+    S.register.rows.forEach(function (r) {
+      if (r.sport && present.indexOf(r.sport) < 0) present.push(r.sport);
+    });
+    present.sort();
+
+    var bats = (S.ref && S.ref.batches) || [];
+    var showIns = present.length > 1, showBat = bats.length > 1;
+    var filterHtml = "";
+    if (showIns || showBat) {
+      filterHtml = '<div class="annot"><div class="row">' +
+        (showIns
+          ? word("", "Everyone", !S.fIns, "fi") +
+            present.map(function (n) {
+              return word(esc(n), esc(n), S.fIns === n, "fi", inst(n).hue);
+            }).join("")
+          : "") +
+        (showIns && showBat ? '<span class="sep"></span>' : "") +
+        (showBat
+          ? bats.map(function (b) {
+              return word(b.id, esc(batchWord(b)), S.fBat === b.id, "fb");
+            }).join("")
+          : "") +
+      "</div></div>";
+    }
+
+    if (S.fIns) rows = rows.filter(function (r) { return r.sport === S.fIns; });
+    if (S.fBat) rows = rows.filter(function (r) { return r.batch_id === S.fBat; });
+    if (S.q) {
+      var q = S.q.toLowerCase();
+      rows = rows.filter(function (r) {
+        return (r.member_name || "").toLowerCase().indexOf(q) >= 0 ||
+               (r.sport || "").toLowerCase().indexOf(q) >= 0;
+      });
+    }
+    if (S.register.rows.length > 12) {
+      body += '<input class="search" id="q" placeholder="Find a student or instrument…" value="' + esc(S.q) + '" />';
+    }
+    if (!S.register.rows.length) {
+      return body + '<div class="card"><div class="note">No students yet.<br><br>' +
+        '<button class="btn" data-add="1">Add the first student</button></div></div>';
+    }
+    /* NO early return for an empty result. Returning here dropped the
+       filter row along with the list, so circling a batch nobody is in
+       stranded him on a card whose only button cleared the instrument
+       and left the batch on. The empty state belongs INSIDE the sheet,
+       under the filter that caused it. */
+
+    if (S.mode === "today") {
+      var due = rows.filter(function (r) { return runsOn(r.batch_id, S.day); });
+      var off = rows.filter(function (r) { return !runsOn(r.batch_id, S.day); });
+      /* Never hide the off-day children behind a decision he has to
+         remember: a makeup lesson is a real thing, and it is one tap
+         away, on the same sheet. */
+      /* Circling "Saturday" on a Thursday would otherwise produce an
+         empty sheet and a dead end. It is really a request to see the
+         Saturday children — which is exactly the makeup-lesson case —
+         so open that set instead of showing him nothing. */
+      var openOff = S.showOff || (!!S.fBat && !due.length && off.length > 0);
+      body += setList(due, off, filterHtml, bats.length > 1, openOff);
+    } else {
+      /* The month is still the old grid. The annotation goes on a torn
+         strip of the same paper so the filter is the one control in
+         both modes rather than two that look unrelated. */
+      if (filterHtml) body += '<div class="sheetwrap"><div class="setlist" ' +
+        'style="padding:8px 16px 4px">' + filterHtml + "</div></div>";
+      body += monthGrid(rows);
+    }
+    body += '<button class="btn ghost" data-add="1" style="margin-top:6px">+ Add a student</button>';
+    return body;
+  }
+
+  /* ============================================================
+     THE SETLIST
+
+     He is a performer. The thing he already knows how to read at a
+     glance, standing up, mid-lesson, is a setlist taped to a wall:
+     numbered names, grouped into sets, ticked as they happen and
+     struck out when they do not.
+
+     So the sets are the INSTRUMENTS — the noun this school is
+     organised around — and the marks are made by hand:
+
+       tick    they came
+       strike  they did not
+       nothing not yet, which is different from away and must look it
+
+     TAPPING THE LINE MARKS. The whole line is the target, ~52px of it,
+     because that is the gesture the sheet is for. Opening a child's
+     card is a separate, smaller reach at the right edge, so the common
+     act is the easy one and the rare act is the deliberate one.
+     ============================================================ */
+  function setList(due, off, filterHtml, showBatchTail, openOff) {
+    var n = 0, tailOn = false;
+
+    function line(r) {
+      n++;
+      var st = r.marks && r.marks[S.day];
+      var cls = st === "present" ? " present" : st === "absent" ? " absent" : "";
+      var bat = batchName(r.batch_id);
+      return '<div class="sl-ln' + cls + (S.busy[r.enrollment_id] ? " busy" : "") +
+          '" data-key="' + r.enrollment_id + '">' +
+        '<button class="mark" data-mark="' + r.enrollment_id + '"' +
+          ' data-batch="' + (r.batch_id || "") + '" data-note="' + inst(r.sport).note + '"' +
+          ' data-now="' + (st || "") + '" aria-label="' + esc(r.member_name) + '">' +
+          '<span class="no">' + n + '.</span>' +
+          /* drawn by hand, not a font glyph — a tick you make */
+          '<svg class="tk" viewBox="0 0 28 28" aria-hidden="true">' +
+            '<path d="M4.6 15 L10.7 21.4 L23.8 6"/></svg>' +
+          '<span class="who">' + esc(r.member_name) +
+            '<svg class="st" viewBox="0 0 300 22" preserveAspectRatio="none" aria-hidden="true">' +
+            '<path d="M2 12 C 70 6, 150 16, 298 9"/></svg></span>' +
+        "</button>" +
+        /* Only in the off-day set. Everyone in today's set runs today
+           by definition, so a batch label there is noise that collides
+           with the name it sits beside. */
+        (tailOn && showBatchTail && bat ? '<span class="tail">' + esc(bat) + "</span>" : "") +
+        '<button class="open" data-who="' + r.enrollment_id + '" data-mem="' + (r.member_id || "") +
+          '" data-nm="' + esc(r.member_name) + '" data-sport="' + esc(r.sport || "") +
+          '" data-batch="' + (r.batch_id || "") + '" aria-label="Open ' + esc(r.member_name) +
+          '">\u203A</button>' +
+      "</div>";
+    }
+
+    /* One set per instrument, in the school's own order of the day. */
+    function sets(rows) {
+      var by = {}, order = [];
+      rows.forEach(function (r) {
+        var k = r.sport || "Other";
+        if (!by[k]) { by[k] = []; order.push(k); }
+        by[k].push(r);
+      });
+      order.sort();
+      return order.map(function (k) {
+        var g = by[k];
+        var inn = g.filter(function (r) {
+          return r.marks && r.marks[S.day] === "present";
+        }).length;
+        /* SYMBOL AND WORD, not symbol instead of word. At 22px a
+           guitar and a ukulele are the same two circles and a neck,
+           and piano and keyboard are the same row of keys — he would
+           be identifying his own sections by guessing. The symbol
+           earns its place by being the thing that MOVES when a child
+           in that section is marked in; the word is what he reads. */
+        return '<div class="sl-set" style="--hue:' + inst(k).hue + '">' +
+          '<div class="sl-hd"><span class="ig" data-ig="' + esc(k) + '">' +
+            svgIcon(inst(k)) + "</span><b>" + esc(k) + "</b>" +
+          "<i>" + g.length + (g.length > 1 ? " names" : " name") + "</i>" +
+          "<em>" + inn + " in</em></div>" +
+          g.map(line).join("") +
+        "</div>";
+      }).join("");
+    }
+
+    var marked = due.filter(function (r) { return r.marks && r.marks[S.day] === "present"; }).length;
+    var away   = due.filter(function (r) { return r.marks && r.marks[S.day] === "absent"; }).length;
+
+    var body = '<div class="sheetwrap"><div class="tape l"></div><div class="tape r"></div>' +
+      '<div class="setlist">' +
+      /* A filtered list must SAY it is filtered. Ten names on a sheet
+         that should hold eighty is either a quiet Tuesday or a filter
+         he forgot he left on, and those look identical. */
+      '<div class="sl-top"><b>' + (S.day === MZ.todayIso() ? "Today" : "That day") + "\u2019s set</b>" +
+        "<em>" + marked + " of " + due.length + " in</em></div>" +
+      filterHtml +
+      /* On its own line, not squeezed into the title — at 375px the
+         title, the note and the count fought and the note lost by
+         being clipped mid-word. */
+      (narrowedBy()
+        ? '<button class="sl-narrow" data-clear="1">showing ' + esc(narrowedBy()) +
+          " \u00d7</button>"
+        : "");
+
+    body += due.length ? sets(due)
+          : (narrowedBy() && !off.length
+              ? '<div class="sl-note">Nobody matches that.</div>'
+              : '<div class="sl-note">No class today' +
+                (S.fBat ? " for " + esc(batchName(S.fBat)) : "") + ".</div>");
+
+    tailOn = true;
+    if (off.length && openOff) {
+      body += '<div class="sl-set" style="--hue:var(--pencil)">' +
+        '<div class="sl-hd"><b>Not usually here today</b><i>' + off.length +
+        (off.length > 1 ? " names" : " name") + "</i></div>" + sets(off) + "</div>";
+    }
+
+    body += '<div class="sl-foot">' + marked + " ticked \u00b7 " + away +
+      " struck \u00b7 " + Math.max(0, due.length - marked - away) + " still to come";
+    if (off.length && !openOff) {
+      body += '<button class="more" data-off="1">Someone came on an off day? Show ' +
+              off.length + " more</button>";
+    }
+    body += "</div></div></div>";
+    return body;
+  }
+
+  /* What the sheet is currently narrowed to, in words. Empty when it
+     is showing everybody, so the line stays quiet in the normal case. */
+  function narrowedBy() {
+    var bits = [];
+    if (S.fIns) bits.push(S.fIns);
+    if (S.fBat) bits.push(batchName(S.fBat));
+    if (S.q)    bits.push('"' + S.q + '"');
+    return bits.length ? bits.filter(Boolean).join(" \u00b7 ") + " only" : "";
+  }
+
+  function batchName(id) {
+    var bs = (S.ref && S.ref.batches) || [];
+    for (var i = 0; i < bs.length; i++) if (bs[i].id === id) return batchWord(bs[i]);
+    return "";
+  }
+  /* A filter word has to be a WORD. "Mon-Fri 3-8pm" is the timetable,
+     which is a fine batch name and a terrible thing to circle. */
+  function batchWord(b) {
+    var n = b.short_name || b.name || "";
+    return n.split(/\s+|,/)[0].replace(/[:\-\u2013]$/, "") || n;
+  }
+
+  function monthGrid(rows) {
+    var y = S.month.y, m = S.month.m, days = MZ.monthRange(y, m).days;
+    var head = "", i, iso;
+    for (i = 1; i <= days; i++) {
+      iso = y + "-" + String(m).padStart(2, "0") + "-" + String(i).padStart(2, "0");
+      head += '<th class="' + (isSunday(iso) ? "sun" : "") + '">' + i + "</th>";
+    }
+    /* ONE ELEMENT PER CELL.
+       This was <td><span class="cell"><i class="p">✓</i></span></td> —
+       three elements for one mark. At ninety-six children that is
+       2,976 cells and 9,406 elements in the tab, and the browser spent
+       104ms LAYING IT OUT (measured; the parse was 11.7ms, so it was
+       never the markup size and it was never the animations, which
+       this view does not run at all).
+
+       The td does the whole job itself. Same information, same look,
+       a third of the nodes. */
+    var body = rows.map(function (r) {
+      var cells = "";
+      for (i = 1; i <= days; i++) {
+        iso = y + "-" + String(m).padStart(2, "0") + "-" + String(i).padStart(2, "0");
+        var st = r.marks && r.marks[iso];
+        cells += st === "present" ? '<td class="c p">\u2713</td>'
+               : st === "absent"  ? '<td class="c a">\u2715</td>'
+               : runsOn(r.batch_id, iso) ? '<td class="c n"></td>'
+               /* not "unmarked" — never expected. An empty circle here
+                  would read as a register he forgot to fill in. */
+               : '<td class="c o">\u00b7</td>';
+      }
+      return '<tr style="--hue:' + inst(r.sport).hue + '">' +
+        cells + '<td class="tot">' + r.present_days + "</td></tr>";
+    }).join("");
+
+    /* THE NAME COLUMN COMES OUT OF THE TABLE.
+       It was position:sticky on ninety-six cells, and sticky is the
+       single most expensive thing left in this view: removing it took
+       the layout from 40.1ms to 22.7ms, measured. So the names are
+       their own narrow table standing beside the scroller instead —
+       the frozen-column pattern — and nothing is sticky at all.
+
+       The two tables stay in step because every row is one fixed
+       height in both. They are one line of text; nothing can wrap. */
+    var names = rows.map(function (r) {
+      return '<tr style="--hue:' + inst(r.sport).hue + '"><td class="nmcol">' +
+        esc(r.member_name) + '<span class="sp">' + esc(r.sport || "") + "</span></td></tr>";
+    }).join("");
+
+    return '<div class="card"><div class="gridwrap">' +
+      '<table class="reg names"><thead><tr><th class="nmcol"></th></tr></thead>' +
+        "<tbody>" + names + "</tbody></table>" +
+      '<div class="gridscroll"><table class="reg days">' +
+        "<thead><tr>" + head + '<th class="tot">Total</th></tr></thead>' +
+        "<tbody>" + body + "</tbody></table></div></div>" +
+      '<div class="muted" style="margin-top:10px">Scroll sideways for the rest of the month. ' +
+      "Tap <b>One day</b> to mark attendance.</div></div>";
+  }
+
+  /* Tap cycles blank → present → absent → blank. One control, three
+     states, and the colour says which without reading anything. */
+  function cycle(btn) {
+    var eid = +btn.getAttribute("data-mark");
+    var bid = +btn.getAttribute("data-batch");
+    var now = btn.getAttribute("data-now");
+    if (!bid) { toast("This student has no class time set."); return; }
+    if (S.busy[eid]) return;
+    var next = now === "present" ? "absent" : now === "absent" ? null : "present";
+
+    /* PAPER FIRST, INSTRUMENT UNDER IT.
+       He is ticking names on a sheet, so the mark sounds like a
+       pencil: two strokes for a tick, one long pressed drag for a
+       strike-off, a dull brush to rub one out. The child's own
+       instrument still speaks underneath at a fifth of the level —
+       enough that he learns the sound of his own register and a
+       mis-tap is something he HEARS before he looks for it, not
+       enough to turn a register into a xylophone. */
+    /* The key presses. A row that visibly goes down is the clearest
+       receipt there is for a tap, on a screen where a mis-tap marks a
+       child absent. */
+    /* The setlist gives its own receipt — the line lights under the
+       thumb and the tick DRAWS itself — so the key-press animation is
+       only for the old row. Both find their container the same way. */
+    var row = btn.closest && btn.closest(".sl-ln, .srow");
+    if (row && row.classList && row.classList.contains("srow")) {
+      row.classList.add("pressed");
+      setTimeout(function () { row.classList.remove("pressed"); }, 160);
+    }
+    var n = +btn.getAttribute("data-note") || 65;
+    if (next === "present")     { pencilTick();   tone(n, 0.20); }
+    else if (next === "absent")  { pencilStrike(); tone(n - 17, 0.14); }
+    else                           paperBrush();
+    btn.classList.remove("strike"); void btn.offsetWidth; btn.classList.add("strike");
+
+    /* busy belongs on whichever container the CSS dims: .tick.busy for
+       the old row, .sl-ln.busy for the sheet. */
+    S.busy[eid] = true; btn.classList.add("busy");
+    if (row && row.classList) row.classList.add("busy");
+    /* Which section to sound once the paint lands. The sheet is
+       re-rendered wholesale on every mark, so the element that should
+       move does not exist yet at the moment we decide it should. */
+    var mrow = (S.register.rows || []).filter(function (r) { return r.enrollment_id === eid; })[0];
+    if (mrow && next) S.pulse = { sport: mrow.sport, kind: next };
+
+    MZ.mark(bid, S.day, eid, next).then(function () {
+      delete S.busy[eid];
+      var row = (S.register.rows || []).filter(function (r) { return r.enrollment_id === eid; })[0];
+      if (row) {
+        row.marks = row.marks || {};
+        if (next) row.marks[S.day] = next; else delete row.marks[S.day];
+      }
+      render();
+    }).catch(function (e) { delete S.busy[eid]; fail(e); });
+  }
+
+  /* ============================================================
+     TAB 2 — DUES
+     reminder_queue() already knows who is late, and this tenant is
+     configured for "one day overdue, keep telling me". Whatever it
+     returns is the list. Two buttons per person: send, or paid.
+     ============================================================ */
+  function loadDues() {
+    S.dues = null;
+    return MZ.dues().then(function (rows) { S.dues = rows || []; render(); }).catch(fail);
+  }
+  function waLink(d) {
+    var ph = String(d.phone || "").replace(/\D/g, "");
+    if (ph.length === 10) ph = "91" + ph;
+    var msg = "Namaste" + (d.parent_name ? " " + d.parent_name : "") + ", this is Mezzo School of Music. " +
+      "The monthly fee for " + d.member_name + " (" + (d.sport || "class") + ") of " +
+      "₹" + Number(d.amount || 0).toLocaleString("en-IN") + " was due on " +
+      new Date(d.due_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) +
+      ". Kindly pay at your convenience. Thank you.";
+    return "https://wa.me/" + ph + "?text=" + encodeURIComponent(msg);
+  }
+  function viewDues() {
+    if (!S.dues) return '<div class="note">Loading…</div>';
+    if (!S.dues.length) {
+      return '<div class="card"><div class="note">' +
+        '<div style="font-size:34px">✓</div>Nobody is overdue.<br>Everyone has paid.' +
+        '<br><br><button class="btn ghost" data-other="1">Someone else paid</button>' +
+        "</div></div>";
+    }
+    var total = S.dues.reduce(function (a, d) { return a + Number(d.amount || 0); }, 0);
+    return '<div class="card">' +
+      '<div class="rowline" style="margin-bottom:10px">' +
+        "<div><b style=\"font-size:19px\">" + S.dues.length + " to collect</b>" +
+        '<div class="muted">' + inr(total) + " in total</div></div></div>" +
+      '<button class="btn ghost" data-other="1" style="margin-bottom:14px">' +
+        "Someone else paid</button>" +
+      S.dues.map(function (d) {
+        var blocked = d.blocked_reason === "missing_phone";
+        return '<div class="due tuned" style="--hue:' + inst(d.sport).hue + '">' +
+          '<div class="hd"><b>' + esc(d.member_name) + "</b><em>" + inr(d.amount) + "</em></div>" +
+          '<div class="sub"><span class="late">' + d.days_since + " day" + (d.days_since === 1 ? "" : "s") +
+            " late</span> · " + esc(d.sport || "") +
+            (d.already_sent ? " · asked today" : "") + "</div>" +
+          '<div class="acts">' +
+            (blocked
+              ? '<button disabled style="opacity:.5">No phone number</button>'
+              : '<a class="wa" target="_blank" rel="noopener" href="' + esc(waLink(d)) + '"' +
+                ' data-sent="' + d.enrollment_id + '" data-amt="' + d.amount + '"' +
+                ' data-ph="' + esc(d.phone || "") + '">WhatsApp</a>') +
+            '<button class="paid" data-paid="' + d.enrollment_id + '" data-amt="' + d.amount +
+              '" data-nm="' + esc(d.member_name) + '" data-sport="' + esc(d.sport || "") + '">Paid</button>' +
+          "</div></div>";
+      }).join("") + "</div>";
+  }
+
+  /* ============================================================
+     TAB 3 — MONEY
+     Three numbers and one form. Adding an expense is amount, what it
+     was for, save — nothing else, because anything else is a reason
+     not to bother recording it.
+     ============================================================ */
+  function loadMoney() {
+    S.money = null;
+    var r = MZ.monthRange(S.month.y, S.month.m);
+    return Promise.all([MZ.payments(r.from, r.to), MZ.expenses(r.from, r.to)])
+      .then(function (x) {
+        S.money = { paid: x[0] || [], spent: x[1] || [], from: r.from, to: r.to };
+        render();
+      }).catch(fail);
+  }
+  function viewMoney() {
+    var mn = new Date(S.month.y, S.month.m - 1, 1)
+      .toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+    var head = '<div class="daybar">' +
+      '<button data-mon="-1">‹</button>' +
+      '<div class="d"><b>' + esc(mn) + "</b><span>this month</span></div>" +
+      '<button data-mon="1">›</button></div>';
+    if (!S.money) return head + '<div class="note">Loading…</div>';
+
+    var inTot = S.money.paid.filter(function (p) { return p.status !== "void"; })
+                            .reduce(function (a, p) { return a + Number(p.amount || 0); }, 0);
+    var outTot = S.money.spent.reduce(function (a, p) { return a + Number(p.amount || 0); }, 0);
+
+    return head +
+      '<div class="card"><div class="figs">' +
+        '<div class="fig in"><b>' + inr(inTot) + "</b><span>Fees collected</span></div>" +
+        '<div class="fig out"><b>' + inr(outTot) + "</b><span>Spent</span></div>" +
+        '<div class="fig"><b>' + inr(inTot - outTot) + "</b><span>Left</span></div>" +
+      "</div></div>" +
+      '<div class="card"><h3 style="font-size:15px;margin-bottom:12px">Add an expense</h3>' +
+        '<label class="field"><span>How much</span>' +
+          '<input id="exAmt" type="number" inputmode="numeric" min="1" placeholder="0" /></label>' +
+        '<label class="field"><span>What for</span>' +
+          '<input id="exWhat" placeholder="Guitar strings, rent, electricity…" /></label>' +
+        '<button class="btn" id="exSave">Save expense</button>' +
+      "</div>" +
+      (S.money.spent.length
+        ? '<div class="card"><h3 style="font-size:15px;margin-bottom:6px">Spent this month</h3>' +
+          S.money.spent.map(function (e) {
+            return '<div class="srow"><div class="nm"><b>' + esc(e.detail || e.category) + "</b>" +
+              "<span>" + new Date(e.on_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) +
+              "</span></div><b>" + inr(e.amount) + "</b></div>";
+          }).join("") + "</div>"
+        : "") +
+      (S.money.paid.length
+        ? '<div class="card"><h3 style="font-size:15px;margin-bottom:6px">Fees received</h3>' +
+          '<div class="muted" style="margin-bottom:8px">' + S.money.paid.length + " payment" +
+          (S.money.paid.length === 1 ? "" : "s") + "</div>" +
+          S.money.paid.slice(0, 30).map(function (p) {
+            var dead = p.status === "void";
+            return '<div class="srow' + (dead ? " voided" : "") + '">' +
+              '<div class="nm"><b>' + inr(p.amount) + "</b><span>" +
+              new Date(p.on_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) +
+              " · " + esc(p.mode || "") + (dead ? " · cancelled" : "") + "</span></div>" +
+              (dead ? "" : '<button class="undo" data-void="' + p.id + '">Undo</button>') +
+            "</div>";
+          }).join("") + "</div>"
+        : "");
+  }
+
+  /* ============================================================
+     TAKING MONEY
+
+     This used to be one window.confirm() that recorded the exact
+     amount reminder_queue quoted, for one month, as UPI, and only
+     ever for somebody already overdue. Three things were wrong with
+     that and one of them reached the parent:
+
+       · a family paying ON TIME had nowhere to be recorded, because
+         the only Paid button lived in the overdue list;
+       · every rupee was filed as UPI, in a school that takes cash;
+       · a term paid up front was recorded as one month, so
+         renewal_on rolled forward once and the platform chased them
+         again the following month for money already paid.
+
+     So there is a sheet now. It asks the three things that actually
+     vary and nothing else, and it is only ever on screen while he is
+     taking money — the register behind it is untouched.
+
+     THE AMOUNT STILL COMES FROM POSTGRES. enrollment_fee() prices the
+     months; this file only ever displays what it is told and sends
+     back what he confirms. */
+  function viewPay() {
+    var p = S.pay;
+    return '<div class="sheet"><div class="card">' +
+      '<h3 style="font-size:19px;margin-bottom:2px">' + esc(p.name) + "</h3>" +
+      '<div class="muted" style="margin-bottom:14px">' + esc(p.sport || "") + "</div>" +
+
+      '<label class="field"><span>How much</span>' +
+        '<input id="payAmt" type="number" inputmode="numeric" min="1" value="' +
+        (p.amount == null ? "" : p.amount) + '" /></label>' +
+
+      '<span class="field"><span>How many months</span></span>' +
+      '<div class="frow" style="margin-bottom:14px">' +
+        [1, 2, 3, 6, 12].map(function (m) {
+          return '<button class="chip' + (p.months === m ? " on" : "") +
+                 '" data-paymonths="' + m + '">' + m + "</button>";
+        }).join("") +
+      "</div>" +
+
+      '<span class="field"><span>How it was paid</span></span>' +
+      '<div class="frow" style="margin-bottom:18px">' +
+        ["Cash", "UPI"].map(function (m) {
+          return '<button class="chip' + (p.mode === m ? " on" : "") +
+                 '" data-paymode="' + esc(m) + '">' + m + "</button>";
+        }).join("") +
+      "</div>" +
+
+      '<button class="btn" id="payGo">Record ' + (p.amount ? inr(p.amount) : "payment") + "</button>" +
+      '<button class="btn ghost" id="payCancel" style="margin-top:8px">Cancel</button>' +
+    "</div></div>";
+  }
+
+  /* Ask the database what this costs for that many months, and never
+     work it out here. A null answer leaves the field as he typed it. */
+  function repriceAndRender() {
+    render();
+    if (!S.pay || !S.pay.enrollment) return;
+    var want = S.pay;
+    MZ.feeFor(want.enrollment, want.months).then(function (v) {
+      if (S.pay !== want) return;                 /* he moved on */
+      var amt = v && (v.amount != null ? v.amount : (v[0] && v[0].amount));
+      if (amt != null) { S.pay.amount = amt; render(); }
+    });
+  }
+
+  function openPay(enrollment, name, sport, amount) {
+    S.pay = { enrollment: enrollment, name: name, sport: sport,
+              amount: amount == null ? null : amount, months: 1, mode: "Cash" };
+    if (amount == null) repriceAndRender(); else render();
+  }
+
+  function confirmPay() {
+    var el = document.getElementById("payAmt");
+    var amt = el ? Math.round(+el.value) : 0;
+    if (!amt || amt <= 0) { S.err = "Enter how much was paid."; return render(); }
+    var b = document.getElementById("payGo");
+    if (b) { b.disabled = true; b.textContent = "Recording…"; }
+    MZ.takePayment({ enrollment: S.pay.enrollment, amount: amt,
+                     months: S.pay.months, mode: S.pay.mode })
+      .then(function () {
+        toast("Payment recorded"); S.pay = null; S.err = ""; loadDues();
+      })
+      .catch(function (e) {
+        if (b) { b.disabled = false; b.textContent = "Record " + inr(amt); }
+        fail(e);
+      });
+  }
+
+  /* ---------- who else has paid ----------
+     The picker is the answer to "somebody paid and they are not on
+     the overdue list". It reads members, which is the one call this
+     app had never made. */
+  function loadPicker() {
+    S.picker = { rows: null, q: "" };
+    render();
+    MZ.students().then(function (rows) {
+      S.picker = { rows: rows || [], q: (S.picker && S.picker.q) || "" };
+      render();
+    }).catch(fail);
+  }
+  function viewPicker() {
+    var pk = S.picker;
+    var body = '<div class="sheet"><div class="card">' +
+      '<h3 style="font-size:18px;margin-bottom:10px">Who paid?</h3>' +
+      '<input class="search" id="pq" placeholder="Find a student…" value="' + esc(pk.q) + '" />';
+    if (!pk.rows) return body + '<div class="note">Loading…</div>' +
+      '<button class="btn ghost" id="pkCancel" style="margin-top:10px">Cancel</button></div></div>';
+
+    var q = pk.q.toLowerCase();
+    var rows = pk.rows.filter(function (m) {
+      return !q || (m.name || "").toLowerCase().indexOf(q) >= 0;
+    }).slice(0, 40);
+
+    body += rows.map(function (m) {
+      var e = (m.enrollments || [])[0] || {};
+      var ins = inst(e.sport);
+      return '<div class="srow key tuned" style="--hue:' + ins.hue + '"' +
+        ' data-pick="' + (e.id || "") + '" data-nm="' + esc(m.name) +
+        '" data-sport="' + esc(e.sport || "") + '">' +
+        '<span class="ig">' + svgIcon(ins) + "</span>" +
+        '<div class="nm"><b>' + esc(m.name) + "</b><span>" + esc(e.sport || "no instrument") + "</span></div>" +
+      "</div>";
+    }).join("") || '<div class="note">Nobody matches that.</div>';
+
+    return body + '<button class="btn ghost" id="pkCancel" style="margin-top:10px">Cancel</button></div></div>';
+  }
+
+  /* ============================================================
+     ONE STUDENT
+
+     Everything about a child that is not "were they here today" lives
+     on one sheet, reached by tapping their name. Nothing was added to
+     the row to make this possible — the name was already there, and a
+     name is the obvious thing to press when you want the person.
+
+     It is also the only place anything can be UNDONE, which is why it
+     exists at all: before this there was no way to fix a wrong phone
+     number, no way to move a child from guitar to piano, and no way
+     to stop a child who had left. They stayed on the register and in
+     the dues list for ever.
+     ============================================================ */
+  function viewWho() {
+    var w = S.who;
+    var ins = (S.ref && S.ref.instruments) || [];
+    var bs  = (S.ref && S.ref.batches) || [];
+    return '<div class="sheet"><div class="card">' +
+      '<div class="rowline" style="margin-bottom:14px">' +
+        '<span class="ig" style="--hue:' + inst(w.sport).hue + '">' + svgIcon(inst(w.sport)) + "</span>" +
+        '<h3 style="font-size:19px;flex:1">' + esc(w.name) + "</h3></div>" +
+
+      '<label class="field"><span>Name</span>' +
+        '<input id="whName" value="' + esc(w.name) + '" /></label>' +
+      '<label class="field"><span>Parent\u2019s phone</span>' +
+        '<input id="whPhone" type="tel" inputmode="numeric"' +
+        (w.asked ? ' placeholder="10 digits"' : ' disabled placeholder="Loading\u2026"') +
+        ' value="' + esc(w.phone || "") + '" /></label>' +
+      '<label class="field"><span>Instrument</span><select id="whIns">' +
+        ins.map(function (i) {
+          return '<option value="' + esc(i.name) + '"' +
+                 (i.name === w.sport ? " selected" : "") + ">" + esc(i.name) + "</option>";
+        }).join("") + "</select></label>" +
+      '<label class="field"><span>Comes on</span><select id="whBatch">' +
+        bs.map(function (b) {
+          return '<option value="' + b.id + '"' +
+                 (b.id === w.batch ? " selected" : "") + ">" + esc(b.name) + "</option>";
+        }).join("") + "</select></label>" +
+
+      '<button class="btn" id="whSave">Save changes</button>' +
+      '<button class="btn ghost" id="whPay" style="margin-top:8px">Record a payment</button>' +
+      '<button class="btn ghost" id="whCancel" style="margin-top:8px">Close</button>' +
+
+      /* Last, separated, and it says what it does rather than "delete".
+         Nothing is deleted: the child and every mark they ever earned
+         stay exactly where they are. */
+      '<div class="danger">' +
+        (w.confirmStop
+          ? '<p class="muted" style="margin-bottom:10px">' + esc(w.name) +
+            " will come off the register and out of the fees list. " +
+            "Nothing already recorded is deleted.</p>" +
+            '<button class="btn stop" id="whStopYes">Yes, ' + esc(w.name) + " has stopped</button>" +
+            '<button class="btn ghost" id="whStopNo" style="margin-top:8px">No, keep them</button>'
+          : '<button class="btn ghost stop-link" id="whStop">' + esc(w.name) +
+            " has stopped coming</button>") +
+      "</div>" +
+    "</div></div>";
+  }
+
+  function openWho(el) {
+    S.who = {
+      enrollment: +el.getAttribute("data-who") || null,
+      member: +el.getAttribute("data-mem") || null,
+      name: el.getAttribute("data-nm") || "",
+      sport: el.getAttribute("data-sport") || "",
+      batch: +el.getAttribute("data-batch") || null,
+      phone: "", loaded: false,
+      confirmStop: false
+    };
+    var want = S.who;
+    /* The instrument and batch pickers need the reference data, which
+       may not have arrived yet on a cold open. */
+    if (!S.ref) MZ.reference().then(function (r) { S.ref = r; render(); }).catch(function () {});
+    /* And the phone number is not in the register's data at all. */
+    if (want.member) {
+      MZ.student(want.member).then(function (m) {
+        if (S.who !== want) return;
+        S.who.phone  = (m && (m.phone || m.parent_phone)) || "";
+        S.who.loaded = !!m;
+        /* Even when the read came back with nothing, unlock the box —
+           a field stuck on "Loading…" for ever is worse than one he
+           can type into, and saveWho() still refuses to send an empty
+           one it never read. */
+        S.who.asked  = true;
+        render();
+      }).catch(function () {
+        if (S.who !== want) return;
+        S.who.asked = true; render();
+      });
+    }
+    render();
+  }
+
+  function saveWho() {
+    var w = S.who;
+    var b = document.getElementById("whSave");
+    if (b) { b.disabled = true; b.textContent = "Saving…"; }
+    var name  = (document.getElementById("whName") || {}).value;
+    var insEl = document.getElementById("whIns"), batEl = document.getElementById("whBatch");
+    /* undefined, not "", when the number has not loaded: editStudent
+       skips a field it is not given, and writing an empty box over a
+       real number would silently cut that family off from reminders. */
+    /* Send it if we read it (so a deliberate clear works), or if he
+       typed one (so a missing number can be added). Never send an
+       empty box we never read — that is the case that wipes a real
+       number and takes the family's reminders with it. */
+    var typed = ((document.getElementById("whPhone") || {}).value || "").replace(/\D/g, "");
+    var phone = (w.loaded || typed) ? typed : undefined;
+    MZ.editStudent(w.member, { name: name, phone: phone })
+      .then(function () {
+        return MZ.moveEnrollment(w.enrollment, {
+          instrument: insEl && insEl.value, batch: batEl && +batEl.value
+        });
+      })
+      .then(function () {
+        toast("Saved"); S.who = null; loadRegister(); render();
+      })
+      .catch(function (e) {
+        if (b) { b.disabled = false; b.textContent = "Save changes"; }
+        fail(e);
+      });
+  }
+
+  function stopWho() {
+    var w = S.who;
+    var b = document.getElementById("whStopYes");
+    if (b) { b.disabled = true; b.textContent = "Stopping…"; }
+    MZ.stopStudent(w.member, "stopped coming")
+      .then(function () {
+        toast(w.name + " is off the register"); S.who = null; loadRegister(); render();
+      })
+      .catch(function (e) {
+        if (b) { b.disabled = false; b.textContent = "Yes, " + w.name + " has stopped"; }
+        fail(e);
+      });
+  }
+
+  /* ---------- add a student ---------- */
+  function viewAdd() {
+    var ins = (S.ref && S.ref.instruments) || [], bs = (S.ref && S.ref.batches) || [];
+    return '<div class="card"><h3 style="font-size:17px;margin-bottom:14px">New student</h3>' +
+      '<label class="field"><span>Name</span><input id="nsName" /></label>' +
+      '<label class="field"><span>Parent’s phone</span>' +
+        '<input id="nsPhone" type="tel" inputmode="numeric" placeholder="10 digits" /></label>' +
+      '<label class="field"><span>Instrument</span><select id="nsIns">' +
+        ins.map(function (i) { return '<option value="' + esc(i.name) + '">' + esc(i.name) + "</option>"; }).join("") +
+      "</select></label>" +
+      '<label class="field"><span>Comes on</span><select id="nsBatch">' +
+        bs.map(function (b) { return '<option value="' + b.id + '">' + esc(b.name) + "</option>"; }).join("") +
+      "</select></label>" +
+      '<div class="muted" style="margin:-2px 0 14px">The fee is set from the ' +
+        "instrument. You do not need to enter it.</div>" +
+      '<button class="btn" id="nsSave">Save student</button>' +
+      '<button class="btn ghost" id="nsCancel" style="margin-top:8px">Cancel</button></div>';
+  }
+
+  /* ---------- render ---------- */
+  function render() {
+    /* Which instrument is painted behind the page. NOT data-tab: the
+       tab buttons are found with closest("[data-tab]"), so putting
+       that attribute on <body> made every click anywhere in the app
+       match it and be handled as a tab switch. Nothing else in the
+       delegated handler ever ran — no marking, no filtering — and it
+       still LOOKED right, because re-entering the current tab
+       re-renders the same screen. */
+    document.body.setAttribute("data-room", S.tab);
+    document.body.classList.toggle("signed-out", !MZ.signedIn());
+    if (!MZ.signedIn()) return gate();
+    drawTabs();
+    var sub = S.tab === "register" ? "Attendance register"
+            : S.tab === "dues" ? "Fees to collect" : "Money this month";
+    var inner = S.tab === "add" ? viewAdd()
+              : S.tab === "register" ? viewRegister()
+              : S.tab === "dues" ? viewDues() : viewMoney();
+    /* The sheets sit ON the tab, so cancelling always returns him to
+       exactly where he was rather than to some remembered screen. */
+    if (S.who)    inner += viewWho();
+    if (S.picker) inner += viewPicker();
+    if (S.pay)    inner += viewPay();
+    /* Read and clear: the entrance animation belongs to the render
+       that follows a tab change, not to the twenty re-renders that
+       follow marking twenty children. */
+    var fresh = S.fresh; S.fresh = false;
+    root.innerHTML = header(sub) + '<div class="wrap' + (fresh ? " fresh" : "") + '">' +
+      (S.err ? '<div class="err">' + esc(S.err) + "</div>" : "") + inner + "</div>";
+    playSection();
+  }
+
+  /* THE SECTION PLAYS ITSELF.
+     Marking a drummer in makes the drum on that section's heading get
+     hit; a guitarist makes the strings wobble; a pianist presses a
+     key. Each is the gesture that instrument actually makes, ~450ms,
+     a few pixels of travel, and only ever ONE of them at a time —
+     the section he just touched. Anything more on a screen he uses
+     between students is decoration he will learn to ignore. */
+  var PLAY = {
+    Drums: "drum", Piano: "key", Keyboard: "key",
+    Guitar: "string", Ukulele: "string", Violin: "string",
+    Vocals: "voice", Flute: "wind"
+  };
+  function playSection() {
+    var p = S.pulse; S.pulse = null;
+    if (!p || !p.sport) return;
+    var el = root.querySelector('[data-ig="' + cssq(p.sport) + '"]');
+    if (!el) return;
+    el.classList.add("play-" + (PLAY[p.sport] || "key"),
+                     p.kind === "absent" ? "play-off" : "play-on");
+  }
+  /* A section name goes into a CSS selector, and "Vocals" is safe but
+     nothing guarantees the next instrument is. */
+  function cssq(v) { return String(v).replace(/["\\]/g, "\\$&"); }
+
+  /* ---------- one delegated click handler ---------- */
+  /* EVERYTHING YOU TOUCH SOUNDS.
+     Softer than the register — marking a child is the loud thing on
+     this screen and nothing else should compete with it. A filter
+     chip plays its own instrument, which is the nicest of these: tap
+     Violin and you hear one. */
+  /* ============================================================
+     PENCIL IS FOR THE REGISTER, AND ONLY THE REGISTER.
+
+     Graphite is the sound of MARKING A CHILD — a tick, a strike, a
+     rub-out. It used to leak out across the filters, the tabs, the
+     day arrows and the view toggle, and once paper is the sound of
+     everything it stops being the sound of anything. It now appears
+     in exactly one place in this file: cycle().
+
+     Everything else is an instrument, and no two controls share one.
+     The rule that picks which: play the thing the control is ABOUT.
+     ============================================================ */
+  var VOICE = {
+    Piano: struck, Keyboard: reed, Guitar: pluck, Violin: bow,
+    Ukulele: pluck, Drums: hit, Vocals: voiceNote, Flute: breath
+  };
+  /* Circling "Drums" plays a drum. Circling "Violin" plays a bow.
+     The filter names an instrument, so the obvious sound for it is
+     that instrument, and eight filters get eight voices for free. */
+  function playInstrument(name, level) {
+    var i = inst(name);
+    return (VOICE[name] || pluck)(i.note, level === undefined ? 0.75 : level);
+  }
+
+  var TAB_SOUND = {
+    register: function () { struck(60, 0.6); },   /* piano — the register's home */
+    dues:     function () { bow(64, 0.55); },     /* violin — the tuner */
+    money:    function () { woodThunk(0.7); },    /* woodblock — the ledger stamp */
+    add:      function () { voiceNote(69, 0.5); } /* a voice — someone new */
+  };
+
+  function clickTone(t) {
+    if (!t.closest) return;
+    var el;
+    if ((el = t.closest("[data-tab]"))) {
+      var f = TAB_SOUND[el.getAttribute("data-tab")];
+      return f ? f() : struck(60, 0.6);
+    }
+    /* an instrument filter plays its own instrument */
+    if ((el = t.closest("[data-fi]"))) {
+      var v = el.getAttribute("data-fi");
+      return v ? playInstrument(v, 0.7) : reed(72, 0.5);   /* "Everyone" — the organ, all of them */
+    }
+    /* the day filter is not an instrument, so it gets the lowest
+       voice in the room and cannot be confused with one */
+    if (t.closest("[data-fb]"))             return pluck(40, 0.75);        /* double bass */
+    if (t.closest("[data-clear]"))          return breath(74, 0.5);        /* flute — clearing the air */
+    if (t.closest("[data-mode]"))           return reed(67, 0.55);         /* keyboard — changing register */
+    if (t.closest("[data-day],[data-mon]")) return struck(76, 0.45);       /* a high piano step */
+    if (t.closest("[data-off]"))            return breath(69, 0.45);
+    /* opening a child's card plays THAT child's instrument */
+    if ((el = t.closest("[data-who],[data-pick],[data-paid]"))) {
+      var sp = el.getAttribute("data-sport");
+      return sp ? playInstrument(sp, 0.6) : pluck(64, 0.55);
+    }
+    if (t.closest(".acts .paid"))           return intoTune(72, 42, 1);    /* flat, then true */
+    if (t.closest("#exSave"))               return woodThunk(0.9);
+    if (t.closest(".acts a"))               return bow(67, 0.5);           /* the ask goes out */
+    if (t.closest(".btn"))                  return pluck(65, 0.6);         /* guitar */
+  }
+
+  document.addEventListener("click", function (e) {
+    var t = e.target;
+    if (t && t.closest && !t.closest("[data-mark]")) clickTone(t);
+    var tab = t.closest("[data-tab]");
+    if (tab) { S.tab = tab.getAttribute("data-tab"); S.err = ""; enter(); return; }
+    if (t.closest("#out")) { MZ.signOut(); location.reload(); return; }
+
+    var mk = t.closest("[data-mark]"); if (mk) { cycle(mk); return; }
+
+    var dd = t.closest("[data-day]");
+    if (dd) { S.day = shiftDay(S.day, +dd.getAttribute("data-day")); S.showOff = false; loadRegister(); render(); return; }
+    var dm = t.closest("[data-mon]");
+    if (dm) {
+      var n = S.month.m + (+dm.getAttribute("data-mon"));
+      S.month = n < 1 ? { y: S.month.y - 1, m: 12 } : n > 12 ? { y: S.month.y + 1, m: 1 } : { y: S.month.y, m: n };
+      (S.tab === "money" ? loadMoney : loadRegister)(); render(); return;
+    }
+    if (t.closest("[data-clear]")) { S.fIns = null; S.fBat = null; S.q = ""; render(); return; }
+    var fi = t.closest("[data-fi]");
+    if (fi) { var v = fi.getAttribute("data-fi"); S.fIns = v || null; S.q = ""; render(); return; }
+    var fb = t.closest("[data-fb]");
+    if (fb) { var n = +fb.getAttribute("data-fb"); S.fBat = S.fBat === n ? null : n; render(); return; }
+    if (t.closest("[data-off]")) { S.showOff = true; render(); return; }
+    var md = t.closest("[data-mode]");
+    if (md) { S.mode = md.getAttribute("data-mode"); loadRegister(); render(); return; }
+
+    if (t.closest("[data-add]")) {
+      S.tab = "add";
+      MZ.reference().then(function (r) { S.ref = r; render(); }).catch(fail);
+      render(); return;
+    }
+    if (t.closest("#nsCancel")) { S.tab = "register"; render(); return; }
+    if (t.closest("#nsSave")) { saveStudent(); return; }
+    if (t.closest("#exSave")) { saveExpense(); return; }
+
+    /* WhatsApp is a real <a> so the OS opens it. window.open returns
+       null whenever noopener is set — that is success, not failure —
+       so nothing here inspects a handle. We only record that he asked. */
+    var wa = t.closest("[data-sent]");
+    if (wa) {
+      MZ.logReminder({ enrollment: +wa.getAttribute("data-sent"),
+                       amount: +wa.getAttribute("data-amt"),
+                       phone: wa.getAttribute("data-ph") })
+        .then(function () { loadDues(); }).catch(function () {});
+      return;
+    }
+    var pd = t.closest("[data-paid]");
+    if (pd) {
+      openPay(+pd.getAttribute("data-paid"), pd.getAttribute("data-nm"),
+              pd.getAttribute("data-sport"), +pd.getAttribute("data-amt"));
+      return;
+    }
+    if (t.closest("[data-other]")) { loadPicker(); return; }
+    var pk = t.closest("[data-pick]");
+    if (pk) {
+      S.picker = null;
+      openPay(+pk.getAttribute("data-pick"), pk.getAttribute("data-nm"),
+              pk.getAttribute("data-sport"), null);
+      return;
+    }
+    if (t.closest("#pkCancel")) { S.picker = null; render(); return; }
+
+    var who = t.closest("[data-who]");
+    if (who) { openWho(who); return; }
+    if (t.closest("#whCancel")) { S.who = null; S.err = ""; render(); return; }
+    if (t.closest("#whSave"))   { saveWho(); return; }
+    if (t.closest("#whStop"))   { S.who.confirmStop = true; render(); return; }
+    if (t.closest("#whStopNo")) { S.who.confirmStop = false; render(); return; }
+    if (t.closest("#whStopYes")){ stopWho(); return; }
+    if (t.closest("#whPay")) {
+      var w = S.who; S.who = null;
+      openPay(w.enrollment, w.name, w.sport, null);
+      return;
+    }
+
+    /* Undoing a payment. void_payment() also recomputes the months it
+       had covered, so the family's next due date goes back to what it
+       was — which a status flip on the row would not do. */
+    var vd = t.closest("[data-void]");
+    if (vd) {
+      var id = +vd.getAttribute("data-void");
+      if (!window.confirm("Cancel this payment? The family's next due date goes back to what it was.")) return;
+      MZ.voidPayment(id).then(function () { toast("Payment cancelled"); loadMoney(); }).catch(fail);
+      return;
+    }
+    var pm = t.closest("[data-paymonths]");
+    if (pm) { S.pay.months = +pm.getAttribute("data-paymonths"); repriceAndRender(); return; }
+    var pmo = t.closest("[data-paymode]");
+    if (pmo) { S.pay.mode = pmo.getAttribute("data-paymode"); render(); return; }
+    if (t.closest("#payGo")) { confirmPay(); return; }
+    if (t.closest("#payCancel")) { S.pay = null; S.err = ""; render(); return; }
+  });
+  document.addEventListener("input", function (e) {
+    if (e.target.id === "pq" && S.picker) {
+      S.picker.q = e.target.value; var pv = S.picker.q;
+      render();
+      var pn = document.getElementById("pq"); if (pn) { pn.value = pv; pn.focus(); }
+      return;
+    }
+    if (e.target.id === "q") { S.q = e.target.value; var v = S.q;
+      var cur = document.getElementById("q"); render();
+      var n = document.getElementById("q"); if (n) { n.value = v; n.focus(); } }
+  });
+
+  function saveStudent() {
+    var b = document.getElementById("nsSave");
+    b.disabled = true; b.textContent = "Saving…";
+    MZ.addStudent({
+      name: document.getElementById("nsName").value,
+      phone: document.getElementById("nsPhone").value.replace(/\D/g, ""),
+      instrument: document.getElementById("nsIns").value,
+      batch: +document.getElementById("nsBatch").value,
+      centre: (S.ref.centres[0] || {}).id
+    }).then(function (m) {
+      toast(m.name + " added"); S.tab = "register"; loadRegister(); render();
+    }).catch(function (e) { b.disabled = false; b.textContent = "Save student"; fail(e); });
+  }
+
+  function saveExpense() {
+    var b = document.getElementById("exSave");
+    var amt = +document.getElementById("exAmt").value;
+    var what = document.getElementById("exWhat").value.trim();
+    b.disabled = true; b.textContent = "Saving…";
+    MZ.addExpense({ amount: amt, detail: what || "General", category: "General" })
+      .then(function () { toast("Expense saved"); loadMoney(); })
+      .catch(function (e) { b.disabled = false; b.textContent = "Save expense"; fail(e); });
+  }
+
+  /* ---------- entering a tab loads only what that tab needs ---------- */
+  function enter() {
+    S.fresh = true;
+    render();
+    if (S.tab === "register") loadRegister();
+    else if (S.tab === "dues") loadDues();
+    else if (S.tab === "money") loadMoney();
+  }
+  function boot() {
+    MZ.report("page_view", {});
+    /* The register needs the batches' day patterns to know who is even
+       expected today, and this arrives after the first paint. Without
+       the re-render it stayed on the safe fallback — show everybody —
+       so the filter looked broken while being perfectly correct about
+       what it knew at the time. */
+    MZ.reference().then(function (r) { S.ref = r; render(); }).catch(function () {});
+    enter();
+  }
+
+  window.addEventListener("error", function (e) {
+    MZ.report("client_error", { msg: String((e && e.message) || "error").slice(0, 140) });
+  });
+
+  if (MZ.signedIn()) boot(); else gate();
+})();
+</script>
+</body></html>

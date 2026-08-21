@@ -320,6 +320,22 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
       "circling an instrument no longer plays that instrument");
   });
 
+  /* /try/ is published on the same origin as the app and writes a fake
+     session into the same localStorage key. If one ever survived, the
+     real app would boot past its sign-in into a register that cannot
+     load — a broken app, not a stale preview. */
+  await check("the published preview's fake session cannot sign anyone into the real app", async () => {
+    store["mz-session"] = JSON.stringify({
+      access_token: "preview", refresh_token: "preview",
+      expires_at: Date.now() + 864e5, email: "preview@example.invalid",
+      role: "staff", tenant: "mezzo"
+    });
+    assert(ctx.MZ.signedIn() === false,
+      "a preview token signed someone into the real app");
+    assert(store["mz-session"] === undefined,
+      "the preview token was refused but left behind to be found again");
+  });
+
   /* The day patterns arrive on a SECOND request, after the register has
      already painted. Without a re-render when they land, the filter sits
      on its safe fallback — show everybody — and looks broken while being

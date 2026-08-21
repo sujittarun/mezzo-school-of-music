@@ -33,7 +33,18 @@
 
   /* ---------------- session ---------------- */
   function session() {
-    try { return JSON.parse(localStorage.getItem(SKEY)); } catch (e) { return null; }
+    var s;
+    try { s = JSON.parse(localStorage.getItem(SKEY)); } catch (e) { return null; }
+    /* THE PREVIEW'S FAKE SESSION CAN NEVER REACH THE REAL APP.
+       /try/ is published on the same origin as the app, so it shares
+       one localStorage. It clears its own token on pagehide, but
+       pagehide is not guaranteed on iOS — and a leftover "preview"
+       token would boot index.html straight past the sign-in screen
+       into a register that cannot load, which reads as a broken app
+       rather than as a stale preview. So the real client refuses it
+       outright and forgets it. */
+    if (s && s.access_token === "preview") { clear(); return null; }
+    return s;
   }
   function save(s)  { try { localStorage.setItem(SKEY, JSON.stringify(s)); } catch (e) {} }
   function clear()  { try { localStorage.removeItem(SKEY); } catch (e) {} }
