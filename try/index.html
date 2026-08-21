@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mezzo — preview (fixtures, not real data)</title>
-<link rel="stylesheet" href="../assets/css/app.css?v=20260821b">
+<base href="../"><link rel="stylesheet" href="assets/css/app.css?v=20260821h">
 </head><body>
 
 <!-- ============================================================
@@ -87,8 +87,8 @@ window.fetch = function (url) {
     json: function () { return Promise.resolve(body); } });
 };
 </script>
-<script src="../assets/js/cloud.js"></script>
-<script src="../assets/js/glass.js"></script>
+<script src="assets/js/cloud.js"></script>
+<script src="assets/js/glass.js"></script>
 <script>
 /* ============================================================
    MEZZO — the whole app.
@@ -826,6 +826,11 @@ window.fetch = function (url) {
           (S.day === MZ.todayIso() ? "Today" : (isSunday(S.day) ? "Sunday · closed" : "")) +
         "</span></div>" +
         '<button data-day="1"' + (S.day >= MZ.todayIso() ? " disabled" : "") + ">›</button>" +
+        /* INSIDE the daybar. As a sibling it had no positioned
+           ancestor, so position:absolute walked all the way up and the
+           peg landed on top of Sign out. */
+        '<button class="peg" data-add="1" aria-label="Add a student">' +
+        '<span class="pin"></span><span class="lbl">Add</span></button>' +
       "</div>";
     } else {
       var mn = new Date(S.month.y, S.month.m - 1, 1)
@@ -834,14 +839,11 @@ window.fetch = function (url) {
         '<button data-mon="-1">‹</button>' +
         '<div class="d"><b>' + esc(mn) + "</b><span>whole month</span></div>" +
         '<button data-mon="1">›</button>' +
+        '<button class="peg" data-add="1" aria-label="Add a student">' +
+        '<span class="pin"></span><span class="lbl">Add</span></button>' +
       "</div>";
     }
 
-    /* The peg sits at the top, beside the date, because that is where
-       he looks first and because a full-width button at the FOOT of a
-       ninety-six-name register is a button nobody scrolls to. */
-    body += '<button class="peg" data-add="1" aria-label="Add a student">' +
-      '<span class="pin"></span><span class="lbl">Add</span></button>';
     body += '<div class="sub-toggle">' +
       '<button data-mode="today"' + (S.mode === "today" ? ' class="on"' : "") + ">One day</button>" +
       '<button data-mode="month"' + (S.mode === "month" ? ' class="on"' : "") + ">Whole month</button>" +

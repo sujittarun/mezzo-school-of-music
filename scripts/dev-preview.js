@@ -191,7 +191,7 @@ return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mezzo — preview (fixtures, not real data)</title>
-<link rel="stylesheet" href="${base}assets/css/app.css?v=20260821b">
+${base}<link rel="stylesheet" href="assets/css/app.css?v=20260821h">
 </head><body>
 ${headOfBody}
 <div id="root"></div><div class="tabs" id="tabs" hidden></div>
@@ -229,8 +229,8 @@ window.fetch = function (url) {
     json: function () { return Promise.resolve(body); } });
 };
 </script>
-<script src="${base}assets/js/cloud.js"></script>
-<script src="${base}assets/js/glass.js"></script>
+<script src="assets/js/cloud.js"></script>
+<script src="assets/js/glass.js"></script>
 <script>${app}</script>
 </body></html>`;
 }
@@ -245,5 +245,10 @@ fs.writeFileSync(path.join(ROOT, "_dev-preview.html"), build(""));
    WhatsApp links to invented phone numbers.
    Assets live one level up from /try/. */
 fs.mkdirSync(path.join(ROOT, "try"), { recursive: true });
-fs.writeFileSync(path.join(ROOT, "try", "index.html"), build("../"));
+/* ONE <base>, not a prefix per asset. Prefixing the stylesheet and
+   the scripts by hand missed every image the app builds at runtime —
+   the logo in the header came out a broken-image box on the iPad, and
+   nothing in this script could have known about it. A base URL fixes
+   every relative path at once, including the ones not written here. */
+fs.writeFileSync(path.join(ROOT, "try", "index.html"), build('<base href="../">'));
 console.log("wrote _dev-preview.html and try/index.html");
