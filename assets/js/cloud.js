@@ -209,8 +209,13 @@
      An empty box saved over a real number is how a family loses its
      WhatsApp reminders without anybody noticing. */
   function student(memberId) {
+    /* `joined` and the enrolment's own start come along too: how long
+       a child has been coming is the first thing worth knowing about
+       them and it costs nothing to ask for in a select that is already
+       being made. */
     return get("/members?" + T + "&id=eq." + memberId +
-               "&select=id,name,phone,parent_name,parent_phone")
+               "&select=id,name,phone,parent_name,parent_phone,joined," +
+               "enrollments(id,sport,batch_id,status,joined_on,renewal_on)")
       .then(function (rows) { return (rows && rows[0]) || null; });
   }
   /* ============================================================
@@ -297,6 +302,7 @@
     if (!a.name)       return Promise.reject(new Error("A name is needed."));
     if (!a.instrument) return Promise.reject(new Error("Pick an instrument."));
     if (!a.days || !a.days.length) return Promise.reject(new Error("Pick at least one day."));
+    var plan = Math.max(1, Math.min(12, Number(a.planMonths) || 1));
     return batchForDays(a.days).then(function (batch) {
     return post("/members", {
       tenant_id: TENANT, name: a.name.trim(), phone: a.phone || null,
@@ -306,8 +312,15 @@
       var m = rows[0];
       return post("/enrollments", {
         tenant_id: TENANT, member_id: m.id, centre_id: a.centre, batch_id: batch.id,
-        sport: a.instrument, plan_months: 1, joined_on: a.joined || todayIso(),
-        renewal_on: a.renewalOn || monthOn(a.joined || todayIso(), 1), status: "active"
+        /* PLAN_MONTHS IS NOT DECORATION. renewal_on is the date
+           reminder_queue() measures lateness from, and record_fee_payment()
+           rolls it forward by the plan. Writing 1 for a child who paid
+           for six months would have chased that family five times for
+           money they had already handed over. */
+        sport: a.instrument, plan_months: plan,
+        joined_on: a.joined || todayIso(),
+        renewal_on: a.renewalOn || monthOn(a.joined || todayIso(), plan),
+        status: "active"
       }).then(function () { report("student_added", {}); return m; });
     });
     });
@@ -341,6 +354,7 @@
   function moveEnrollment(enrollmentId, a) {
     var body = {};
     if (a.instrument) body.sport = a.instrument;
+    if (a.planMonths) body.plan_months = Math.max(1, Math.min(12, Number(a.planMonths)));
     var days = a.days && a.days.length ? a.days : null;
     return (days ? batchForDays(days) : Promise.resolve(null)).then(function (batch) {
       if (batch) body.batch_id = batch.id;

@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" />
-<link rel="stylesheet" href="assets/css/app.css?v=20260821f" />
+<link rel="stylesheet" href="assets/css/app.css?v=20260821h" />
 </head>
 <body>
 <!-- ============================================================
@@ -93,11 +93,15 @@
     picker: null,             // the student list, when choosing who paid
     who: null,                // the student card: {enrollment,member,name,sport,batch,phone}
     nsDays: [],               // the days ticked on the add-student form
+    nsPlan: 1,                // how many months they are paying for
     pulse: null,              // {sport, kind} — the section to play after the next paint
     fIns: null,               // instrument filter, null = all
     showOff: false,
     register: null,           // rows from attendance_month
     dues: null,
+    duesReg: null,            // this month's register, for the family card
+    fam: null,                // the family card that is open: an index into S.dues
+    famInfo: null,            // that member's row, once it lands
     money: null,
     ref: null,
     busy: {},                 // enrollment_id -> true while a mark is in flight
@@ -807,6 +811,11 @@
       "</div>";
     }
 
+    /* The peg sits at the top, beside the date, because that is where
+       he looks first and because a full-width button at the FOOT of a
+       ninety-six-name register is a button nobody scrolls to. */
+    body += '<button class="peg" data-add="1" aria-label="Add a student">' +
+      '<span class="pin"></span><span class="lbl">Add</span></button>';
     body += '<div class="sub-toggle">' +
       '<button data-mode="today"' + (S.mode === "today" ? ' class="on"' : "") + ">One day</button>" +
       '<button data-mode="month"' + (S.mode === "month" ? ' class="on"' : "") + ">Whole month</button>" +
@@ -900,7 +909,6 @@
         'style="padding:8px 16px 4px">' + filterHtml + "</div></div>";
       body += monthGrid(rows);
     }
-    body += '<button class="btn ghost" data-add="1" style="margin-top:6px">+ Add a student</button>';
     return body;
   }
 
@@ -1185,7 +1193,17 @@
      ============================================================ */
   function loadDues() {
     S.dues = null;
-    return MZ.dues().then(function (rows) { S.dues = rows || []; render(); }).catch(fail);
+    /* The register rides along in the same round trip. Opening a
+       family's card needs their attendance, and asking for it only
+       when he taps would put a Tokyo round trip — ~180ms — between the
+       tap and anything appearing. */
+    var r = MZ.monthRange(S.month.y, S.month.m);
+    return Promise.all([MZ.dues(), MZ.register(r.from, r.to)])
+      .then(function (x) {
+        S.dues = Array.isArray(x[0]) ? x[0] : [];
+        S.duesReg = Array.isArray(x[1]) ? x[1] : [];
+        render();
+      }).catch(fail);
   }
   function waLink(d) {
     var ph = String(d.phone || "").replace(/\D/g, "");
@@ -1218,6 +1236,11 @@
     var d = Number(days) || 0;
     return d <= 0 ? 0 : Math.min(1, Math.pow(d / 26, 0.72));
   }
+  /* Three steps, all warm: a nudge, a chase, a problem. Roughly a week,
+     three weeks, and beyond. */
+  function tuneColour(off) {
+    return off < 0.30 ? "var(--warn)" : off < 0.62 ? "#C25A17" : "var(--no)";
+  }
 
   function viewDues() {
     if (!S.dues) return '<div class="note">Loading…</div>';
@@ -1225,7 +1248,7 @@
       return '<div class="card tuner"><div class="tn-allin">' +
         '<div class="tn-ring"><b>\u2713</b></div>' +
         "<b>The whole school is in tune.</b><span>Nobody is overdue.</span>" +
-        '<button class="btn ghost" data-other="1">Someone else paid</button>' +
+        '<button class="btn plec" data-other="1">Someone else paid</button>' +
         "</div></div>";
     }
     var total = S.dues.reduce(function (a, d) { return a + Number(d.amount || 0); }, 0);
@@ -1233,42 +1256,123 @@
       '<div class="rowline" style="margin-bottom:4px">' +
         "<div><b style=\"font-size:19px\">" + S.dues.length + " out of tune</b>" +
         '<div class="muted">' + inr(total) + " in total</div></div></div>" +
-      '<button class="btn ghost" data-other="1" style="margin:8px 0 14px">' +
-        "Someone else paid</button>" +
-      S.dues.map(function (d) {
-        var blocked = d.blocked_reason === "missing_phone";
+      '<div class="muted" style="margin:6px 0 12px">Tap a name to hear where they sit</div>' +
+      S.dues.map(function (d, i) {
         var off = flatness(d.days_since), hue = inst(d.sport).hue;
-        var col = off < 0.12 ? "var(--ok)" : off < 0.5 ? "var(--warn)" : "var(--no)";
-        /* left of centre is flat; 50% is dead centre and 7% is as flat
-           as the meter draws */
+        /* NEVER GREEN. Green is "in tune" — settled — and nobody on
+           this list is settled: reminder_queue() only returns families
+           who owe. One day late came out green and nineteen days came
+           out red, which read as two different KINDS of thing rather
+           than two points on one scale. Amber to red, monotonic, so
+           the colour only ever says "how late". */
+        var col = tuneColour(off);
         var left = (50 - off * 43).toFixed(1);
         var ticks = "";
         for (var t = 0; t < 11; t++) {
           ticks += '<i class="tn-tk' + (t === 5 ? " mid" : "") + '" style="left:' + (t * 10) + '%"></i>';
         }
-        return '<div class="due tuned" style="--hue:' + hue + '">' +
-          '<div class="hd">' +
-            '<span class="tn-note" style="color:' + col + '">' +
-              (TUNER_NOTE[d.sport] || "\u266a") + "</span>" +
-            "<b>" + esc(d.member_name) + "</b><em>" + inr(d.amount) + "</em></div>" +
-          '<div class="tn-meter"><div class="tn-ticks">' + ticks +
-            '<span class="tn-gate"></span></div>' +
+        /* ONE ROW, ONE TAP. The WhatsApp and Paid buttons used to sit
+           on every row, which made each family 150px tall and the list
+           a wall of green and violet. They live in the family's own
+           card now: the list is for SEEING who is flat, the card is
+           for doing something about it. */
+        return '<button class="due tuned tn-row" data-fam="' + i + '" style="--hue:' + hue + '">' +
+          '<span class="tn-note" style="color:' + col + '">' +
+            (TUNER_NOTE[d.sport] || "\u266a") + "</span>" +
+          '<span class="tn-who"><b>' + esc(d.member_name) + "</b>" +
+            /* "asked today" did not fit beside the instrument and came
+               out as "Piano · ask…". The full sentence is on the card;
+               the row only needs to say that it happened. */
+            "<span>" + esc(d.sport || "") +
+            (d.already_sent ? " \u00b7 asked" : "") + "</span></span>" +
+          '<span class="tn-meter"><span class="tn-ticks">' + ticks +
+            '<span class="tn-gate"></span></span>' +
             '<span class="ndl' + (off > 0.12 ? " off" : "") +
               '" style="left:' + left + '%;background:' + col + '"></span>' +
             '<span class="tn-cents">' + d.days_since + " day" + (d.days_since === 1 ? "" : "s") +
-            " flat</span></div>" +
-          '<div class="sub">' + esc(d.sport || "") +
-            (d.already_sent ? " \u00b7 asked today" : "") + "</div>" +
-          '<div class="acts">' +
-            (blocked
-              ? '<button disabled style="opacity:.5">No phone number</button>'
-              : '<a class="wa" target="_blank" rel="noopener" href="' + esc(waLink(d)) + '"' +
-                ' data-sent="' + d.enrollment_id + '" data-amt="' + d.amount + '"' +
-                ' data-ph="' + esc(d.phone || "") + '">WhatsApp</a>') +
-            '<button class="paid" data-paid="' + d.enrollment_id + '" data-amt="' + d.amount +
-              '" data-nm="' + esc(d.member_name) + '" data-sport="' + esc(d.sport || "") + '">Paid</button>' +
-          "</div></div>";
-      }).join("") + "</div>";
+            " flat</span></span>" +
+          '<span class="tn-amt"><b>' + inr(d.amount) + "</b></span>" +
+        "</button>";
+      }).join("") +
+      '<button class="btn plec" data-other="1" style="margin-top:14px">' +
+        "Someone else paid</button></div>";
+  }
+
+  /* ============================================================
+     THE FAMILY CARD
+
+     Opened from a name on the tuner. It answers the question he
+     actually has before he sends a message — is this a family that
+     has been here for years and forgets, or one that joined in June
+     and is already slipping? — and only then offers the two things he
+     can do about it.
+
+     Every number on it is real. Nothing is computed that the database
+     did not already say, and no fee is priced here: the amount is the
+     one reminder_queue() returned.
+     ============================================================ */
+  function monthsBetween(a, b) {
+    if (!a) return null;
+    var d0 = new Date(a), d1 = new Date(b || MZ.todayIso());
+    if (isNaN(d0)) return null;
+    var m = (d1.getFullYear() - d0.getFullYear()) * 12 + (d1.getMonth() - d0.getMonth());
+    if (d1.getDate() < d0.getDate()) m--;
+    return Math.max(0, m);
+  }
+  function viewFam() {
+    var d = S.dues && S.dues[S.fam];
+    if (!d) return "";
+    var w = S.famInfo || {};
+    var reg = (S.duesReg || []).filter(function (r) {
+      return r.enrollment_id === d.enrollment_id;
+    })[0];
+
+    /* how long they have been coming */
+    var since = w.joined || (w.enrollments && w.enrollments[0] && w.enrollments[0].joined_on);
+    var months = monthsBetween(since);
+
+    /* this month, over the days this child was actually expected */
+    var seen = 0, came = 0, run = 0, best = 0;
+    if (reg) {
+      Object.keys(reg.marks || {}).sort().forEach(function (iso) {
+        var m = reg.marks[iso];
+        if (m === "present") { came++; seen++; run++; if (run > best) best = run; }
+        else if (m === "absent") { seen++; run = 0; }
+      });
+    }
+    var rate = seen ? Math.round(came / seen * 100) : null;
+    var days = reg ? MZ.dayLabel(daysOf(reg.batch_id)) : "";
+
+    function stat(v, k) { return '<div class="fst"><b>' + v + "</b><span>" + k + "</span></div>"; }
+
+    return '<div class="sheet" id="famSheet"><div class="card fam">' +
+      '<div class="fam-hd" style="--hue:' + inst(d.sport).hue + '">' +
+        '<span class="ig">' + svgIcon(inst(d.sport)) + "</span>" +
+        "<div><b>" + esc(d.member_name) + "</b><span>" + esc(d.sport || "") +
+          (days ? " \u00b7 " + esc(days) : "") +
+          (d.already_sent ? " \u00b7 asked today" : "") + "</span></div></div>" +
+
+      '<div class="fstats">' +
+        stat(months == null ? "\u2013" : months, months === 1 ? "month here" : "months here") +
+        stat(rate == null ? "\u2013" : rate + "%", "here this month") +
+        stat(came || "\u2013", came === 1 ? "lesson" : "lessons") +
+        stat(best || "\u2013", "best run") +
+      "</div>" +
+
+      '<div class="fowe"><span>Owing</span><b>' + inr(d.amount) + "</b>" +
+        "<i>" + d.days_since + " day" + (d.days_since === 1 ? "" : "s") + " late</i></div>" +
+
+      (d.blocked_reason === "missing_phone"
+        ? '<div class="note" style="margin:0 0 10px">No phone number for this family, ' +
+          "so there is nobody to message.</div>"
+        : '<a class="btn key wa" target="_blank" rel="noopener" href="' + esc(waLink(d)) + '"' +
+          ' data-sent="' + d.enrollment_id + '" data-amt="' + d.amount + '"' +
+          ' data-ph="' + esc(d.phone || "") + '">Send the reminder</a>') +
+      '<button class="btn key paid" data-paid="' + d.enrollment_id + '" data-amt="' + d.amount +
+        '" data-nm="' + esc(d.member_name) + '" data-sport="' + esc(d.sport || "") +
+        '">They have paid</button>' +
+      '<button class="btn plec" id="famClose">Close</button>' +
+    "</div></div>";
   }
 
   function loadMoney() {
@@ -1753,8 +1857,17 @@
         (S.nsDays && S.nsDays.length
           ? '<em class="daysum">' + esc(MZ.dayLabel(S.nsDays)) + "</em>"
           : '<em class="daysum dim">Pick the days he comes</em>') + "</div>" +
+      '<div class="field"><span>Paying for</span>' +
+        '<div class="stops" id="nsPlan">' +
+          [1, 3, 6, 12].map(function (n) {
+            return '<button type="button" data-plan="' + n + '"' +
+              ((S.nsPlan || 1) === n ? ' class="on"' : "") + '><i><em>' + n +
+              "</em></i><span>" + (n === 1 ? "month" : "months") + "</span></button>";
+          }).join("") +
+        "</div></div>" +
       '<div class="muted" style="margin:-2px 0 14px">The fee is set from the ' +
-        "instrument. You do not need to enter it.</div>" +
+        "instrument \u2014 you do not need to enter it. The next reminder falls " +
+        (S.nsPlan || 1) + ((S.nsPlan || 1) === 1 ? " month" : " months") + " after they start.</div>" +
       '<button class="btn" id="nsSave">Save student</button>' +
       '<button class="btn ghost" id="nsCancel" style="margin-top:8px">Cancel</button></div>';
   }
@@ -1781,6 +1894,7 @@
               : S.tab === "dues" ? viewDues() : viewMoney();
     /* The sheets sit ON the tab, so cancelling always returns him to
        exactly where he was rather than to some remembered screen. */
+    if (S.fam != null) inner += viewFam();
     if (S.who)    inner += viewWho();
     if (S.picker) inner += viewPicker();
     if (S.pay)    inner += viewPay();
@@ -1873,13 +1987,23 @@
     if (t.closest("[data-day],[data-mon]")) return struck(76, 0.45);       /* a high piano step */
     if (t.closest("[data-off]"))            return breath(69, 0.45);
     /* opening a child's card plays THAT child's instrument */
-    if ((el = t.closest("[data-who],[data-pick],[data-paid]"))) {
+    /* NOT [data-paid]. That rule sat above the one below and stole the
+       "they have paid" button, which then played the child's drum
+       instead of the flat note gliding up into true — the one sound in
+       this app that means something specific. */
+    if ((el = t.closest("[data-who],[data-pick]"))) {
       var sp = el.getAttribute("data-sport");
       return sp ? playInstrument(sp, 0.6) : pluck(64, 0.55);
     }
-    if (t.closest(".acts .paid"))           return intoTune(72, 42, 1);    /* flat, then true */
+    /* Opening a family on the tuner plays their child's instrument. */
+    if ((el = t.closest("[data-fam]"))) {
+      var fd = S.dues && S.dues[+el.getAttribute("data-fam")];
+      return fd ? playInstrument(fd.sport, 0.65) : pluck(64, 0.55);
+    }
+    if (t.closest(".paid"))                 return intoTune(72, 42, 1);    /* flat, then true */
     if (t.closest("#exSave"))               return woodThunk(0.9);
-    if (t.closest(".acts a"))               return bow(67, 0.5);           /* the ask goes out */
+    if (t.closest(".wa"))                   return bow(67, 0.5);           /* the ask goes out */
+    if (t.closest("#famClose"))             return breath(65, 0.4);        /* the card closes */
     if (t.closest(".btn"))                  return pluck(65, 0.6);         /* guitar */
   }
 
@@ -1900,6 +2024,31 @@
       S.month = n < 1 ? { y: S.month.y - 1, m: 12 } : n > 12 ? { y: S.month.y + 1, m: 1 } : { y: S.month.y, m: n };
       (S.tab === "money" ? loadMoney : loadRegister)(); render(); return;
     }
+    var fam = t.closest("[data-fam]");
+    if (fam) {
+      S.fam = +fam.getAttribute("data-fam");
+      S.famInfo = null;
+      var row = S.dues[S.fam];
+      /* How long they have been coming is not in reminder_queue() —
+         it is on the member, and reminder_queue does not promise a
+         member_id either. The register row for the same enrolment
+         does, and it is already in hand from the same round trip. */
+      var rreg = row && (S.duesReg || []).filter(function (x) {
+        return x.enrollment_id === row.enrollment_id; })[0];
+      var mid = (row && row.member_id) || (rreg && rreg.member_id);
+      if (mid) {
+        var want = S.fam;
+        MZ.student(mid).then(function (m) {
+          if (S.fam === want) { S.famInfo = m || {}; render(); }
+        }).catch(function () { if (S.fam === want) { S.famInfo = {}; render(); } });
+      }
+      render(); return;
+    }
+    if (t.closest("#famClose")) { S.fam = null; S.famInfo = null; render(); return; }
+
+    var pl = t.closest("[data-plan]");
+    if (pl) { S.nsPlan = +pl.getAttribute("data-plan"); render(); return; }
+
     var dp = t.closest("[data-daypick]");
     if (dp) {
       var parts = dp.getAttribute("data-daypick").split(":"), d = +parts[1];
@@ -1917,7 +2066,7 @@
     if (md) { S.mode = md.getAttribute("data-mode"); loadRegister(); render(); return; }
 
     if (t.closest("[data-add]")) {
-      S.tab = "add"; S.nsDays = [];
+      S.tab = "add"; S.nsDays = []; S.nsPlan = 1;
       MZ.reference().then(function (r) { S.ref = r; render(); }).catch(fail);
       render(); return;
     }
@@ -1938,6 +2087,7 @@
     }
     var pd = t.closest("[data-paid]");
     if (pd) {
+      S.fam = null; S.famInfo = null;
       openPay(+pd.getAttribute("data-paid"), pd.getAttribute("data-nm"),
               pd.getAttribute("data-sport"), +pd.getAttribute("data-amt"));
       return;
@@ -2002,6 +2152,7 @@
       phone: document.getElementById("nsPhone").value.replace(/\D/g, ""),
       instrument: document.getElementById("nsIns").value,
       days: (S.nsDays || []).slice(),
+      planMonths: S.nsPlan || 1,
       centre: (S.ref.centres[0] || {}).id
     }).then(function (m) {
       toast(m.name + " added"); S.tab = "register"; loadRegister(); render();

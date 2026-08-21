@@ -135,7 +135,8 @@ const fixtures = {
              present_days: Object.values(marks).filter((v) => v === "present").length };
   }),
   dues: STUDENTS.filter((s) => s.n % 7 === 3).map((s, i) => ({
-    enrollment_id: s.n + 1, member_name: s.name, parent_name: "Parent " + s.name.split(" ")[0],
+    enrollment_id: s.n + 1, member_id: s.n + 1,
+    member_name: s.name, parent_name: "Parent " + s.name.split(" ")[0],
     sport: s.sport, amount: s.sport === "Piano" ? 2500 : 1500,
     days_since: 1 + (i * 3) % 26, due_date: isoOf(Math.max(1, DOM - ((i * 3) % 26))),
     phone: "900000" + String(1000 + s.n).slice(-4), already_sent: i % 4 === 0
@@ -160,12 +161,20 @@ const fixtures = {
     { id: 11, category: "Supplies", detail: "Ukulele strings",    amount: 620,   mode: "Cash", on_date: isoOf(18) },
     { id: 12, category: "Upkeep",   detail: "Aircon service",     amount: 2800,  mode: "UPI",  on_date: isoOf(19) }
   ],
-  members: STUDENTS.map((s) => ({
-    id: s.n + 1, name: s.name, phone: "900000" + String(1000 + s.n).slice(-4),
-    parent_name: "Parent " + s.name.split(" ")[0],
-    parent_phone: "900000" + String(1000 + s.n).slice(-4),
-    enrollments: [{ id: s.n + 1, sport: s.sport, batch_id: s.batch, status: "active" }]
-  })),
+  members: STUDENTS.map((s) => {
+    /* joined `tenure` months ago, so "months here" has something real
+       to count */
+    const j = new Date(Y, M - 1 - s.tenure, Math.min(28, 1 + (s.n % 27)));
+    const ji = j.getFullYear() + "-" + String(j.getMonth() + 1).padStart(2, "0") +
+               "-" + String(j.getDate()).padStart(2, "0");
+    return {
+      id: s.n + 1, name: s.name, phone: "900000" + String(1000 + s.n).slice(-4),
+      parent_name: "Parent " + s.name.split(" ")[0],
+      parent_phone: "900000" + String(1000 + s.n).slice(-4), joined: ji,
+      enrollments: [{ id: s.n + 1, sport: s.sport, batch_id: s.batch,
+                      status: "active", joined_on: ji }]
+    };
+  }),
   centres: [{ id: 1, code: "main", name: "Thadagam Road", short_name: "Main", sort: 1 }],
   batches: Object.keys(PATTERN).map((k) => ({
     id: +k, code: "d" + PATTERN[k].join(""), tenant_id: "mezzo",

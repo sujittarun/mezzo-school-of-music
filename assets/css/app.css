@@ -1169,3 +1169,208 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
 .dim-row .hairpin path { fill: none; stroke: var(--no); stroke-width: 1.5; stroke-linecap: round; }
 .dim-row .fg b { font-size: 13px; font-weight: 700; color: var(--no);
   font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ============================================================
+   TWO NEW BUTTONS, BOTH INSTRUMENT-SHAPED
+
+   The rule this app already holds itself to: a guitar-shaped button
+   is a bad button. A shape earns its place only where the geometry
+   already fits the job.
+
+     .btn.key    A PIANO KEY. A key is a tall rectangle with a lip
+                 along its front edge that collapses when you press
+                 it — which is exactly what a primary button is, and
+                 exactly the receipt a primary button should give.
+                 It presses IN, not down: the lip goes, an inner
+                 shadow arrives, and it settles 2px.
+
+     .btn.plec   A PLECTRUM. A rounded triangle, and a secondary
+                 button is already a rounded-triangle's worth of
+                 space. Point down, the way you hold one.
+
+   Both keep the full 52px target. Nothing here trades a tap for a
+   silhouette.
+   ============================================================ */
+.btn.key {
+  position: relative; border: 0; border-radius: 4px 13px 13px 4px;
+  border-bottom: 4px solid rgba(0,0,0,.22);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.30), 0 3px 8px rgba(74,60,32,.16);
+  transition: transform .09s ease-out, border-bottom-width .09s, box-shadow .12s;
+  text-align: center; line-height: var(--tap); padding: 0; text-decoration: none;
+  display: block; margin-bottom: 9px;
+}
+.btn.key:active {
+  transform: translateY(2px); border-bottom-width: 1px;
+  box-shadow: inset 0 4px 8px rgba(0,0,0,.28);
+}
+.btn.key.wa   { background: #128C7E; color: #fff; }
+.btn.key.paid { background: var(--brand); color: #fff; }
+
+/* the plectrum: wider at the shoulders, rounded to a point at the foot */
+/* A plectrum is a SMALL object. Stretched the full width of a card it
+   is just a lozenge — the shape only reads at something near its real
+   proportions, so it is capped and centred rather than filling the
+   row. Still 52px tall, so nothing was traded for the silhouette. */
+/* A REAL plectrum, cut with clip-path. Elliptical border-radius
+   cannot taper a shape — it only rounds a rectangle — so every
+   attempt at this with radii came out a lozenge. The clip is the
+   actual silhouette: square shoulders, shallow sides, a rounded point
+   at the foot.
+
+   64px tall rather than 52 because the point eats the bottom third,
+   and the label has to sit above the taper rather than inside it. The
+   whole 64px is still the target. */
+.btn.plec {
+  position: relative; border: 0; padding: 0;
+  background: #EDE7FA;
+  clip-path: polygon(9% 0, 91% 0, 100% 34%, 50% 100%, 0 34%);
+  width: 100%; max-width: 218px; margin: 0 auto; display: block;
+  height: 64px; color: var(--brand); font-size: 15.5px; font-weight: 700;
+  line-height: 46px;                       /* the label rides high, above the point */
+  transition: transform .1s;
+}
+/* The clip goes on the BUTTON, not on a pseudo-element. A ::before at
+   z-index:-1 inside a positioned card paints behind the card's own
+   background and the plectrum simply vanished — which is what it did
+   the first time. A pick is a solid object anyway, so it does not
+   need the outline that forced the extra layer. */
+.btn.plec:active { transform: scale(.97); background: #E4DAF6; }
+
+/* ---------- the tuner row ---------- */
+.card.tuner .tn-row {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  background: none; border: 0; border-bottom: 1px solid var(--line);
+  padding: 12px 2px 13px; text-align: left; color: inherit;
+  border-left: 3px solid var(--hue); border-radius: 2px; padding-left: 11px;
+}
+.card.tuner .tn-row:last-of-type { border-bottom: 0; }
+.card.tuner .tn-row:active { background: rgba(150,132,92,.12); }
+.card.tuner .tn-who { flex: 1; min-width: 0; }
+.card.tuner .tn-who b { display: block; font-size: 16px; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card.tuner .tn-who span { display: block; font-size: 12.5px; color: var(--ink-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card.tuner .tn-row .tn-meter { flex: none; width: min(140px, 30vw); height: 40px; margin: 0; }
+.card.tuner .tn-row .tn-cents { font-size: 9.5px; }
+.card.tuner .tn-amt { flex: none; text-align: right; }
+.card.tuner .tn-amt b { font-size: 15.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ---------- the family card ---------- */
+.card.fam { width: 100%; max-width: 460px; }
+.fam-hd { display: flex; align-items: center; gap: 11px; margin-bottom: 15px; }
+.fam-hd .ig { width: 34px; height: 34px; flex: none; color: var(--hue); }
+.fam-hd .ig svg { width: 34px; height: 34px; display: block; fill: none;
+  stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.fam-hd b { display: block; font-size: 20px; line-height: 1.15; }
+.fam-hd span { display: block; font-size: 13px; color: var(--ink-3); }
+
+/* four numbers, because four is what fits before they stop being read */
+.fstats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-bottom: 14px; }
+.fst { background: #FFFDF6; border: 1px solid var(--rule); border-radius: 11px;
+  padding: 10px 4px 9px; text-align: center; }
+.fst b { display: block; font-size: 19px; font-weight: 700; line-height: 1.1;
+  font-variant-numeric: tabular-nums; }
+.fst span { display: block; font-size: 10.5px; color: var(--ink-3); line-height: 1.25;
+  margin-top: 3px; }
+
+.fowe { display: flex; align-items: baseline; gap: 9px; padding: 12px 13px; margin-bottom: 14px;
+  background: var(--no-bg); border-radius: 12px; }
+.fowe span { font-size: 13.5px; color: var(--ink-2); font-weight: 600; }
+.fowe b { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.fowe i { margin-left: auto; font-style: normal; font-size: 12.5px; font-weight: 700;
+  color: var(--no); }
+
+/* ============================================================
+   THREE MORE THINGS THAT ARE NOT BUTTONS
+
+   The app had ended up with two shapes — a rectangle and a pick — and
+   two shapes used everywhere is the same as one. These three are each
+   a real object from a real instrument, and each is used where its
+   mechanics already match the job it is doing.
+
+     .stops    ORGAN DRAWSTOPS. A stop is pulled OUT to switch a rank
+               of pipes on and pushed in to switch it off, and it stays
+               where you put it. That is exactly a radio group, and it
+               is the only control in this app that is genuinely
+               mechanical rather than decorated.
+
+     .daypick  PIANO KEYS. Six of them, Monday to Saturday, and a day
+               he has chosen is a key that is DOWN. No tick, no fill,
+               no colour needed — a depressed key is unambiguous.
+
+     .peg      A TUNING PEG. Small, round, at the top, turned when you
+               are adding something. A full-width button at the foot of
+               a ninety-six-name register is a button nobody reaches.
+   ============================================================ */
+
+/* ---------- organ drawstops ---------- */
+.stops { display: flex; gap: 10px; }
+.stops button {
+  flex: 1 1 0; min-width: 0; background: none; border: 0; padding: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  min-height: 78px; color: var(--ink-2);
+}
+.stops button i {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; max-width: 54px; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, #FFFCF2, #E7DCC4 70%, #D6C8A9);
+  box-shadow: 0 4px 0 #BCAA86, 0 6px 10px rgba(74,60,32,.24),
+              inset 0 1px 0 rgba(255,255,255,.9);
+  transition: transform .1s ease-out, box-shadow .12s, background .16s;
+}
+.stops button i em { font-style: normal; font-size: 19px; font-weight: 700; color: var(--ink); }
+.stops button span { font-size: 11px; font-weight: 600; color: var(--ink-3); }
+/* pushed IN */
+.stops button.on i {
+  transform: translateY(4px);
+  background: radial-gradient(circle at 38% 32%, #7A5FC8, #5B3FA8 72%, #48318A);
+  box-shadow: 0 0 0 #0000, inset 0 3px 7px rgba(0,0,0,.36);
+}
+.stops button.on i em { color: #fff; }
+.stops button.on span { color: var(--brand); }
+.stops button:active i { transform: translateY(4px); box-shadow: 0 0 0 #0000, inset 0 3px 7px rgba(0,0,0,.3); }
+
+/* ---------- the day picker becomes six piano keys ---------- */
+.daypick { display: flex; gap: 3px; margin-bottom: 8px; }
+.daypick button {
+  flex: 1 1 0; min-width: 0; min-height: 56px; padding: 0 2px 8px;
+  display: flex; align-items: flex-end; justify-content: center;
+  border: 1px solid var(--rule); border-bottom: 4px solid #D8CDB6;
+  border-radius: 3px 3px 8px 8px;
+  background: linear-gradient(180deg, #FFFDF8, #F6F0E1);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 2px 4px rgba(74,60,32,.10);
+  color: var(--ink-2); font-size: 13px; font-weight: 700; letter-spacing: .01em;
+  transition: transform .09s ease-out, border-bottom-width .09s, background .14s, box-shadow .12s;
+}
+/* a day he comes is a key that is DOWN */
+.daypick button.on {
+  transform: translateY(3px); border-bottom-width: 1px;
+  background: linear-gradient(180deg, #EDE5D2, #E4DAC2);
+  box-shadow: inset 0 4px 8px rgba(80,64,38,.26);
+  color: var(--brand);
+}
+.daypick button:active { transform: translateY(3px); border-bottom-width: 1px; }
+
+/* ---------- the tuning peg ---------- */
+.peg {
+  position: absolute; top: 0; right: 0; border: 0; background: none; padding: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  min-width: 56px; min-height: 56px; z-index: 3;
+}
+.peg .pin {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: radial-gradient(circle at 36% 30%, #FFFCF2, #E2D4B4 68%, #C9B891);
+  box-shadow: 0 2px 0 #AD9B76, 0 3px 7px rgba(74,60,32,.28),
+              inset 0 1px 0 rgba(255,255,255,.9);
+  position: relative;
+}
+/* the slot the string goes through, and the + that says what it does */
+.peg .pin::before, .peg .pin::after {
+  content: ""; position: absolute; left: 50%; top: 50%; background: var(--brand);
+  border-radius: 1px;
+}
+.peg .pin::before { width: 13px; height: 2.4px; margin: -1.2px 0 0 -6.5px; }
+.peg .pin::after  { width: 2.4px; height: 13px; margin: -6.5px 0 0 -1.2px; }
+.peg .lbl { font-size: 10.5px; font-weight: 700; color: var(--ink-3); letter-spacing: .04em; }
+.peg:active .pin { transform: translateY(2px); box-shadow: 0 0 0 #0000, inset 0 2px 5px rgba(0,0,0,.3); }
+.daybar { position: relative; padding-right: 62px; }

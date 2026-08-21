@@ -436,6 +436,67 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
       "an error body did not render as an empty register: " + h.slice(0, 120));
   });
 
+  /* A child can enrol for three months or six. plan_months is not
+     decoration: renewal_on is what reminder_queue() measures lateness
+     from and what record_fee_payment() rolls forward. Writing 1 for a
+     family who paid for six would chase them five times for money
+     already handed over. */
+  await check("enrolling for six months sets the plan AND the date six months out", async () => {
+    signIn(); fetchLog.length = 0;
+    nextBody = (url, body) => {
+      if (url.includes("/batches") && body) return [{ id: 21, ...body }];
+      if (url.includes("/batches")) return [
+        { id: 1, days: [1,2,3,4,5], start_time: "15:00", end_time: "20:00", centre_id: 4, active: true }];
+      if (url.includes("/centres")) return [{ id: 4 }];
+      if (url.includes("/members")) return [{ id: 88, name: "Ilango" }];
+      if (url.includes("attendance_month")) return [];
+      return url.includes("/sports") ? [] : {};
+    };
+    await ctx.MZ.reference(true);
+    api.S.ref = await ctx.MZ.reference();
+    api.S.tab = "add"; api.S.nsDays = [2, 4]; api.S.nsPlan = 6;
+    api.render();
+    byId("nsName").value = "Ilango"; byId("nsPhone").value = "9000000002";
+    byId("nsIns").value = "Violin";
+    onClick({ target: { closest: (s) => (s === "#nsSave" ? {} : null) } });
+    for (let i = 0; i < 14; i++) await tick();
+
+    const enr = calls("/enrollments").filter((c) => c.method === "POST");
+    assert(enr.length === 1, "nobody was enrolled");
+    assert(enr[0].body.plan_months === 6,
+      "the plan was written as " + enr[0].body.plan_months + ", not 6");
+    const j = new Date(enr[0].body.joined_on), r = new Date(enr[0].body.renewal_on);
+    const gap = (r.getFullYear() - j.getFullYear()) * 12 + (r.getMonth() - j.getMonth());
+    assert(gap === 6,
+      "renewal_on is " + gap + " months out, not 6 — this family gets chased early");
+  });
+
+  /* Nobody on the dues list has paid. Green means settled, so nothing
+     on that list may be green: one day late came out green and
+     nineteen days came out red, which read as two kinds of thing
+     rather than two points on one scale. */
+  await check("no overdue family is ever coloured as if they were settled", async () => {
+    signIn();
+    nextBody = (url) => url.includes("reminder_queue") ? [
+      { enrollment_id: 1, member_name: "A", phone: "9000000001", sport: "Piano",
+        amount: 2500, days_since: 1,  due_date: "2026-08-20" },
+      { enrollment_id: 2, member_name: "B", phone: "9000000002", sport: "Piano",
+        amount: 2500, days_since: 4,  due_date: "2026-08-17" },
+      { enrollment_id: 3, member_name: "C", phone: "9000000003", sport: "Piano",
+        amount: 2500, days_since: 19, due_date: "2026-08-02" }
+    ] : [];
+    api.S.tab = "dues"; api.enter(); await tick(); await tick();
+    const h = byId("root").innerHTML;
+    const cols = [...h.matchAll(/class="ndl[^"]*" style="left:[\d.]+%;background:([^"]+)"/g)]
+      .map((m) => m[1]);
+    assert(cols.length === 3, "three families, " + cols.length + " needles");
+    assert(!cols.some((c) => /--ok/.test(c)),
+      "an overdue family is coloured green: " + cols.join(", "));
+    /* and it has to be monotonic — later is never lighter */
+    assert(cols[0] !== cols[2],
+      "one day late and nineteen days late look identical: " + cols.join(", "));
+  });
+
   /* The day patterns arrive on a SECOND request, after the register has
      already painted. Without a re-render when they land, the filter sits
      on its safe fallback — show everybody — and looks broken while being
@@ -573,9 +634,16 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
 
   await check("the WhatsApp link carries the country code and no stray characters", async () => {
     signIn();
-    nextBody = [{ enrollment_id: 5, member_name: "Chitra", parent_name: "Uma", phone: "90000 00665",
-                  sport: "Violin", amount: 1500, days_since: 1, due_date: "2026-08-18" }];
+    nextBody = (url) => url.includes("reminder_queue")
+      ? [{ enrollment_id: 5, member_name: "Chitra", parent_name: "Uma", phone: "90000 00665",
+           sport: "Violin", amount: 1500, days_since: 1, due_date: "2026-08-18" }]
+      : [];
     api.S.tab = "dues"; api.enter(); await tick(); await tick();
+    /* The link lives on the family's card now, not on every row: the
+       list is for seeing who is flat, the card is for acting. */
+    onClick({ target: { closest: (s) => (s === "[data-fam]"
+      ? { getAttribute: () => "0" } : null) } });
+    await tick(); await tick();
     const h = byId("root").innerHTML;
     const m = h.match(/href="(https:\/\/wa\.me\/[^"]+)"/);
     assert(m, "no WhatsApp link was rendered");
