@@ -1456,3 +1456,48 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
   flex: 1 1 90px; min-width: 0; min-height: 44px; padding: 0 11px;
   border: 1px solid var(--rule); border-radius: 10px; background: #FFFDF6; font-size: 15px;
 }
+
+/* ============================================================
+   THE MONTH'S SHAPE
+
+   An audio waveform: in above the centre line, out below. A month of
+   a music school HAS a shape — fees clustered in the first week, the
+   rent as one deep trough, strings and rosin as small nicks — and the
+   shape arrives faster than any table of thirty-one rows.
+
+   Thirty-one columns of two bars is 93 elements. That is nothing next
+   to the 2,976-cell register, and none of it is laid out twice.
+   ============================================================ */
+.wave { position: relative; display: flex; align-items: stretch; gap: 1px;
+  height: 116px; padding: 0 1px; }
+.wave .zero { position: absolute; left: 0; right: 0; top: 50%; height: 1px;
+  background: var(--rule); pointer-events: none; }
+.wcol {
+  flex: 1 1 0; min-width: 0; padding: 0; border: 0; background: none;
+  display: flex; flex-direction: column; border-radius: 3px;
+  transition: background .14s;
+}
+.wcol .half { height: 50%; display: flex; }
+.wcol .half.t { align-items: flex-end; }
+.wcol .half.b { align-items: flex-start; }
+.wcol i {
+  display: block; width: 100%; min-height: 0; border-radius: 2px 2px 0 0;
+  background: var(--ok);
+}
+.wcol .half.b i { border-radius: 0 0 2px 2px; background: var(--no); }
+.wcol.today { background: rgba(201,138,46,.14); }
+.wcol.on { background: rgba(91,63,168,.16); }
+.wcol.on i { background: var(--brand); }
+.wcol:active { background: rgba(91,63,168,.10); }
+
+.wscale { display: flex; justify-content: space-between; margin-top: 4px;
+  font-size: 11px; color: var(--ink-3); font-weight: 600; }
+
+.wnote { margin-top: 10px; padding: 11px 13px; border-radius: 12px;
+  background: #FFFDF6; border: 1px solid var(--rule); min-height: 62px; }
+.wnote b { display: block; font-size: 14.5px; margin-bottom: 3px; }
+.wnote span { display: block; font-size: 13px; font-weight: 600; line-height: 1.45; }
+.wnote .in  { color: var(--ok); }
+.wnote .out { color: var(--no); }
+.wnote .quiet { color: var(--ink-3); font-weight: 500; }
+.wnote.quiet-only { min-height: 0; padding: 9px 13px; }

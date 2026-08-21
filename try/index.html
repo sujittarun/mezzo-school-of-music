@@ -129,6 +129,7 @@ window.fetch = function (url) {
     fam: null,                // the family card that is open: an index into S.dues
     famInfo: null,            // that member's row, once it lands
     money: null,
+    wave: null,               // the day tapped on the month's waveform
     exEdit: null,             // the expense being changed
     exKill: null,             // the expense being removed, awaiting a yes
     ref: null,
@@ -773,7 +774,13 @@ window.fetch = function (url) {
                 '<path d="M7.6 8.4h6.6M7.6 12h6.6M7.6 15.6h3.4"/>' +
                 '<path d="M12.9 16.6 15.8 19.6 21.2 12.4" stroke-width="2.1"/></svg>',
       dues:     '<svg viewBox="0 0 24 24"><path d="M12 3.2a6.6 6.6 0 0 1 6.6 6.6c0 4 1.2 5.6 2.2 6.6H3.2c1-1 2.2-2.6 2.2-6.6A6.6 6.6 0 0 1 12 3.2z"/><path d="M10 19.4a2.1 2.1 0 0 0 4 0"/><path d="M12 3.2V1.6"/></svg>',
-      money:    '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.6"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21"/></svg>'
+      /* Two concentric circles read as a target, or an aperture, or a
+         drum head — anything except money. This is a banknote with a
+         rupee on it, which at 26px is the one shape nobody has to
+         work out. */
+      money:    '<svg viewBox="0 0 24 24"><rect x="2.4" y="6" width="19.2" height="12" rx="2.2"/>' +
+                '<path d="M9.4 9.6h4.6M9.4 12h4.6M13 9.6c1.6 0 1.6 2.4 0 2.4h-3.6l4 3.4"/>' +
+                '<path d="M5.2 9.1v5.8M18.8 9.1v5.8"/></svg>'
     };
     var T = [["register", "Attendance"], ["dues", "Dues"], ["money", "Money"]];
     tabs.innerHTML = T.map(function (t) {
@@ -1492,6 +1499,83 @@ window.fetch = function (url) {
     }).filter(Boolean).sort(function (a, b) { return b.drop - a.drop; });
   }
 
+  /* ============================================================
+     THE MONTH AS A WAVEFORM
+
+     Money in above the centre line, money out below it — which is
+     what every waveform he has ever looked at already does. A month
+     of a music school has a shape: a cluster of fees in the first
+     week, the rent as one deep trough, strings and rosin as small
+     nicks. He can read that shape in a second and no table of
+     thirty-one rows will ever tell him the same thing as fast.
+
+     Tap a day and it says what happened, and plays it: a struck note
+     for a day that took money in, a wooden thunk for one that only
+     spent. Pitch rises with the size of the day.
+
+     It is one graphic. The temptation on a finance screen is six.
+     ============================================================ */
+  function viewWave() {
+    if (!S.money) return "";
+    var y = S.month.y, m = S.month.m, days = MZ.monthRange(y, m).days;
+    var inn = [], out = [], i;
+    for (i = 0; i <= days; i++) { inn[i] = 0; out[i] = 0; }
+    S.money.paid.forEach(function (p) {
+      if (p.status === "void") return;
+      var d = +String(p.on_date).slice(8, 10);
+      if (d >= 1 && d <= days) inn[d] += Number(p.amount || 0);
+    });
+    S.money.spent.forEach(function (e) {
+      var d = +String(e.on_date).slice(8, 10);
+      if (d >= 1 && d <= days) out[d] += Number(e.amount || 0);
+    });
+    var peak = 1;
+    for (i = 1; i <= days; i++) { peak = Math.max(peak, inn[i], out[i]); }
+
+    var today = MZ.todayIso(), tDay = (+today.slice(0, 4) === y && +today.slice(5, 7) === m)
+      ? +today.slice(8, 10) : 0;
+
+    var cols = "";
+    for (i = 1; i <= days; i++) {
+      var up = Math.round(inn[i] / peak * 100), dn = Math.round(out[i] / peak * 100);
+      cols += '<button class="wcol' + (S.wave === i ? " on" : "") +
+        (i === tDay ? " today" : "") + '" data-wave="' + i + '" aria-label="' + i + '">' +
+        '<span class="half t"><i style="height:' + up + '%"></i></span>' +
+        '<span class="half b"><i style="height:' + dn + '%"></i></span></button>';
+    }
+
+    /* what happened on the day he tapped */
+    var note = "";
+    if (S.wave) {
+      var d = S.wave;
+      var fees = S.money.paid.filter(function (p) {
+        return p.status !== "void" && +String(p.on_date).slice(8, 10) === d; });
+      var bills = S.money.spent.filter(function (e) {
+        return +String(e.on_date).slice(8, 10) === d; });
+      var when = new Date(y, m - 1, d).toLocaleDateString("en-IN", { day: "numeric", month: "long" });
+      note = '<div class="wnote"><b>' + esc(when) + "</b>" +
+        (fees.length
+          ? '<span class="in">+' + inr(inn[d]) + " \u00b7 " + fees.length +
+            (fees.length === 1 ? " fee" : " fees") + "</span>" : "") +
+        (bills.length
+          ? '<span class="out">\u2212' + inr(out[d]) + " \u00b7 " +
+            esc(bills.map(function (e) { return e.detail || e.category; }).join(", ")) + "</span>"
+          : "") +
+        (!fees.length && !bills.length ? '<span class="quiet">Nothing moved.</span>' : "") +
+      "</div>";
+    }
+
+    return '<div class="card"><div class="rowline" style="margin-bottom:2px">' +
+      '<b style="font-size:15px">The month\u2019s shape</b>' +
+      '<span style="flex:1"></span><span class="muted">tap a day</span></div>' +
+      '<div class="muted" style="margin-bottom:10px">In above the line, out below</div>' +
+      '<div class="wave">' + cols + '<span class="zero"></span></div>' +
+      '<div class="wscale"><span>1</span><span>' + days + "</span></div>" +
+      (note || '<div class="wnote quiet-only"><span class="quiet">' +
+        "Tap any day to see what moved.</span></div>") +
+    "</div>";
+  }
+
   function viewInsights() {
     var rows = (S.money && S.money.rows) || [];
     var paid = ((S.money && S.money.paid) || []).filter(function (p) { return p.status !== "void"; });
@@ -1580,6 +1664,7 @@ window.fetch = function (url) {
         '<div class="fig out"><b>' + inr(outTot) + "</b><span>Spent</span></div>" +
         '<div class="fig"><b>' + inr(inTot - outTot) + "</b><span>Left</span></div>" +
       "</div></div>" +
+      viewWave() +
       '<div class="card"><h3 style="font-size:15px;margin-bottom:12px">Add an expense</h3>' +
         '<label class="field"><span>How much</span>' +
           '<input id="exAmt" type="number" inputmode="numeric" min="1" placeholder="0" /></label>' +
@@ -2065,6 +2150,19 @@ window.fetch = function (url) {
       var fd = S.dues && S.dues[+el.getAttribute("data-fam")];
       return fd ? playInstrument(fd.sport, 0.65) : pluck(64, 0.55);
     }
+    /* A day on the waveform sounds like what it did: a struck note
+       for money in, pitched by how big the day was, and a wooden
+       thunk for a day that only spent. */
+    if ((el = t.closest("[data-wave]"))) {
+      var wday = +el.getAttribute("data-wave"), got = 0, gone = 0;
+      (S.money ? S.money.paid : []).forEach(function (p) {
+        if (p.status !== "void" && +String(p.on_date).slice(8, 10) === wday) got += Number(p.amount || 0); });
+      (S.money ? S.money.spent : []).forEach(function (e) {
+        if (+String(e.on_date).slice(8, 10) === wday) gone += Number(e.amount || 0); });
+      if (!got && !gone) return breath(69, 0.3);
+      if (got >= gone) return struck(58 + Math.min(14, Math.round(got / 1200)), 0.55);
+      return woodThunk(0.6);
+    }
     if (t.closest(".paid"))                 return intoTune(72, 42, 1);    /* flat, then true */
     if (t.closest("#exSave"))               return woodThunk(0.9);
     if (t.closest(".wa"))                   return bow(67, 0.5);           /* the ask goes out */
@@ -2138,6 +2236,12 @@ window.fetch = function (url) {
     if (t.closest("#nsCancel")) { S.tab = "register"; render(); return; }
     if (t.closest("#nsSave")) { saveStudent(); return; }
     if (t.closest("#exSave")) { saveExpense(); return; }
+    var wv = t.closest("[data-wave]");
+    if (wv) {
+      var wd = +wv.getAttribute("data-wave");
+      S.wave = S.wave === wd ? null : wd;
+      render(); return;
+    }
     var ee = t.closest("[data-exedit]");
     if (ee) { S.exEdit = +ee.getAttribute("data-exedit"); S.exKill = null; render(); return; }
     var ek = t.closest("[data-exkill]");
