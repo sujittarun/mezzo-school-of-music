@@ -522,6 +522,69 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
       "one day late and nineteen days late look identical: " + cols.join(", "));
   });
 
+  /* Two days a week is the shape of this school. One day is asked
+     about, not refused — a child who genuinely comes once a week
+     exists, and an app that will not save them is an app he works
+     around. Three or more is nudged, because the fee is priced for
+     two and only he can decide what it becomes. */
+  await check("one day a week is asked about once and then saved", async () => {
+    signIn(); fetchLog.length = 0;
+    nextBody = (url, body) => {
+      if (url.includes("/batches") && body) return [{ id: 31, ...body }];
+      if (url.includes("/batches")) return [
+        { id: 1, days: [1,2,3,4,5], start_time: "15:00", end_time: "20:00", centre_id: 4, active: true }];
+      if (url.includes("/centres")) return [{ id: 4 }];
+      if (url.includes("/members")) return [{ id: 91, name: "Uma" }];
+      if (url.includes("attendance_month")) return [];
+      return url.includes("/sports") ? [] : {};
+    };
+    await ctx.MZ.reference(true);
+    api.S.ref = await ctx.MZ.reference();
+    api.S.tab = "add"; api.S.nsDays = [3]; api.S.nsPlan = 1;
+    api.S.nsErr = {}; api.S.nsVals = {}; api.S.nsOneOk = null;
+    api.render();
+    byId("nsName").value = "Uma"; byId("nsPhone").value = "9000000003";
+    byId("nsIns").value = "Violin";
+
+    /* first press: it asks, and writes nothing */
+    onClick({ target: { closest: (s) => (s === "#nsSave" ? {} : null) } });
+    for (let i = 0; i < 8; i++) await tick();
+    assert(api.S.nsOneOk === "ask", "one day a week was not questioned at all");
+    assert(calls("/enrollments").filter((c) => c.method === "POST").length === 0,
+      "it saved before asking");
+    assert(/Only one day/i.test(byId("root").innerHTML), "the question is not on screen");
+
+    /* second press: it does as it is told */
+    onClick({ target: { closest: (s) => (s === "#nsSave" ? {} : null) } });
+    for (let i = 0; i < 14; i++) await tick();
+    assert(calls("/enrollments").filter((c) => c.method === "POST").length === 1,
+      "answering the question did not save the student");
+  });
+
+  await check("the day picker nudges at one day and at three, and is silent at two", async () => {
+    signIn();
+    nextBody = (url) => url.includes("/batches")
+      ? [{ id: 1, days: [1,2,3,4,5], start_time: "15:00", end_time: "20:00" }] : [];
+    await ctx.MZ.reference(true);
+    api.S.ref = await ctx.MZ.reference();
+    api.S.tab = "add"; api.S.nsErr = {}; api.S.nsVals = {}; api.S.nsOneOk = null;
+
+    api.S.nsDays = [3];       api.render();
+    assert(/twice a week/i.test(byId("root").innerHTML), "one day was not nudged");
+
+    api.S.nsDays = [3, 6];    api.render();
+    assert(!/twice a week/i.test(byId("root").innerHTML) &&
+           !/usual two/i.test(byId("root").innerHTML),
+      "two days — the normal case — was nudged at anyway");
+
+    api.S.nsDays = [1, 3, 5]; api.render();
+    const h = byId("root").innerHTML;
+    assert(/usual two/i.test(h), "three days was not nudged");
+    /* The amounts live in fee_rules. This file may not know them and
+       must never print one. */
+    assert(!/1,?500|2,?500/.test(h), "a fee amount was printed in the nudge");
+  });
+
   /* The day patterns arrive on a SECOND request, after the register has
      already painted. Without a re-render when they land, the filter sits
      on its safe fallback — show everybody — and looks broken while being

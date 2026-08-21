@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" />
-<link rel="stylesheet" href="assets/css/app.css?v=20260821l" />
+<link rel="stylesheet" href="assets/css/app.css?v=20260821m" />
 </head>
 <body>
 <!-- ============================================================
@@ -96,6 +96,7 @@
     nsPlan: 1,                // how many months they are paying for
     nsErr: {},                // per-field messages on the add form
     nsVals: {},               // what he typed, so a redraw never eats it
+    nsOneOk: null,            // "ask" while one-day-a-week is being confirmed
     pulse: null,              // {sport, kind} — the section to play after the next paint
     fIns: null,               // instrument filter, null = all
     showOff: false,
@@ -232,6 +233,31 @@
     }
     return out + "</div>";
   }
+  /* ============================================================
+     TWO DAYS A WEEK IS THE SHAPE OF THIS SCHOOL
+
+     He teaches almost everybody twice a week, and the fee in
+     fee_rules is priced for that. So the picker is not a free-for-all
+     and it is not a rule either — one child genuinely comes once a
+     week and another comes four times, and both are allowed.
+
+     What the app owes him is a NUDGE at the moment he is choosing,
+     not a wall of explanation afterwards. One short line, in his own
+     words, and never a number: the amounts live in the database and
+     this file is not allowed to know them.
+     ============================================================ */
+  function dayHint(days) {
+    var n = (days || []).length;
+    if (n === 1) return { tone: "soft", text: "Most come twice a week." };
+    if (n >= 3)  return { tone: "warn", text: n + " days \u2014 more than the usual two. " +
+                                              "Set the fee when you take the payment." };
+    return null;
+  }
+  function dayHintHtml(days) {
+    var h = dayHint(days);
+    return h ? '<em class="dhint ' + h.tone + '">' + h.text + "</em>" : "";
+  }
+
   function toggleDay(list, d) {
     var i = list.indexOf(d);
     if (i >= 0) list.splice(i, 1); else list.push(d);
@@ -1934,9 +1960,14 @@
       '<div class="field"><span>Comes on</span>' + dayPicker("whDays", w.days || []) +
         '<em class="daysum' + (w.days && w.days.length ? "" : " dim") + '">' +
         esc(w.days && w.days.length ? MZ.dayLabel(w.days) : "Pick the days he comes") +
-        "</em></div>" +
+        "</em>" + dayHintHtml(w.days) + "</div>" +
 
-      '<button class="btn" id="whSave">Save changes</button>' +
+      (w.oneOk === "ask"
+        ? '<div class="askline"><b>Only one day a week?</b>' +
+          '<span>' + esc(MZ.dayLabel(w.days)) + " \u2014 most come twice.</span></div>"
+        : "") +
+      '<button class="btn" id="whSave">' +
+        (w.oneOk === "ask" ? "Yes, save" : "Save changes") + "</button>" +
       '<button class="btn ghost" id="whPay" style="margin-top:8px">Record a payment</button>' +
       '<button class="btn ghost" id="whCancel" style="margin-top:8px">Close</button>' +
 
@@ -2000,6 +2031,14 @@
 
   function saveWho() {
     var w = S.who;
+    /* NOT a guard on zero. An empty list here means the reference data
+       has not landed yet, not that he cleared the days — and
+       moveEnrollment leaves the days alone when it is given none. A
+       block would stop him fixing a phone number on a slow connection,
+       which is the opposite of safe. */
+    if ((w.days || []).length === 1 && w.oneOk !== "ok") {
+      w.oneOk = "ask"; render(); return;
+    }
     var b = document.getElementById("whSave");
     if (b) { b.disabled = true; b.textContent = "Saving…"; }
     var name  = (document.getElementById("whName") || {}).value;
@@ -2065,7 +2104,8 @@
         (E.days ? '<em class="ferr">' + E.days + "</em>" : "") +
         (S.nsDays && S.nsDays.length
           ? '<em class="daysum">' + esc(MZ.dayLabel(S.nsDays)) + "</em>"
-          : '<em class="daysum dim">Pick the days he comes</em>') + "</div>" +
+          : '<em class="daysum dim">Pick the days he comes</em>') +
+        dayHintHtml(S.nsDays) + "</div>" +
       '<div class="field"><span>Paying for</span>' +
         '<div class="stops" id="nsPlan">' +
           [1, 3, 6, 12].map(function (n) {
@@ -2074,10 +2114,21 @@
               "</em></i><span>" + (n === 1 ? "month" : "months") + "</span></button>";
           }).join("") +
         "</div></div>" +
-      '<div class="muted" style="margin:-2px 0 14px">The fee is set from the ' +
-        "instrument \u2014 you do not need to enter it. The next reminder falls " +
-        (S.nsPlan || 1) + ((S.nsPlan || 1) === 1 ? " month" : " months") + " after they start.</div>" +
-      '<button class="btn bow" id="nsSave">Save student</button>' +
+      /* Short, and it stops repeating itself: when the day picker has
+         already said "set the fee when you take the payment", saying
+         "you do not need to enter it" two lines below is a
+         contradiction he has to resolve. */
+      '<div class="muted" style="margin:-2px 0 14px">' +
+        ((S.nsDays || []).length >= 3
+          ? "Reminder in "
+          : "The fee comes from the instrument. Reminder in ") +
+        (S.nsPlan || 1) + ((S.nsPlan || 1) === 1 ? " month." : " months.") + "</div>" +
+      (S.nsOneOk === "ask"
+        ? '<div class="askline"><b>Only one day a week?</b>' +
+          '<span>' + esc(MZ.dayLabel(S.nsDays)) + " \u2014 most come twice.</span></div>"
+        : "") +
+      '<button class="btn bow" id="nsSave">' +
+        (S.nsOneOk === "ask" ? "Yes, save" : "Save student") + "</button>" +
       '<button class="btn plec" id="nsCancel" style="margin-top:10px">Cancel</button></div>';
   }
 
@@ -2115,6 +2166,19 @@
       (S.err ? '<div class="err">' + esc(S.err) + "</div>" : "") + inner + "</div>";
     playSection();
     scrubWave();
+    showAsk();
+  }
+
+  /* A question he cannot see is a button that did nothing. The one-day
+     question renders below the fold on a phone, so it brings itself
+     into view — and only when it has just appeared, never on the
+     twenty re-renders that follow. */
+  function showAsk() {
+    var a = root.querySelector(".askline");
+    if (!a || a.__seen) return;
+    a.__seen = true;
+    try { a.scrollIntoView({ block: "center", behavior: "smooth" }); }
+    catch (e) { a.scrollIntoView(); }
   }
 
   /* THE SECTION PLAYS ITSELF.
@@ -2275,8 +2339,11 @@
     var dp = t.closest("[data-daypick]");
     if (dp) {
       var parts = dp.getAttribute("data-daypick").split(":"), d = +parts[1];
-      if (parts[0] === "whDays" && S.who) toggleDay(S.who.days = S.who.days || [], d);
-      else { keepAdd(); toggleDay(S.nsDays = S.nsDays || [], d); }
+      if (parts[0] === "whDays" && S.who) {
+        toggleDay(S.who.days = S.who.days || [], d);
+        S.who.oneOk = null;                    /* changing the days withdraws the question */
+      }
+      else { keepAdd(); toggleDay(S.nsDays = S.nsDays || [], d); S.nsOneOk = null; }
       /* the days he picked must survive the redraw, so they live in
          state, not in the DOM the redraw is about to replace */
       render(); return;
@@ -2289,7 +2356,7 @@
     if (md) { S.mode = md.getAttribute("data-mode"); loadRegister(); render(); return; }
 
     if (t.closest("[data-add]")) {
-      S.tab = "add"; S.nsDays = []; S.nsPlan = 1; S.nsErr = {}; S.nsVals = {};
+      S.tab = "add"; S.nsDays = []; S.nsPlan = 1; S.nsErr = {}; S.nsVals = {}; S.nsOneOk = null;
       MZ.reference().then(function (r) { S.ref = r; render(); }).catch(fail);
       render(); return;
     }
@@ -2378,7 +2445,10 @@
     var who = t.closest("[data-who]");
     if (who) { openWho(who); return; }
     if (t.closest("#whCancel")) { S.who = null; S.err = ""; render(); return; }
-    if (t.closest("#whSave"))   { saveWho(); return; }
+    if (t.closest("#whSave"))   {
+      if (S.who && S.who.oneOk === "ask") S.who.oneOk = "ok";
+      saveWho(); return;
+    }
     if (t.closest("#whStop"))   { S.who.confirmStop = true; render(); return; }
     if (t.closest("#whStopNo")) { S.who.confirmStop = false; render(); return; }
     if (t.closest("#whStopYes")){ stopWho(); return; }
@@ -2439,6 +2509,15 @@
     S.nsErr = E;
     if (Object.keys(E).length) { render(); return; }
 
+    /* ONE DAY IS ASKED ABOUT, NOT REFUSED.
+       Two a week is the shape of this school, so one day is usually a
+       slip — but a child who genuinely comes once a week exists, and
+       an app that refuses to save them is an app he works around. It
+       asks once and then does as it is told. */
+    if ((S.nsDays || []).length === 1 && !S.nsOneOk) {
+      S.nsOneOk = "ask"; render(); return;
+    }
+
     var b = document.getElementById("nsSave");
     b.disabled = true; b.textContent = "Saving…";
     var b = document.getElementById("nsSave");
@@ -2452,7 +2531,7 @@
       centre: (S.ref.centres[0] || {}).id
     }).then(function (m) {
       toast(m.name + " added");
-      S.tab = "register"; S.nsErr = {}; S.nsVals = {};
+      S.tab = "register"; S.nsErr = {}; S.nsVals = {}; S.nsOneOk = null;
       loadRegister();
       /* THE FEE COMES FROM THE DATABASE, NOT FROM HERE.
          He wanted the amount in front of him with a chance to change

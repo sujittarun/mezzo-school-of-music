@@ -1537,3 +1537,20 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
 .field.bad input, .field.bad select { border-color: var(--no); }
 .ferr { display: block; font-style: normal; font-size: 12.5px; font-weight: 600;
   color: var(--no); margin-top: 5px; }
+
+/* ---------- the day nudges ----------
+   One short line under the picker, at the moment he is choosing. It
+   never names an amount: the fees live in fee_rules and this file is
+   not allowed to know them — scripts/check-app.js fails the build if
+   either number appears here. */
+.dhint { display: block; font-style: normal; font-size: 12.5px; font-weight: 600;
+  line-height: 1.4; margin-top: 4px; }
+.dhint.soft { color: var(--ink-3); }
+.dhint.warn { color: var(--warn); }
+
+/* asked once, then it does as it is told */
+.askline { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  margin: 4px 0 10px; padding: 11px 13px; border-radius: 12px;
+  background: var(--warn-bg); border: 1px solid rgba(143,99,23,.28); }
+.askline b { font-size: 14.5px; }
+.askline span { font-size: 13px; color: var(--ink-2); }
