@@ -21,6 +21,14 @@ const ROOT = path.join(__dirname, "..");
 const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
 const app = html.slice(html.lastIndexOf("<script>") + 8, html.lastIndexOf("</script>"));
 
+/* THE STYLESHEET COMES FROM index.html, not from a string in here.
+   This file had its own hardcoded ?v= stamp, so the moment the app's
+   stamp moved the preview was rendering the real markup against stale
+   CSS — and an audit run against it would have been auditing a build
+   that does not exist. */
+const cssHref = (html.match(/href="(assets\/css\/app\.css[^"]*)"/) || [])[1] ||
+                "assets/css/app.css";
+
 /* Everything the real page puts in <body> before #root — the SVG
    filter defs and the feature test that switches refraction on. Taken
    from index.html rather than copied, because a preview that has
@@ -191,7 +199,7 @@ return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mezzo — preview (fixtures, not real data)</title>
-${base}<link rel="stylesheet" href="assets/css/app.css?v=20260821h">
+${base}<link rel="stylesheet" href="${cssHref}">
 </head><body>
 ${headOfBody}
 <div id="root"></div><div class="tabs" id="tabs" hidden></div>

@@ -4,3 +4,4 @@ node_modules/
 .claude/
 
 _dev-preview.html
+_audit.js

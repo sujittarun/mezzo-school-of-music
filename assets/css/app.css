@@ -1468,8 +1468,10 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
    Thirty-one columns of two bars is 93 elements. That is nothing next
    to the 2,976-cell register, and none of it is laid out twice.
    ============================================================ */
+/* The strip is the control; the columns are paint. touch-action:none
+   so a drag along it reads the month instead of scrolling the page. */
 .wave { position: relative; display: flex; align-items: stretch; gap: 1px;
-  height: 116px; padding: 0 1px; }
+  height: 116px; padding: 0 1px; touch-action: none; cursor: crosshair; }
 .wave .zero { position: absolute; left: 0; right: 0; top: 50%; height: 1px;
   background: var(--rule); pointer-events: none; }
 .wcol {

@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" />
-<link rel="stylesheet" href="assets/css/app.css?v=20260821k" />
+<link rel="stylesheet" href="assets/css/app.css?v=20260821l" />
 </head>
 <body>
 <!-- ============================================================
@@ -1521,6 +1521,40 @@
 
      It is one graphic. The temptation on a finance screen is six.
      ============================================================ */
+  /* Which day sits under this x. The columns are equal width, so it
+     is one division — no per-column hit testing and no 9px targets. */
+  function dayFromWave(strip, clientX) {
+    var b = strip.getBoundingClientRect();
+    var n = strip.querySelectorAll("[data-wday]").length || 1;
+    var k = Math.floor((clientX - b.left) / (b.width / n)) + 1;
+    return Math.min(n, Math.max(1, k));
+  }
+  /* Dragging along the wave reads it out as you go. The money tab is
+     the heaviest screen in the app, so a drag never re-renders it —
+     it moves the highlight and rewrites the one line of text. */
+  function scrubWave() {
+    var strip = root.querySelector("[data-wavestrip]");
+    if (!strip || strip.__wired) return;
+    strip.__wired = true;
+    var live = false;
+    function show(x) {
+      var d = dayFromWave(strip, x);
+      if (d === S.wave) return;
+      S.wave = d;
+      var cols = strip.querySelectorAll("[data-wday]");
+      for (var i = 0; i < cols.length; i++) cols[i].classList.toggle("on", i + 1 === d);
+      var note = root.querySelector(".wnote");
+      if (note) note.outerHTML = waveNote(d);
+    }
+    strip.addEventListener("pointerdown", function (ev) {
+      live = true; try { strip.setPointerCapture(ev.pointerId); } catch (e) {}
+      show(ev.clientX);
+    });
+    strip.addEventListener("pointermove", function (ev) { if (live) show(ev.clientX); });
+    strip.addEventListener("pointerup", function () { live = false; });
+    strip.addEventListener("pointercancel", function () { live = false; });
+  }
+
   function viewWave() {
     if (!S.money) return "";
     var y = S.month.y, m = S.month.m, days = MZ.monthRange(y, m).days;
@@ -1544,41 +1578,50 @@
     var cols = "";
     for (i = 1; i <= days; i++) {
       var up = Math.round(inn[i] / peak * 100), dn = Math.round(out[i] / peak * 100);
-      cols += '<button class="wcol' + (S.wave === i ? " on" : "") +
-        (i === tDay ? " today" : "") + '" data-wave="' + i + '" aria-label="' + i + '">' +
+      /* NOT a button each. Thirty-one columns in 330px is a 9px
+         target, which the audit caught and which no thumb can hit.
+         The STRIP is the control: tap or drag anywhere along it and
+         the nearest day is picked, which is also how you would run a
+         finger along a waveform anyway. */
+      cols += '<span class="wcol' + (S.wave === i ? " on" : "") +
+        (i === tDay ? " today" : "") + '" data-wday="' + i + '">' +
         '<span class="half t"><i style="height:' + up + '%"></i></span>' +
-        '<span class="half b"><i style="height:' + dn + '%"></i></span></button>';
+        '<span class="half b"><i style="height:' + dn + '%"></i></span></span>';
     }
 
-    /* what happened on the day he tapped */
-    var note = "";
-    if (S.wave) {
-      var d = S.wave;
-      var fees = S.money.paid.filter(function (p) {
-        return p.status !== "void" && +String(p.on_date).slice(8, 10) === d; });
-      var bills = S.money.spent.filter(function (e) {
-        return +String(e.on_date).slice(8, 10) === d; });
-      var when = new Date(y, m - 1, d).toLocaleDateString("en-IN", { day: "numeric", month: "long" });
-      note = '<div class="wnote"><b>' + esc(when) + "</b>" +
-        (fees.length
-          ? '<span class="in">+' + inr(inn[d]) + " \u00b7 " + fees.length +
-            (fees.length === 1 ? " fee" : " fees") + "</span>" : "") +
-        (bills.length
-          ? '<span class="out">\u2212' + inr(out[d]) + " \u00b7 " +
-            esc(bills.map(function (e) { return e.detail || e.category; }).join(", ")) + "</span>"
-          : "") +
-        (!fees.length && !bills.length ? '<span class="quiet">Nothing moved.</span>' : "") +
-      "</div>";
-    }
 
     return '<div class="card"><div class="rowline" style="margin-bottom:2px">' +
       '<b style="font-size:15px">The month\u2019s shape</b>' +
       '<span style="flex:1"></span><span class="muted">tap a day</span></div>' +
       '<div class="muted" style="margin-bottom:10px">In above the line, out below</div>' +
-      '<div class="wave">' + cols + '<span class="zero"></span></div>' +
+      '<div class="wave" data-wavestrip="1" role="group" aria-label="Day by day">' +
+        cols + '<span class="zero"></span></div>' +
       '<div class="wscale"><span>1</span><span>' + days + "</span></div>" +
-      (note || '<div class="wnote quiet-only"><span class="quiet">' +
-        "Tap any day to see what moved.</span></div>") +
+      waveNote(S.wave) +
+    "</div>";
+  }
+
+  /* One day's line, on its own, so a drag can replace it without
+     redrawing the heaviest screen in the app thirty times a second. */
+  function waveNote(d) {
+    if (!S.money || !d) {
+      return '<div class="wnote quiet-only"><span class="quiet">' +
+             "Tap or drag along the month to see what moved.</span></div>";
+    }
+    var y = S.month.y, m = S.month.m, got = 0, gone = 0;
+    var fees = S.money.paid.filter(function (p) {
+      return p.status !== "void" && +String(p.on_date).slice(8, 10) === d; });
+    var bills = S.money.spent.filter(function (e) {
+      return +String(e.on_date).slice(8, 10) === d; });
+    fees.forEach(function (p) { got += Number(p.amount || 0); });
+    bills.forEach(function (e) { gone += Number(e.amount || 0); });
+    var when = new Date(y, m - 1, d).toLocaleDateString("en-IN", { day: "numeric", month: "long" });
+    return '<div class="wnote"><b>' + esc(when) + "</b>" +
+      (fees.length ? '<span class="in">+' + inr(got) + " \u00b7 " + fees.length +
+        (fees.length === 1 ? " fee" : " fees") + "</span>" : "") +
+      (bills.length ? '<span class="out">\u2212' + inr(gone) + " \u00b7 " +
+        esc(bills.map(function (e) { return e.detail || e.category; }).join(", ")) + "</span>" : "") +
+      (!fees.length && !bills.length ? '<span class="quiet">Nothing moved.</span>' : "") +
     "</div>";
   }
 
@@ -2071,6 +2114,7 @@
     root.innerHTML = header(sub) + '<div class="wrap' + (fresh ? " fresh" : "") + '">' +
       (S.err ? '<div class="err">' + esc(S.err) + "</div>" : "") + inner + "</div>";
     playSection();
+    scrubWave();
   }
 
   /* THE SECTION PLAYS ITSELF.
@@ -2169,8 +2213,8 @@
     /* A day on the waveform sounds like what it did: a struck note
        for money in, pitched by how big the day was, and a wooden
        thunk for a day that only spent. */
-    if ((el = t.closest("[data-wave]"))) {
-      var wday = +el.getAttribute("data-wave"), got = 0, gone = 0;
+    if ((el = t.closest("[data-wavestrip]"))) {
+      var wday = dayFromWave(el, (window.event && window.event.clientX) || 0), got = 0, gone = 0;
       (S.money ? S.money.paid : []).forEach(function (p) {
         if (p.status !== "void" && +String(p.on_date).slice(8, 10) === wday) got += Number(p.amount || 0); });
       (S.money ? S.money.spent : []).forEach(function (e) {
@@ -2276,9 +2320,9 @@
       }
       (S.tab === "money" ? loadMoney : loadRegister)(); render(); return;
     }
-    var wv = t.closest("[data-wave]");
+    var wv = t.closest("[data-wavestrip]");
     if (wv) {
-      var wd = +wv.getAttribute("data-wave");
+      var wd = dayFromWave(wv, e.clientX);
       S.wave = S.wave === wd ? null : wd;
       render(); return;
     }
