@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" />
-<link rel="stylesheet" href="assets/css/app.css?v=20260821q" />
+<link rel="stylesheet" href="assets/css/app.css?v=20260821r" />
 </head>
 <body>
 <!-- ============================================================
@@ -104,10 +104,13 @@
     dues: null,
     duesReg: null,            // this month's register, for the family card
     people: null,             // every live enrolment, with its due row if any
+    pausing: null,            // the enrolment whose pause panel is open
+    pauseMonths: 1,           // how long they are going away for
     fam: null,                // the family card that is open: an index into S.dues
     famInfo: null,            // that member's row, once it lands
     money: null,
     monthPick: false,         // the twelve-month strip is open
+    ledger: "spent",          // which face of the money panel is showing
     wave: null,               // the day tapped on the month's waveform
     exEdit: null,             // the expense being changed
     exKill: null,             // the expense being removed, awaiting a yes
@@ -1678,12 +1681,44 @@
                 { day: "numeric", month: "short" })
             : "nothing owing") + "</i></div>") +
 
-      famActions(pr, d) +
-      (pr.paused ? "" :
-        '<button class="rest-link" data-pause="' + pr.enrollment_id +
-        '" data-nm="' + esc(pr.name) + '">Pause \u2014 away for a while</button>') +
+      /* Chasing a family and pausing them are different intents. With
+         both on screen the pause panel sat under two full-width
+         actions on a card already at its height limit, so choosing
+         "away for a while" meant scrolling to find the thing you had
+         just asked for. Opening the panel takes the card over. */
+      (S.pausing === pr.enrollment_id ? "" : famActions(pr, d)) +
+      (pr.paused ? "" : pausePanel(pr)) +
       '<button class="btn plec" id="famClose">Close</button>' +
     "</div></div>";
+  }
+
+  /* HOW LONG, THEN PAUSE. One question, three answers, and the date
+     the next fee lands is shown before he commits — because that is
+     the thing the pause actually changes. */
+  function pausePanel(pr) {
+    if (S.pausing !== pr.enrollment_id) {
+      return '<button class="rest-link" data-pausing="' + pr.enrollment_id +
+        '">Pause \u2014 away for a while</button>';
+    }
+    var m = S.pauseMonths || 1;
+    var next = pr.renewal_on ? MZ.monthOn(pr.renewal_on, m) : null;
+    return '<div class="pausebox"><b>Away for how long?</b>' +
+      '<div class="stops">' +
+        [1, 2, 3].map(function (n) {
+          return '<button type="button" data-pausem="' + n + '"' +
+            (m === n ? ' class="on"' : "") + '><i><em>' + n + "</em></i><span>" +
+            (n === 1 ? "month" : "months") + "</span></button>";
+        }).join("") +
+      "</div>" +
+      '<span class="pnote">' +
+        (next
+          ? "Next fee moves to " +
+            new Date(next).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+          : "No renewal date set, so nothing to move.") + "</span>" +
+      '<button class="btn bow" data-pause="' + pr.enrollment_id +
+        '" data-nm="' + esc(pr.name) + '" data-months="' + m +
+        '" data-ren="' + esc(pr.renewal_on || "") + '">Pause ' + esc(pr.name) + "</button>" +
+      '<button class="rest-link" data-pausecancel="1">Not now</button></div>';
   }
 
   /* What he can do about this family. A settled one can still pay
@@ -1909,7 +1944,9 @@
     "</div>";
   }
 
-  function viewInsights() {
+  function viewInsights(inPanel) {
+    var open = inPanel ? '<div class="lgsec">' : '<div class="card">';
+    var shut = "</div>";
     var rows = (S.money && S.money.rows) || [];
     var paid = ((S.money && S.money.paid) || []).filter(function (p) { return p.status !== "void"; });
     if (!rows.length && !paid.length) return "";
@@ -1940,17 +1977,17 @@
     /* ---- 3. who is fading ---- */
     var slipping = S.money ? fading(rows, S.money.from, S.money.to) : [];
 
-    return '<div class="card"><h3 style="font-size:15px;margin-bottom:2px">Where the week goes</h3>' +
+    return open + '<h3 style="font-size:15px;margin-bottom:2px">Where the week goes</h3>' +
       '<div class="muted" style="margin-bottom:12px">How many children each day carries</div>' +
       '<div class="week">' + week + "</div>" +
       (load[quietest] < busiest * 0.6
         ? '<div class="muted" style="margin-top:10px">' + DAY_NAMES[quietest] +
           " is your quietest day \u2014 " + load[quietest] + " against " + busiest +
           " at your busiest. That is room, not a gap.</div>"
-        : "") + "</div>" +
+        : "") + shut +
 
       (ins.length
-        ? '<div class="card"><h3 style="font-size:15px;margin-bottom:2px">What each instrument earned</h3>' +
+        ? open + '<h3 style="font-size:15px;margin-bottom:2px">What each instrument earned</h3>' +
           '<div class="muted" style="margin-bottom:12px">' + inr(earned) + " collected this month</div>" +
           ins.map(function (k) {
             var n = heads[k] || 0;
@@ -1960,11 +1997,11 @@
               '<span class="v">' + inr(byIns[k]) + "</span></div>" +
               (n ? '<div class="insub">' + n + " playing \u00b7 " + inr(Math.round(byIns[k] / n)) +
                    " each</div>" : "");
-          }).join("") + "</div>"
+          }).join("") + shut
         : "") +
 
       (slipping.length
-        ? '<div class="card"><h3 style="font-size:15px;margin-bottom:2px">Losing the thread</h3>' +
+        ? open + '<h3 style="font-size:15px;margin-bottom:2px">Losing the thread</h3>' +
           '<div class="muted" style="margin-bottom:12px">Coming less than they used to. ' +
           "Measured against their own earlier weeks, not against anyone else.</div>" +
           slipping.slice(0, 8).map(function (f) {
@@ -1974,107 +2011,108 @@
               '<svg class="hairpin" viewBox="0 0 60 16" aria-hidden="true">' +
                 '<path d="M1 2 L57 8 M1 14 L57 8"/></svg>' +
               '<div class="fg"><b>' + f.was + "% \u2192 " + f.now + '%</b></div></div>';
-          }).join("") + "</div>"
+          }).join("") + shut
         : "");
   }
+
+  /* ============================================================
+     THE LEDGER IS ONE PANEL, NOT FIVE CARDS
+
+     The money tab was: three figures, a waveform, an add-expense
+     form, a list of what was spent, a list of what came in, and three
+     charts — six stacked cards and a very long thumb. They are all
+     answers to the same question, so they live in one panel with a
+     row of tabs, and the tab he is on is the only one that costs any
+     height.
+
+     The figures and the waveform stay above it: those are the month's
+     shape at a glance and he should never have to choose to see them.
+     ============================================================ */
+  var LEDGER = [["spent", "Spent"], ["in", "Received"], ["look", "Insights"]];
 
   function viewMoney() {
     var mn = new Date(S.month.y, S.month.m - 1, 1)
       .toLocaleDateString("en-IN", { month: "long", year: "numeric" });
     var head = '<div class="daybar">' +
-      '<button data-mon="-1">‹</button>' +
-      '<div class="d"><b>' + esc(mn) + "</b><span>this month</span></div>" +
-      '<button data-mon="1">›</button></div>';
-    if (!S.money) return head + '<div class="note">Loading…</div>';
+      '<button data-mon="-1">\u2039</button>' +
+      '<button class="d" data-months="1"><b>' + esc(mn) + "</b><span>tap to jump</span></button>" +
+      '<button data-mon="1">\u203a</button></div>';
+    if (!S.money) return head + '<div class="note">Loading\u2026</div>';
 
-    var inTot = S.money.paid.filter(function (p) { return p.status !== "void"; })
-                            .reduce(function (a, p) { return a + Number(p.amount || 0); }, 0);
+    var live = S.money.paid.filter(function (p) { return p.status !== "void"; });
+    var inTot  = live.reduce(function (a, p) { return a + Number(p.amount || 0); }, 0);
     var outTot = S.money.spent.reduce(function (a, p) { return a + Number(p.amount || 0); }, 0);
+    var view = S.ledger || "spent";
 
-    return head +
+    var tabs = '<div class="sub-toggle ledger">' + LEDGER.map(function (t) {
+      var n = t[0] === "spent" ? S.money.spent.length
+            : t[0] === "in"    ? live.length : 0;
+      return '<button data-ledger="' + t[0] + '"' + (view === t[0] ? ' class="on"' : "") + ">" +
+        t[1] + (n ? ' <em class="n">' + n + "</em>" : "") + "</button>";
+    }).join("") + "</div>";
+
+    return head + monthStrip() +
       '<div class="card"><div class="figs">' +
         '<div class="fig in"><b>' + inr(inTot) + "</b><span>Fees collected</span></div>" +
         '<div class="fig out"><b>' + inr(outTot) + "</b><span>Spent</span></div>" +
         '<div class="fig"><b>' + inr(inTot - outTot) + "</b><span>Left</span></div>" +
       "</div></div>" +
       viewWave() +
-      '<div class="card"><h3 style="font-size:15px;margin-bottom:12px">Add an expense</h3>' +
+      '<div class="card ledgerpanel">' + tabs +
+        (view === "spent" ? ledgerSpent()
+       : view === "in"    ? ledgerIn(live)
+       :                    viewInsights(true)) +
+      "</div>";
+  }
+
+  function ledgerSpent() {
+    return '<div class="lgrid">' +
         '<label class="field"><span>How much</span>' +
           '<input id="exAmt" type="number" inputmode="numeric" min="1" placeholder="0" /></label>' +
         '<label class="field"><span>What for</span>' +
-          '<input id="exWhat" placeholder="Guitar strings, rent, electricity…" /></label>' +
-        '<button class="btn bow" id="exSave">Save expense</button>' +
+          '<input id="exWhat" placeholder="Guitar strings, rent, electricity\u2026" /></label>' +
       "</div>" +
+      '<button class="btn bow" id="exSave">Save expense</button>' +
       (S.money.spent.length
-        ? '<div class="card"><h3 style="font-size:15px;margin-bottom:6px">Spent this month</h3>' +
-          S.money.spent.map(function (e) {
-            /* An expense typed wrong stayed wrong for ever: there was
-               no way to change it and no way to take it off. Editing
-               is inline; removing asks once, because money leaving the
-               books by accident is worse than one extra tap. */
-            if (S.exEdit === e.id) {
-              return '<div class="srow exedit">' +
-                '<input id="exeWhat" value="' + esc(e.detail || e.category || "") + '" />' +
-                '<input id="exeAmt" type="number" inputmode="numeric" value="' + Number(e.amount) + '" />' +
-                '<button class="mini go" data-exsave="' + e.id + '">Save</button>' +
-                '<button class="mini" data-excancel="1">Cancel</button></div>';
-            }
-            if (S.exKill === e.id) {
-              return '<div class="srow exedit"><div class="nm"><b>Remove ' +
-                esc(e.detail || e.category) + "?</b><span>" + inr(e.amount) + "</span></div>" +
-                '<button class="mini bad" data-exkillyes="' + e.id + '">Remove</button>' +
-                '<button class="mini" data-excancel="1">Keep</button></div>';
-            }
-            return '<div class="srow"><div class="nm"><b>' + esc(e.detail || e.category) + "</b>" +
-              "<span>" + new Date(e.on_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) +
-              "</span></div><b>" + inr(e.amount) + "</b>" +
-              /* Two words plus an amount plus a name does not fit a
-                 382px row — the controls wrapped on top of the money.
-                 A pencil and a cross are the same two acts in 80px. */
-              '<button class="mini ic" data-exedit="' + e.id + '" aria-label="Change">\u270e</button>' +
-              '<button class="mini ic" data-exkill="' + e.id + '" aria-label="Remove">\u00d7</button>' +
-            "</div>";
-          }).join("") + "</div>"
-        : "") +
-      (S.money.paid.length
-        ? '<div class="card"><h3 style="font-size:15px;margin-bottom:6px">Fees received</h3>' +
-          '<div class="muted" style="margin-bottom:8px">' + S.money.paid.length + " payment" +
-          (S.money.paid.length === 1 ? "" : "s") + "</div>" +
-          S.money.paid.slice(0, 30).map(function (p) {
-            var dead = p.status === "void";
-            return '<div class="srow' + (dead ? " voided" : "") + '">' +
-              '<div class="nm"><b>' + inr(p.amount) + "</b><span>" +
-              new Date(p.on_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) +
-              " · " + esc(p.mode || "") + (dead ? " · cancelled" : "") + "</span></div>" +
-              (dead ? "" : '<button class="undo" data-void="' + p.id + '">Undo</button>') +
-            "</div>";
-          }).join("") + "</div>"
-        : "") +
-      viewInsights();
+        ? '<div class="lglist">' + S.money.spent.map(expenseRow).join("") + "</div>"
+        : '<div class="note" style="margin-top:10px">Nothing spent this month yet.</div>');
   }
 
-  /* ============================================================
-     TAKING MONEY
+  function ledgerIn(live) {
+    if (!live.length) return '<div class="note" style="margin-top:12px">No fees in yet this month.</div>';
+    return '<div class="lglist">' + S.money.paid.slice(0, 40).map(function (p) {
+      var dead = p.status === "void";
+      return '<div class="srow' + (dead ? " voided" : "") + '">' +
+        '<div class="nm"><b>' + inr(p.amount) + "</b><span>" +
+        new Date(p.on_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) +
+        " \u00b7 " + esc(p.mode || "") + (dead ? " \u00b7 cancelled" : "") + "</span></div>" +
+        (dead ? "" : '<button class="mini" data-void="' + p.id + '">Undo</button>') +
+      "</div>";
+    }).join("") + "</div>";
+  }
 
-     This used to be one window.confirm() that recorded the exact
-     amount reminder_queue quoted, for one month, as UPI, and only
-     ever for somebody already overdue. Three things were wrong with
-     that and one of them reached the parent:
+  function expenseRow(e) {
+    if (S.exEdit === e.id) {
+      return '<div class="srow exedit">' +
+        '<input id="exeWhat" value="' + esc(e.detail || e.category || "") + '" />' +
+        '<input id="exeAmt" type="number" inputmode="numeric" value="' + Number(e.amount) + '" />' +
+        '<button class="mini go" data-exsave="' + e.id + '">Save</button>' +
+        '<button class="mini" data-excancel="1">Cancel</button></div>';
+    }
+    if (S.exKill === e.id) {
+      return '<div class="srow exedit"><div class="nm"><b>Remove ' +
+        esc(e.detail || e.category) + "?</b><span>" + inr(e.amount) + "</span></div>" +
+        '<button class="mini bad" data-exkillyes="' + e.id + '">Remove</button>' +
+        '<button class="mini" data-excancel="1">Keep</button></div>';
+    }
+    return '<div class="srow"><div class="nm"><b>' + esc(e.detail || e.category) + "</b>" +
+      "<span>" + new Date(e.on_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) +
+      "</span></div><b>" + inr(e.amount) + "</b>" +
+      '<button class="mini ic" data-exedit="' + e.id + '" aria-label="Change">\u270e</button>' +
+      '<button class="mini ic" data-exkill="' + e.id + '" aria-label="Remove">\u00d7</button>' +
+    "</div>";
+  }
 
-       · a family paying ON TIME had nowhere to be recorded, because
-         the only Paid button lived in the overdue list;
-       · every rupee was filed as UPI, in a school that takes cash;
-       · a term paid up front was recorded as one month, so
-         renewal_on rolled forward once and the platform chased them
-         again the following month for money already paid.
-
-     So there is a sheet now. It asks the three things that actually
-     vary and nothing else, and it is only ever on screen while he is
-     taking money — the register behind it is untouched.
-
-     THE AMOUNT STILL COMES FROM POSTGRES. enrollment_fee() prices the
-     months; this file only ever displays what it is told and sends
-     back what he confirms. */
   function viewPay() {
     var p = S.pay;
     return '<div class="sheet"><div class="card">' +
@@ -2590,20 +2628,33 @@
       render(); return;
     }
     if (t.closest("#famClose")) { S.fam = null; S.famInfo = null; render(); return; }
+    var po = t.closest("[data-pausing]");
+    if (po) { S.pausing = +po.getAttribute("data-pausing"); S.pauseMonths = 1; render(); return; }
+    if (t.closest("[data-pausecancel]")) { S.pausing = null; render(); return; }
+    var pm = t.closest("[data-pausem]");
+    if (pm) { S.pauseMonths = +pm.getAttribute("data-pausem"); render(); return; }
+
     var pz = t.closest("[data-pause]");
     if (pz) {
       var pn = pz.getAttribute("data-nm");
-      MZ.pauseStudent(+pz.getAttribute("data-pause"), true).then(function () {
-        toast(pn + " is paused"); S.fam = null; S.famInfo = null; loadDues();
-      }).catch(fail);
+      MZ.pauseStudent({ enrollment: +pz.getAttribute("data-pause"),
+                        months: +pz.getAttribute("data-months") || 1,
+                        renewalOn: pz.getAttribute("data-ren") || null })
+        .then(function () {
+          toast(pn + " is paused");
+          S.fam = null; S.famInfo = null; S.pausing = null;
+          S.tab === "register" ? loadRegister() : loadDues();
+        }).catch(fail);
       return;
     }
     var rz = t.closest("[data-resume]");
     if (rz) {
       var rn = rz.getAttribute("data-nm");
-      MZ.pauseStudent(+rz.getAttribute("data-resume"), false).then(function () {
-        toast(rn + " is back"); S.fam = null; S.famInfo = null; loadDues();
-      }).catch(fail);
+      MZ.pauseStudent({ enrollment: +rz.getAttribute("data-resume"), resume: true })
+        .then(function () {
+          toast(rn + " is back"); S.fam = null; S.famInfo = null;
+          S.tab === "register" ? loadRegister() : loadDues();
+        }).catch(fail);
       return;
     }
 
@@ -2637,6 +2688,8 @@
     if (t.closest("#nsCancel")) { S.tab = "register"; render(); return; }
     if (t.closest("#nsSave")) { saveStudent(); return; }
     if (t.closest("#exSave")) { saveExpense(); return; }
+    var lg = t.closest("[data-ledger]");
+    if (lg) { S.ledger = lg.getAttribute("data-ledger"); render(); return; }
     if (t.closest("[data-months]")) { S.monthPick = !S.monthPick; render(); return; }
     var jm = t.closest("[data-jump]");
     if (jm) {

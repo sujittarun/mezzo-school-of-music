@@ -614,15 +614,30 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
     assert(/Paused \u2014 1/.test(h), "there is no paused band: " + h.slice(0, 80));
     assert(/In tune \u2014 1/.test(h), "the paused member was counted as in tune");
 
-    /* pause the active one */
+    /* Pause for two months. THE RENEWAL DATE MUST MOVE WITH IT.
+       reminder_queue measures lateness from renewal_on, so a status
+       flip on its own brings the child back instantly sixty days
+       overdue for two months they did not attend. */
     fetchLog.length = 0;
-    onClick({ target: { closest: (q) => (q === "[data-pause]"
-      ? { getAttribute: (a) => (a === "data-pause" ? "11" : "Aarthi") } : null) } });
+    onClick({ target: { closest: (q) => (q === "[data-pause]" ? { getAttribute: (a) =>
+      a === "data-pause" ? "11" : a === "data-months" ? "2" :
+      a === "data-ren" ? "2026-09-10" : "Aarthi" } : null) } });
     for (let i = 0; i < 8; i++) await tick();
     const pw = calls("/enrollments").filter((c) => c.method === "PATCH");
     assert(pw.length === 1, "pausing wrote " + pw.length + " times");
     assert(pw[0].body.status === "paused",
       "pause wrote " + JSON.stringify(pw[0].body) + ", not a paused status");
+    assert(pw[0].body.renewal_on === "2026-11-10",
+      "a two-month pause moved the fee date to " + pw[0].body.renewal_on +
+      " instead of 2026-11-10 — this family gets chased for months they were away");
+
+    /* A renewal date that is not a date must not become NaN-NaN-NaN. */
+    fetchLog.length = 0;
+    await ctx.MZ.pauseStudent({ enrollment: 11, months: 2, renewalOn: "not a date" });
+    for (let i = 0; i < 4; i++) await tick();
+    const bad = calls("/enrollments").filter((c) => c.method === "PATCH")[0];
+    assert(bad.body.renewal_on === undefined,
+      "an unparseable date was shifted into " + bad.body.renewal_on);
     /* NOT discontinue_member: that closes the enrolment and a return
        would need a whole new one, losing the history */
     assert(calls("discontinue_member").length === 0,

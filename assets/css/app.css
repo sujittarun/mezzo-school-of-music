@@ -1600,7 +1600,12 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
   background: var(--ok);
 }
 .wcol .half.b i { border-radius: 0 0 2px 2px; background: var(--no); }
-.wcol.today { background: rgba(201,138,46,.14); }
+/* A filled column reads as DATA — at this width today's marker looked
+   like the biggest bar of the month. It is a line behind the bars
+   instead. */
+.wcol.today { background: linear-gradient(90deg,
+  rgba(0,0,0,0) calc(50% - 1px), rgba(201,138,46,.55) calc(50% - 1px),
+  rgba(201,138,46,.55) calc(50% + 1px), rgba(0,0,0,0) calc(50% + 1px)); }
 .wcol.on { background: rgba(91,63,168,.16); }
 .wcol.on i { background: var(--brand); }
 .wcol:active { background: rgba(91,63,168,.10); }
@@ -1667,3 +1672,36 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
   background: var(--warn-bg); border: 1px solid rgba(143,99,23,.28); }
 .askline b { font-size: 14.5px; }
 .askline span { font-size: 13px; color: var(--ink-2); }
+
+/* ---------- the ledger panel ----------
+   Spent, Received and Insights are three answers to one question, so
+   they share one panel and only the face he is on costs any height.
+   The tabs are the same piano keys as One day / Month, because a
+   second kind of tab in the same app is a second thing to learn. */
+.sub-toggle.ledger { margin-bottom: 14px; }
+.sub-toggle.ledger button { flex: 1 1 0; }
+.sub-toggle .n { font-style: normal; font-size: 11px; font-weight: 700;
+  color: var(--ink-3); margin-left: 3px; }
+.sub-toggle button.on .n { color: var(--brand); }
+
+/* the add-expense pair sits side by side above 420px: two short
+   fields stacked was most of the scroll on this tab */
+.lgrid { display: grid; gap: 10px; grid-template-columns: 1fr; }
+@media (min-width: 420px) { .lgrid { grid-template-columns: 7rem 1fr; align-items: end; } }
+.lgrid .field { margin-bottom: 0; }
+
+/* the list scrolls inside the panel rather than the page: the panel
+   keeps its place and the thumb stays where the numbers are */
+.lglist { margin-top: 14px; max-height: 46vh; overflow-y: auto;
+  -webkit-overflow-scrolling: touch; }
+.lgsec { padding-top: 4px; }
+.lgsec + .lgsec { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+
+/* ---------- pausing ---------- */
+.pausebox { margin-top: 10px; padding: 14px 14px 8px; border-radius: 14px;
+  background: rgba(150,132,92,.12); border: 1px solid var(--rule); }
+.pausebox > b { display: block; font-size: 15px; margin-bottom: 12px; }
+.pausebox .stops button { min-height: 66px; }
+.pausebox .stops button i { max-width: 44px; }
+.pnote { display: block; text-align: center; font-size: 13px; font-weight: 600;
+  color: var(--ink-2); margin: 12px 0 12px; }

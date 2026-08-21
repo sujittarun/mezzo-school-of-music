@@ -157,12 +157,26 @@ const fixtures = {
     days_since: 1 + (i * 3) % 26, due_date: isoOf(Math.max(1, DOM - ((i * 3) % 26))),
     phone: "900000" + String(1000 + s.n).slice(-4), already_sent: i % 4 === 0
   })),
-  payments: STUDENTS.filter((s) => s.n % 7 !== 3).slice(0, 62).map((s, i) => ({
-    id: i + 1, amount: s.sport === "Piano" ? 2500 : 1500,
-    on_date: isoOf(1 + (i * 3) % Math.max(1, DOM - 1)),
-    mode: i % 3 ? "UPI" : "Cash", kind: "fee", status: "paid",
-    member_id: s.n + 1, enrollment_id: s.n + 1, member_name: s.name, sport: s.sport
-  })),
+  /* REAL PAYMENTS LOOK LIKE THIS.
+     UPI is how almost everyone in Coimbatore pays now, so the mix is
+     roughly four in five; a handful pay a term up front rather than a
+     month, which is what plan_months 3 and 6 are for; and two are
+     voided, because a mis-keyed payment being taken back is a normal
+     week and the Undo path should be exercised by the fixtures rather
+     than only by a test. */
+  payments: STUDENTS.filter((s) => s.n % 7 !== 3).slice(0, 62).map((s, i) => {
+    const rate = s.sport === "Piano" ? 2500 : 1500;
+    const months = i % 17 === 0 ? 6 : i % 9 === 0 ? 3 : 1;
+    return {
+      id: i + 1, amount: rate * months,
+      on_date: isoOf(1 + (i * 3) % Math.max(1, DOM - 1)),
+      mode: i % 5 === 0 ? "Cash" : "UPI",
+      kind: "fee", status: i === 12 || i === 41 ? "void" : "paid",
+      months: months,
+      member_id: s.n + 1, enrollment_id: s.n + 1, member_name: s.name, sport: s.sport
+    };
+  }),
+
   expenses: [
     { id: 1,  category: "Rent",     detail: "Studio rent",        amount: 18000, mode: "UPI",  on_date: isoOf(2) },
     { id: 2,  category: "Utility",  detail: "Electricity",        amount: 3400,  mode: "UPI",  on_date: isoOf(4) },

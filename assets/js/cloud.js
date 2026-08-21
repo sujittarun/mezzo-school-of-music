@@ -467,10 +467,36 @@
      attendance and its payments all stay exactly where they are, so
      coming back is one flip in the other direction rather than a new
      enrolment with a new history. */
-  function pauseStudent(enrollmentId, paused) {
-    return patch("/enrollments?" + T + "&id=eq." + enrollmentId,
-      { status: paused ? "paused" : "active" })
-      .then(function (r) { report(paused ? "student_paused" : "student_resumed", {}); return r; });
+  /* PAUSING MUST MOVE THE RENEWAL DATE, or it is a trap.
+
+     reminder_queue() measures lateness from enrollments.renewal_on.
+     Flip the status and nothing else, and a child paused for two
+     months comes back INSTANTLY SIXTY DAYS OVERDUE — chased by
+     WhatsApp for two months they did not attend and do not owe. The
+     first version of this did exactly that.
+
+     So the pause asks how long, and pushes renewal_on out by the same
+     number of months there and then. Nothing has to be remembered
+     afterwards: when they are brought back, the date is already
+     right and resuming is a status flip on its own.
+
+     Why not store the return date and shift on the way back: there is
+     nowhere to put it. enrollments has no jsonb, no notes and no
+     paused_on — checked — and adding one is a shared migration that
+     reaches six other academies. */
+  function pauseStudent(a) {
+    var body = { status: a.resume ? "active" : "paused" };
+    /* Only shift a date that IS a date. monthOn() on anything else
+       returns NaN-NaN-NaN, and writing that into renewal_on would
+       leave the enrolment with no readable due date at all. */
+    if (!a.resume && a.months && /^\d{4}-\d{2}-\d{2}$/.test(String(a.renewalOn || ""))) {
+      body.renewal_on = monthOn(a.renewalOn, Math.max(1, Math.min(12, Number(a.months) || 1)));
+    }
+    return patch("/enrollments?" + T + "&id=eq." + a.enrollment, body)
+      .then(function (r) {
+        report(a.resume ? "student_resumed" : "student_paused", {});
+        return r;
+      });
   }
 
   /* An expense typed wrong is money that is wrong until somebody can
