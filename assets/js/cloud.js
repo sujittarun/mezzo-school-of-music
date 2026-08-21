@@ -263,6 +263,12 @@
   /* Find the pattern, or make it. Never a duplicate: the key is the
      sorted day list, so [6,3] and [3,6] are the same Wednesday-and-
      Saturday pattern and share one row. */
+  var PLANS = [1, 3, 6, 12];
+  function planMonths(v) {
+    var n = Number(v) || 1;
+    return PLANS.indexOf(n) >= 0 ? n : 1;
+  }
+
   function batchForDays(days) {
     var key = dayKey(days);
     if (!key) return Promise.reject(new Error("Pick at least one day."));
@@ -303,7 +309,11 @@
     if (!a.name)       return Promise.reject(new Error("A name is needed."));
     if (!a.instrument) return Promise.reject(new Error("Pick an instrument."));
     if (!a.days || !a.days.length) return Promise.reject(new Error("Pick at least one day."));
-    var plan = Math.max(1, Math.min(12, Number(a.planMonths) || 1));
+    /* enrollments_plan_months_check allows 1, 3, 6 or 12 and nothing
+       else. Clamping to 1..12 would let a 2 or a 4 through and the
+       insert would be rejected by the database with a constraint
+       error the operator cannot act on. */
+    var plan = planMonths(a.planMonths);
     return batchForDays(a.days).then(function (batch) {
     return post("/members", {
       tenant_id: TENANT, name: a.name.trim(), phone: a.phone || null,
@@ -362,7 +372,7 @@
   function moveEnrollment(enrollmentId, a) {
     var body = {};
     if (a.instrument) body.sport = a.instrument;
-    if (a.planMonths) body.plan_months = Math.max(1, Math.min(12, Number(a.planMonths)));
+    if (a.planMonths) body.plan_months = planMonths(a.planMonths);
     var days = a.days && a.days.length ? a.days : null;
     return (days ? batchForDays(days) : Promise.resolve(null)).then(function (batch) {
       if (batch) body.batch_id = batch.id;
@@ -438,6 +448,31 @@
     }).then(function (r) { report("expense_added", {}); return r; });
   }
 
+  /* ============================================================
+     PAUSING A STUDENT
+
+     Checked before writing a line of this, because guessing would
+     have been the expensive kind of wrong:
+
+       reminder_queue()   ...and e.status = 'active'
+       attendance_month() ...and e.status = 'active'
+
+     So a paused enrolment falls out of the register AND out of the
+     chase, which is exactly what "away for a while" means. And
+     `paused` is not a word invented here — discontinue_member's
+     rejoin guard already reads `status in ('active','paused')`, so
+     the platform has always had the idea; nothing was using it.
+
+     It is a status flip, not a discontinue: the enrolment, its
+     attendance and its payments all stay exactly where they are, so
+     coming back is one flip in the other direction rather than a new
+     enrolment with a new history. */
+  function pauseStudent(enrollmentId, paused) {
+    return patch("/enrollments?" + T + "&id=eq." + enrollmentId,
+      { status: paused ? "paused" : "active" })
+      .then(function (r) { report(paused ? "student_paused" : "student_resumed", {}); return r; });
+  }
+
   /* An expense typed wrong is money that is wrong until somebody can
      change it, and there was no way to. Both writes carry the tenant
      in the URL: an id is global on this platform, so a DELETE without
@@ -497,6 +532,7 @@
     report: report, reference: reference,
     students: students, student: student, addStudent: addStudent, stopStudent: stopStudent,
     editStudent: editStudent, moveEnrollment: moveEnrollment, voidPayment: voidPayment,
+    pauseStudent: pauseStudent,
     mark: mark, register: register,
     feeFor: feeFor, takePayment: takePayment, payments: payments,
     expenses: expenses, addExpense: addExpense,

@@ -179,8 +179,11 @@ const fixtures = {
       id: s.n + 1, name: s.name, phone: "900000" + String(1000 + s.n).slice(-4),
       parent_name: "Parent " + s.name.split(" ")[0],
       parent_phone: "900000" + String(1000 + s.n).slice(-4), joined: ji,
+      /* a few are away for a while — enough to see the Paused band
+         and to prove a paused child is off the register */
       enrollments: [{ id: s.n + 1, sport: s.sport, batch_id: s.batch,
-                      status: "active", joined_on: ji }]
+                      status: s.n % 23 === 5 ? "paused" : "active",
+                      joined_on: ji }]
     };
   }),
   centres: [{ id: 1, code: "main", name: "Thadagam Road", short_name: "Main", sort: 1 }],

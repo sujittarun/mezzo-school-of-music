@@ -584,6 +584,87 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
     assert(!/1,?500|2,?500/.test(h), "a fee amount was printed in the nudge");
   });
 
+  /* PAUSING. Verified against the platform before writing any of it,
+     because guessing here is the expensive kind of wrong:
+
+       reminder_queue()   ...and e.status = 'active'
+       attendance_month() ...and e.status = 'active'
+       discontinue_member ...status in ('active','paused')
+
+     So a paused enrolment leaves the register AND the chase, and
+     'paused' is a status the platform already knew about. */
+  await check("pausing a student is a status flip, not a discontinue", async () => {
+    signIn(); fetchLog.length = 0;
+    nextBody = (url) => {
+      if (url.includes("reminder_queue")) return [];
+      if (url.includes("/members")) return [
+        { id: 1, name: "Aarthi", phone: "9000000111", status: "active",
+          enrollments: [{ id: 11, sport: "Piano", batch_id: 1, status: "active" }] },
+        { id: 2, name: "Farhan", phone: "9000000222", status: "active",
+          enrollments: [{ id: 22, sport: "Keyboard", batch_id: 1, status: "paused" }] },
+      ];
+      return [];
+    };
+    api.S.tab = "dues"; api.enter();
+    for (let i = 0; i < 10; i++) await tick();
+    let h = byId("root").innerHTML;
+    /* a paused member STAYS on the roll — otherwise pausing is a
+       one-way door and he can never bring them back */
+    assert(h.includes("Farhan"), "a paused member vanished from the roll");
+    assert(/Paused \u2014 1/.test(h), "there is no paused band: " + h.slice(0, 80));
+    assert(/In tune \u2014 1/.test(h), "the paused member was counted as in tune");
+
+    /* pause the active one */
+    fetchLog.length = 0;
+    onClick({ target: { closest: (q) => (q === "[data-pause]"
+      ? { getAttribute: (a) => (a === "data-pause" ? "11" : "Aarthi") } : null) } });
+    for (let i = 0; i < 8; i++) await tick();
+    const pw = calls("/enrollments").filter((c) => c.method === "PATCH");
+    assert(pw.length === 1, "pausing wrote " + pw.length + " times");
+    assert(pw[0].body.status === "paused",
+      "pause wrote " + JSON.stringify(pw[0].body) + ", not a paused status");
+    /* NOT discontinue_member: that closes the enrolment and a return
+       would need a whole new one, losing the history */
+    assert(calls("discontinue_member").length === 0,
+      "pausing went through discontinue_member — that is leaving, not pausing");
+    assert(pw[0].url.includes("tenant_id=eq.mezzo"),
+      "the pause was written without a tenant: ids are global on this platform");
+
+    /* and back again */
+    fetchLog.length = 0;
+    onClick({ target: { closest: (q) => (q === "[data-resume]"
+      ? { getAttribute: (a) => (a === "data-resume" ? "22" : "Farhan") } : null) } });
+    for (let i = 0; i < 8; i++) await tick();
+    const rw = calls("/enrollments").filter((c) => c.method === "PATCH");
+    assert(rw.length === 1 && rw[0].body.status === "active",
+      "bringing back did not restore the enrolment: " + JSON.stringify(rw.map((c) => c.body)));
+  });
+
+  /* enrollments_plan_months_check allows 1, 3, 6 or 12 and nothing
+     else. A 2 or a 4 reaching the database is a constraint error the
+     operator can do nothing about. */
+  await check("a plan of months the database will not accept never leaves the client", async () => {
+    signIn(); fetchLog.length = 0;
+    nextBody = (url, body) => {
+      if (url.includes("/batches") && body) return [{ id: 41, ...body }];
+      if (url.includes("/batches")) return [
+        { id: 1, days: [1,2,3,4,5], start_time: "15:00", end_time: "20:00", centre_id: 4, active: true }];
+      if (url.includes("/centres")) return [{ id: 4 }];
+      if (url.includes("/members")) return [{ id: 99, name: "Test" }];
+      if (url.includes("attendance_month")) return [];
+      return url.includes("/sports") ? [] : {};
+    };
+    await ctx.MZ.reference(true);
+    await ctx.MZ.addStudent({ name: "Test", phone: "9000000004", instrument: "Piano",
+                              days: [1, 4], planMonths: 4, centre: 4 });
+    for (let i = 0; i < 6; i++) await tick();
+    const enr = calls("/enrollments").filter((c) => c.method === "POST");
+    assert(enr.length === 1, "nobody was enrolled");
+    assert([1, 3, 6, 12].indexOf(enr[0].body.plan_months) >= 0,
+      "plan_months went out as " + enr[0].body.plan_months +
+      ", which enrollments_plan_months_check will reject");
+  });
+
   /* The day patterns arrive on a SECOND request, after the register has
      already painted. Without a re-render when they land, the filter sits
      on its safe fallback — show everybody — and looks broken while being

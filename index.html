@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" />
-<link rel="stylesheet" href="assets/css/app.css?v=20260821n" />
+<link rel="stylesheet" href="assets/css/app.css?v=20260821o" />
 </head>
 <body>
 <!-- ============================================================
@@ -1305,11 +1305,16 @@
 
     members.forEach(function (m) {
       (m.enrollments || []).forEach(function (en) {
-        if (en.status && en.status !== "active") return;
+        /* paused stays ON the roll. A paused child is out of the
+           register and out of the chase, but he still has to be able
+           to find them and bring them back — dropping them here would
+           make pausing a one-way door. */
+        if (en.status && en.status !== "active" && en.status !== "paused") return;
         out.push({
           key: en.id, member_id: m.id, enrollment_id: en.id,
           name: m.name, sport: en.sport, batch_id: en.batch_id,
           renewal_on: en.renewal_on, phone: m.phone || m.parent_phone,
+          paused: en.status === "paused",
           due: byEnrol[en.id] || null
         });
         delete byEnrol[en.id];
@@ -1324,8 +1329,10 @@
                  phone: d.phone, due: d });
     });
 
-    /* flat first, worst first; then everyone else by name */
+    /* flat first worst-first, then in tune, then paused at the foot */
+    function rank(p) { return p.paused ? 2 : p.due ? 0 : 1; }
     out.sort(function (a, b) {
+      if (rank(a) !== rank(b)) return rank(a) - rank(b);
       var ad = a.due ? a.due.days_since || 0 : -1, bd = b.due ? b.due.days_since || 0 : -1;
       if (ad !== bd) return bd - ad;
       return String(a.name).localeCompare(String(b.name));
@@ -1405,28 +1412,57 @@
     /* dead centre is 90 degrees. Flat swings left, toward 170. */
     var share = total ? flat / total : 0;
     var deg = 90 + Math.min(1, share) * 78;
-    var col = share === 0 ? "var(--ok)" : share < 0.18 ? "var(--warn)"
-            : share < 0.4 ? "#C25A17" : "var(--no)";
+    var lit = share === 0 ? "ok" : share < 0.18 ? "warn" : share < 0.4 ? "mid" : "bad";
     var cx = 130, cy = 118, r = 96;
-    var ticks = "";
-    for (var t = 0; t <= 14; t++) {
-      var a = 12 + t * 12;
-      var p0 = polar(cx, cy, r - (t % 7 === 0 ? 15 : 8), a), p1 = polar(cx, cy, r, a);
-      ticks += '<line x1="' + p0[0].toFixed(1) + '" y1="' + p0[1].toFixed(1) +
-               '" x2="' + p1[0].toFixed(1) + '" y2="' + p1[1].toFixed(1) + '"/>';
+
+    /* a real tuner has a numbered scale, not just marks */
+    var ticks = "", labels = "";
+    for (var t = 0; t <= 12; t++) {
+      var a = 12 + t * 13, big = t % 3 === 0;
+      var p0 = polar(cx, cy, r - (big ? 16 : 8), a), p1 = polar(cx, cy, r, a);
+      ticks += '<line class="' + (big ? "big" : "") + '" x1="' + p0[0].toFixed(1) +
+        '" y1="' + p0[1].toFixed(1) + '" x2="' + p1[0].toFixed(1) +
+        '" y2="' + p1[1].toFixed(1) + '"/>';
+      /* ONLY THE FLAT SIDE IS NUMBERED.
+         Nobody can be sharp on this dial — reminder_queue has no idea
+         of "paid ahead" — so numbering the right half printed 0, 0,
+         which reads as a broken scale rather than an unused one. The
+         left is numbered in members behind; the right keeps its ticks
+         and stays blank, the way the sharp side of a tuner does when
+         you are only ever flat. */
+      if (big && a >= 90) {
+        var lp = polar(cx, cy, r - 30, a);
+        var v = Math.round((a - 90) / 78 * total);
+        labels += '<text x="' + lp[0].toFixed(1) + '" y="' + (lp[1] + 4).toFixed(1) + '">' +
+          v + "</text>";
+      }
     }
-    var n = polar(cx, cy, r - 20, deg);
-    return '<div class="face"><svg viewBox="0 0 260 132" aria-hidden="true">' +
-      '<path class="bg" d="' + arcPath(cx, cy, r, 12, 168) + '"/>' +
-      '<path class="ok" d="' + arcPath(cx, cy, r, 82, 98) + '"/>' +
-      '<g class="tk">' + ticks + "</g>" +
-      '<line class="ndl" x1="' + cx + '" y1="' + cy + '" x2="' + n[0].toFixed(1) +
-        '" y2="' + n[1].toFixed(1) + '" style="stroke:' + col + '"/>' +
-      '<circle class="hub" cx="' + cx + '" cy="' + cy + '" r="7"/></svg></div>' +
-      /* The reading sits BELOW the dial. Nothing can live on the
-         needle's axis — it sweeps the whole radius, so any label in
-         there gets a line drawn through it, which is what happened. */
-      '<div class="reading" style="color:' + col + '">' +
+    var n = polar(cx, cy, r - 26, deg);
+
+    return '<div class="face ' + lit + '">' +
+      '<svg viewBox="0 0 260 150" aria-hidden="true">' +
+        '<path class="bg" d="' + arcPath(cx, cy, r, 12, 168) + '"/>' +
+        '<path class="ok" d="' + arcPath(cx, cy, r, 84, 96) + '"/>' +
+        '<g class="tk">' + ticks + "</g>" +
+        '<g class="lb">' + labels +
+          '<text class="sym" x="30" y="112">\u266d</text>' +
+          '<text class="sym dim" x="232" y="112">\u266f</text></g>' +
+        /* the needle, with its own shadow just under it */
+        '<line class="sh" x1="' + (cx + 1) + '" y1="' + (cy + 2) + '" x2="' +
+          (n[0] + 1).toFixed(1) + '" y2="' + (n[1] + 2).toFixed(1) + '"/>' +
+        '<line class="ndl" x1="' + cx + '" y1="' + cy + '" x2="' + n[0].toFixed(1) +
+          '" y2="' + n[1].toFixed(1) + '"/>' +
+        '<circle class="hub" cx="' + cx + '" cy="' + cy + '" r="8"/>' +
+        '<circle class="hub2" cx="' + cx + '" cy="' + cy + '" r="3.4"/>' +
+        /* three lamps along the foot, the way a tuner shows flat /
+           in tune / sharp — only one of them is ever lit */
+        '<g class="lamps">' +
+          '<circle class="l flatlamp" cx="' + (cx - 44) + '" cy="140" r="5"/>' +
+          '<circle class="l okl"      cx="' + cx + '" cy="140" r="6"/>' +
+          '<circle class="l sharp"    cx="' + (cx + 44) + '" cy="140" r="5"/>' +
+        "</g>" +
+      "</svg></div>" +
+      '<div class="reading">' +
         (flat ? "<b>" + flat + "</b><span>out of tune</span>"
               : '<b>\u2713</b><span>all in tune</span>') + "</div>" +
       '<div class="facesub">' + total + (total === 1 ? " member" : " members") +
@@ -1435,7 +1471,7 @@
 
   function viewDues() {
     if (!S.people) return '<div class="note">Loading…</div>';
-    var flat = S.people.filter(function (p) { return p.due; });
+    var flat = S.people.filter(function (p) { return p.due && !p.paused; });
     var owedTotal = flat.reduce(function (a, p) { return a + Number(p.due.amount || 0); }, 0);
     if (!S.people.length) {
       return '<div class="card tuner"><div class="tn-allin">' +
@@ -1443,22 +1479,41 @@
         "<span>Add a student from the register.</span></div></div>";
     }
 
-    var shownFlat = false, shownOk = false, rows = "";
+    var paused = S.people.filter(function (p) { return p.paused; });
+    var shown = {}, rows = "";
     S.people.forEach(function (p, i) {
-      if (p.due && !shownFlat) { shownFlat = true;
-        rows += '<div class="msec">Out of tune \u2014 ' + flat.length + "</div>"; }
-      if (!p.due && !shownOk) { shownOk = true;
-        rows += '<div class="msec">In tune \u2014 ' + (S.people.length - flat.length) + "</div>"; }
+      var band = p.paused ? "paused" : p.due ? "flat" : "ok";
+      if (!shown[band]) {
+        shown[band] = true;
+        rows += '<div class="msec">' +
+          (band === "flat"   ? "Out of tune \u2014 " + flat.length
+         : band === "ok"     ? "In tune \u2014 " +
+             (S.people.length - flat.length - paused.length)
+         :                     "Paused \u2014 " + paused.length) + "</div>";
+      }
       rows += memberRow(p, i);
     });
 
+    /* "Someone else paid" is a RARE act — somebody handed over cash
+       for a child who is not on the overdue list. It sat directly
+       under the dial, where the eye lands first, competing with the
+       ninety-six names it is not about. It goes to the foot of the
+       roll, as a line rather than a button. */
     return '<div class="card tuner">' + tunerFace(flat.length, S.people.length, owedTotal) +
-      '<button class="btn plec" data-other="1" style="margin:14px auto 6px">' +
-        "Someone else paid</button>" + rows + "</div>";
+      rows +
+      '<button class="rest-link" data-other="1" style="margin-top:16px">' +
+        "Someone else paid \u2014 record it</button></div>";
   }
 
   function memberRow(p, i) {
     var hue = inst(p.sport).hue;
+    if (p.paused) {
+      return '<button class="mrow rest" data-fam="' + i + '" style="--hue:' + hue + '">' +
+        '<span class="mnote">' + (TUNER_NOTE[p.sport] || "\u266a") + "</span>" +
+        '<span class="mwho"><b>' + esc(p.name) + "</b><span>" + esc(p.sport || "") + "</span></span>" +
+        '<span class="mtrack rest"></span>' +
+        '<span class="mamt"><b>\u2016</b><span>paused</span></span></button>';
+    }
     if (!p.due) {
       /* settled: the mark sits dead centre and it is green. Nothing
          else on the row, because there is nothing to do about it. */
@@ -1550,7 +1605,8 @@
       /* Two states, written out flat rather than nested. The first
          version of this was three ternaries inside each other and it
          did not even parse. */
-      (pr.due
+      (pr.paused ? ""
+        : pr.due
         ? '<div class="fowe"><span>Owing</span><b>' + inr(d.amount) + "</b>" +
           "<i>" + d.days_since + " day" + (d.days_since === 1 ? "" : "s") + " late</i></div>"
         : '<div class="fowe ok"><span>In tune</span><b>\u2713</b><i>' +
@@ -1560,6 +1616,9 @@
             : "nothing owing") + "</i></div>") +
 
       famActions(pr, d) +
+      (pr.paused ? "" :
+        '<button class="rest-link" data-pause="' + pr.enrollment_id +
+        '" data-nm="' + esc(pr.name) + '">Pause \u2014 away for a while</button>') +
       '<button class="btn plec" id="famClose">Close</button>' +
     "</div></div>";
   }
@@ -1567,6 +1626,14 @@
   /* What he can do about this family. A settled one can still pay
      early, which is the only reason that button is there at all. */
   function famActions(pr, d) {
+    if (pr.paused) {
+      /* A paused member has nothing owing and nothing to chase — the
+         only thing to do about them is bring them back. */
+      return '<div class="fowe rest"><span>Paused</span><b>\u2016</b>' +
+        "<i>off the register</i></div>" +
+        '<button class="btn bow" data-resume="' + pr.enrollment_id +
+        '" data-nm="' + esc(pr.name) + '">Bring back</button>';
+    }
     if (!pr.due) {
       return '<button class="btn bow paid" data-paid="' + pr.enrollment_id +
         '" data-nm="' + esc(pr.name) + '" data-sport="' + esc(pr.sport || "") +
@@ -2460,6 +2527,22 @@
       render(); return;
     }
     if (t.closest("#famClose")) { S.fam = null; S.famInfo = null; render(); return; }
+    var pz = t.closest("[data-pause]");
+    if (pz) {
+      var pn = pz.getAttribute("data-nm");
+      MZ.pauseStudent(+pz.getAttribute("data-pause"), true).then(function () {
+        toast(pn + " is paused"); S.fam = null; S.famInfo = null; loadDues();
+      }).catch(fail);
+      return;
+    }
+    var rz = t.closest("[data-resume]");
+    if (rz) {
+      var rn = rz.getAttribute("data-nm");
+      MZ.pauseStudent(+rz.getAttribute("data-resume"), false).then(function () {
+        toast(rn + " is back"); S.fam = null; S.famInfo = null; loadDues();
+      }).catch(fail);
+      return;
+    }
 
     var pl = t.closest("[data-plan]");
     if (pl) { keepAdd(); S.nsPlan = +pl.getAttribute("data-plan"); render(); return; }

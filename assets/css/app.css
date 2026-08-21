@@ -1238,27 +1238,73 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
    need the outline that forced the extra layer. */
 .btn.plec:active { transform: scale(.97); background: linear-gradient(180deg, #CDBFEE, #BCACE6); }
 
-/* ---------- one dial, then a strip of names ----------
-   The per-row meter is gone: eleven ticks, a gate and a needle on
-   every one of ninety-six rows was ninety-six tuners, and the
-   furniture drowned what each row was actually saying. */
-.card.tuner .face { position: relative; margin: 2px auto 0; max-width: 290px; }
+/* ---------- ONE DIAL, AND IT IS A DEVICE ----------
+   The paper version of this read as a drawing of a tuner. A tuner is
+   an OBJECT: a dark face behind glass, a bright printed scale, a
+   needle with a shadow under it and three lamps along the foot. So it
+   is built as one — a small machine lying on the sheet — and the
+   contrast against the cream is most of why it reads at all.
+
+   Still one dial for the whole school, not one per row. */
+.card.tuner .face {
+  position: relative; margin: 2px auto 0; max-width: 320px; padding: 10px 12px 4px;
+  border-radius: 18px;
+  background: linear-gradient(178deg, #2A2431 0%, #191420 62%, #221C2A 100%);
+  box-shadow: 0 1px 0 rgba(255,255,255,.14) inset,
+              0 -2px 6px rgba(0,0,0,.5) inset,
+              0 6px 18px rgba(40,28,16,.28);
+  border: 1px solid #0E0A14;
+}
+/* the glass */
+.card.tuner .face::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(160deg, rgba(255,255,255,.13) 0%, rgba(255,255,255,.03) 34%,
+              rgba(255,255,255,0) 55%);
+}
 .card.tuner .face svg { width: 100%; height: auto; display: block; }
-.card.tuner .face .bg { fill: none; stroke: var(--rule); stroke-width: 9; stroke-linecap: round; }
-.card.tuner .face .ok { fill: none; stroke: rgba(29,107,74,.30); stroke-width: 9; stroke-linecap: round; }
-.card.tuner .face .tk line { stroke: var(--rule); stroke-width: 1.6; }
-.card.tuner .face .ndl { stroke-width: 3.4; stroke-linecap: round;
-  transition: all .6s cubic-bezier(.22,1.3,.36,1); }
-.card.tuner .face .hub { fill: var(--ink); }
+
+.card.tuner .face .bg { fill: none; stroke: rgba(255,255,255,.13); stroke-width: 8; stroke-linecap: round; }
+.card.tuner .face .ok { fill: none; stroke: #3FCB8A; stroke-width: 8; stroke-linecap: round; }
+.card.tuner .face .tk line { stroke: rgba(255,255,255,.34); stroke-width: 1.4; }
+.card.tuner .face .tk line.big { stroke: rgba(255,255,255,.78); stroke-width: 2.2; }
+.card.tuner .face .lb text { fill: rgba(255,255,255,.62); font-size: 11px; font-weight: 700;
+  text-anchor: middle; font-variant-numeric: tabular-nums; }
+.card.tuner .face .lb .sym { font-size: 17px; fill: rgba(255,255,255,.55); }
+.card.tuner .face .lb .sym.dim { fill: rgba(255,255,255,.18); }
+
+.card.tuner .face .sh { stroke: rgba(0,0,0,.55); stroke-width: 4; stroke-linecap: round; }
+.card.tuner .face .ndl { stroke: #FF6B4A; stroke-width: 3; stroke-linecap: round;
+  transition: all .7s cubic-bezier(.22,1.3,.36,1); }
+.card.tuner .face.ok  .ndl { stroke: #3FCB8A; }
+.card.tuner .face.warn .ndl { stroke: #F5C462; }
+.card.tuner .face.mid  .ndl { stroke: #FF9A4A; }
+.card.tuner .face .hub  { fill: #0D0912; stroke: rgba(255,255,255,.30); stroke-width: 1.2; }
+.card.tuner .face .hub2 { fill: rgba(255,255,255,.45); }
+
+/* the three lamps. Exactly one is ever lit, which is what a tuner
+   does and what a row of dots on a dashboard never does. */
+.card.tuner .face .lamps .l { fill: rgba(255,255,255,.10); }
+.card.tuner .face.ok   .okl      { fill: #3FCB8A; filter: drop-shadow(0 0 6px rgba(63,203,138,.9)); }
+.card.tuner .face.warn .flatlamp { fill: #F5C462; filter: drop-shadow(0 0 5px rgba(245,196,98,.85)); }
+.card.tuner .face.mid  .flatlamp { fill: #FF9A4A; filter: drop-shadow(0 0 5px rgba(255,154,74,.85)); }
+.card.tuner .face.bad  .flatlamp { fill: #FF6B4A; filter: drop-shadow(0 0 6px rgba(255,107,74,.9)); }
+
 /* Below the dial, not inside it. A needle sweeps the whole radius, so
    anything on that axis gets a line drawn straight through it. */
-.card.tuner .reading { text-align: center; margin-top: -6px; display: flex;
-  align-items: baseline; justify-content: center; gap: 8px; }
+.card.tuner .reading { text-align: center; margin-top: 9px; display: flex;
+  align-items: baseline; justify-content: center; gap: 8px; color: var(--ink); }
 .card.tuner .reading b { font: 700 30px/1 inherit; font-variant-numeric: tabular-nums; }
 .card.tuner .reading span { font-size: 11.5px; font-weight: 700;
-  letter-spacing: .14em; text-transform: uppercase; }
+  letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
 .card.tuner .facesub { text-align: center; color: var(--ink-3); font-size: 13.5px;
   font-weight: 600; margin-top: 2px; }
+
+/* a quiet line, not a button: rare acts should not compete with
+   ninety-six names */
+.rest-link { display: block; width: 100%; background: none; border: 0;
+  padding: 13px 0; color: var(--brand); font-size: 14px; font-weight: 700;
+  text-decoration: underline; text-underline-offset: 4px; min-height: 46px; }
+.rest-link:active { opacity: .6; }
 
 .msec { font-size: 10.5px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
   color: var(--ink-3); padding: 16px 2px 4px; }
@@ -1296,6 +1342,16 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
 .mamt b { display: block; font-size: 14.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .mamt span { display: block; font-size: 11px; color: var(--ink-3); font-weight: 600; }
 .mrow.ok .mamt b { color: var(--ok); font-size: 17px; }
+
+/* paused: nothing to read, nothing owed, nothing to do but bring
+   them back */
+.mrow.rest { opacity: .62; }
+.mrow.rest .mnote { color: var(--ink-3); }
+.mtrack.rest::before { content: ""; position: absolute; left: 0; right: 0; top: 50%;
+  height: 1px; background: var(--rule); }
+.mrow.rest .mamt b { color: var(--ink-3); letter-spacing: .12em; }
+.fowe.rest { background: rgba(150,132,92,.16); }
+.fowe.rest b, .fowe.rest i { color: var(--ink-3); }
 
 /* ---------- the family card ---------- */
 .card.fam { width: 100%; max-width: 460px; }
