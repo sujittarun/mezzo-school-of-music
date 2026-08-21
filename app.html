@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" />
-<link rel="stylesheet" href="assets/css/app.css?v=20260821t" />
+<link rel="stylesheet" href="assets/css/app.css?v=20260821u" />
 </head>
 <body>
 <!-- ============================================================
@@ -1493,7 +1493,11 @@
        box carried 14px of empty sky and 18px of empty floor, and this
        block sits at the top of a phone screen where that is a row and
        a half of names. */
-    return '<div class="face"><div class="plate">' +
+    /* `off` when anybody is behind. It drives nothing but the waver —
+       see the note on @keyframes waver: movement means out of tune and
+       stillness means settled, which is a thing you read without
+       reading anything. */
+    return '<div class="face' + (flat ? " off" : "") + '"><div class="plate">' +
       '<svg viewBox="0 14 260 116" aria-hidden="true">' +
         '<path class="bg" d="' + arcPath(cx, cy, r, 12, 168) + '"/>' +
         '<path class="okband" d="' + arcPath(cx, cy, r, 84, 96) + '"/>' +
@@ -1504,9 +1508,17 @@
         /* Drawn straight up and rotated into place, so the swing is one
            attribute rather than two recomputed endpoints. The shadow
            rides in the same group. */
+        /* TWO groups, not one. The outer carries the READING as an SVG
+           transform attribute, written by paintNeedle(); the inner
+           carries the waver as a CSS animation. One element cannot do
+           both — a CSS transform replaces the attribute outright, and
+           the needle would snap to the middle of the dial the moment
+           the animation started. */
         '<g class="nd" data-deg="' + rot + '" transform="rotate(' + rot + ' ' + cx + ' ' + cy + ')">' +
-          '<polygon class="sh" points="' + BLADE + '" transform="translate(1.6 2.6)"/>' +
-          '<polygon class="ndl" points="' + BLADE + '"/>' +
+          '<g class="wob">' +
+            '<polygon class="sh" points="' + BLADE + '" transform="translate(1.6 2.6)"/>' +
+            '<polygon class="ndl" points="' + BLADE + '"/>' +
+          "</g>" +
         "</g>" +
         '<circle class="hub" cx="' + cx + '" cy="' + cy + '" r="8.5"/>' +
         '<circle class="hub2" cx="' + cx + '" cy="' + cy + '" r="3.4"/>' +

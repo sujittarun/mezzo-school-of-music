@@ -1562,6 +1562,51 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
       " — PostgREST answers that with a 400 and the student cannot be saved");
   });
 
+  /* THE WAVER, FROM design3/2-tuner.html. Its comment is the whole
+     idea: "out of tune wavers, very slightly. In tune is perfectly
+     still — which is what makes stillness read as settled at a
+     glance." A dial that never moves is a picture of a dial. */
+  await check("the needle hunts when somebody is behind, and is still when nobody is", () => {
+    /* TWO groups. One element cannot carry both the reading and the
+       waver: a CSS transform replaces the SVG transform attribute
+       outright, and the needle would snap to the middle of the dial the
+       moment the animation started. */
+    const face = appSrc.slice(appSrc.indexOf("function tunerFace("),
+                              appSrc.indexOf("function lampRow("));
+    assert(/<g class="nd" data-deg="[\s\S]{0,400}<g class="wob">/.test(face),
+      "the waver group is gone, or is no longer inside the group that carries the reading");
+    assert(/'<div class="face' \+ \(flat \? " off" : ""\)/.test(face),
+      "the face no longer says whether anybody is behind, so the needle cannot know to hunt");
+
+    /* the reading is still written to the OUTER group */
+    const paint = appSrc.slice(appSrc.indexOf("function paintNeedle("),
+                               appSrc.indexOf("function viewDues("));
+    assert(/querySelector\("\.card\.tuner \.nd"\)/.test(paint),
+      "paintNeedle is writing somewhere other than the reading group");
+    assert(!/\.wob/.test(paint), "paintNeedle is fighting the waver for the same element");
+
+    /* still when settled — the animation is on .off only */
+    assert(/\.card\.tuner \.face\.off \.wob \{ animation: waver/.test(cssSrc),
+      "the waver is not gated on being out of tune; a settled dial would fidget");
+    assert(/prefers-reduced-motion[\s\S]{0,140}\.wob \{ animation: none/.test(cssSrc),
+      "the waver ignores reduced motion");
+
+    /* ONE definition of the name. There were two — the dial's and a
+       leftover from the per-row meters that slid the needle sideways
+       instead of pivoting it — and with two @keyframes sharing a name
+       only source order decides which the browser uses. */
+    const defs = (cssSrc.match(/^@keyframes waver/gm) || []).length;
+    assert(defs === 1, defs + " @keyframes named waver — only file order decides which wins");
+
+    /* pivots by hand, so it needs neither transform-box nor
+       transform-origin to be supported */
+    const at = cssSrc.search(/^@keyframes waver/m);
+    const kf = cssSrc.slice(at, cssSrc.indexOf("}\n", cssSrc.indexOf("50%", at)));
+    assert(/translate\(130px, 118px\) rotate\(-?[\d.]+deg\) translate\(-130px, -118px\)/.test(kf),
+      "the waver no longer pivots on the hub by hand — it will swing from the wrong point " +
+      "or rely on transform-box being supported");
+  });
+
   console.log(failed ? "\n" + failed + " failed" : "\nall app checks passed");
   process.exit(failed ? 1 : 0);
 })();
