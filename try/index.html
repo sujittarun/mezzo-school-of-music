@@ -1300,12 +1300,147 @@ window.fetch = function (url) {
   function loadMoney() {
     S.money = null;
     var r = MZ.monthRange(S.month.y, S.month.m);
-    return Promise.all([MZ.payments(r.from, r.to), MZ.expenses(r.from, r.to)])
+    /* Three reads, one round trip. A round trip to Tokyo is ~180ms and
+       the query itself is single-digit milliseconds, so the register
+       rides along free — asking for it afterwards would double the
+       wait for the whole tab. */
+    return Promise.all([MZ.payments(r.from, r.to), MZ.expenses(r.from, r.to),
+                        MZ.register(r.from, r.to)])
       .then(function (x) {
-        S.money = { paid: x[0] || [], spent: x[1] || [], from: r.from, to: r.to };
+        S.money = { paid: x[0] || [], spent: x[1] || [], from: r.from, to: r.to,
+                    rows: Array.isArray(x[2]) ? x[2] : [] };
         render();
       }).catch(fail);
   }
+  /* ============================================================
+     WHAT A ONE-TEACHER MUSIC SCHOOL CAN ACTUALLY BE TOLD
+
+     His inventory is not seats, it is HIS OWN HOURS. He teaches every
+     instrument himself, so the three questions worth a chart are:
+
+       1. WHERE THE WEEK GOES.  Which days are full and which are
+          empty. An empty Tuesday is not a statistic, it is a slot he
+          can move somebody into or advertise. Only computable at all
+          now that each child carries their own days.
+
+       2. WHAT EACH INSTRUMENT EARNS.  Piano is the premium; the rest
+          are not. The mix decides the money, and this is the only
+          chart that says how to earn more without teaching longer.
+          It SUMS money already collected — it does not price anything.
+          Pricing is resolve_fee()'s job and lives in Postgres.
+
+       3. WHO IS FADING.  Children do not resign from a music school,
+          they drift. So each is measured against THEIR OWN earlier
+          attendance, not against the school average: a child who has
+          always come twice a month has not changed, and a child who
+          came every week and now comes fortnightly has. That is a
+          diminuendo, and it is the one number here that is worth a
+          phone call this evening.
+     ============================================================ */
+  function pct(a, b) { return b ? Math.round(a / b * 100) : 0; }
+
+  /* Attendance in the last third of the month against the two before,
+     per child, both measured over the days that child was expected. */
+  function fading(rows, from, to) {
+    var d0 = new Date(from), d1 = new Date(to);
+    /* END AT TODAY, not at the end of the month. Splitting a whole
+       August in two on the 21st put the entire "recent" window in the
+       future, where nobody has been marked yet — so every child fell
+       under the minimum and the list was always empty. */
+    var now = new Date(MZ.todayIso());
+    if (now < d1) d1 = now;
+    var span = Math.round((d1 - d0) / 864e5) + 1;
+    if (span < 12) return [];
+    var cut = new Date(d0.getTime() + Math.floor(span * 2 / 3) * 864e5);
+    return rows.map(function (r) {
+      var was = { seen: 0, came: 0 }, now = { seen: 0, came: 0 };
+      for (var t = d0.getTime(); t <= d1.getTime(); t += 864e5) {
+        var day = new Date(t), iso = MZ.iso(day);
+        if (!runsOn(r.batch_id, iso) || isSunday(iso)) continue;
+        var m = r.marks && r.marks[iso];
+        if (m !== "present" && m !== "absent") continue;
+        var b = day < cut ? was : now;
+        b.seen++; if (m === "present") b.came++;
+      }
+      /* Too little to judge is not the same as fading. Three expected
+         days either side is the floor; below that one missed lesson
+         swings the number thirty points and the list fills with noise. */
+      if (was.seen < 3 || now.seen < 3) return null;
+      var drop = pct(was.came, was.seen) - pct(now.came, now.seen);
+      return drop >= 25 ? { r: r, was: pct(was.came, was.seen),
+                            now: pct(now.came, now.seen), drop: drop } : null;
+    }).filter(Boolean).sort(function (a, b) { return b.drop - a.drop; });
+  }
+
+  function viewInsights() {
+    var rows = (S.money && S.money.rows) || [];
+    var paid = ((S.money && S.money.paid) || []).filter(function (p) { return p.status !== "void"; });
+    if (!rows.length && !paid.length) return "";
+
+    /* ---- 1. where the week goes ---- */
+    var load = [0, 0, 0, 0, 0, 0, 0];
+    rows.forEach(function (r) { daysOf(r.batch_id).forEach(function (d) { load[d]++; }); });
+    var busiest = Math.max.apply(null, load.slice(1, 7)) || 1;
+    var week = "";
+    for (var d = 1; d <= 6; d++) {
+      week += '<div class="bar"><i style="height:' + Math.round(load[d] / busiest * 100) + '%"></i>' +
+              "<b>" + load[d] + "</b><span>" + DAY_NAMES[d] + "</span></div>";
+    }
+    var quietest = 1;
+    for (var q = 2; q <= 6; q++) if (load[q] < load[quietest]) quietest = q;
+
+    /* ---- 2. what each instrument earns ---- */
+    var byIns = {}, top = 0, earned = 0;
+    paid.forEach(function (p) {
+      var k = p.sport || "Other", v = Number(p.amount || 0);
+      byIns[k] = (byIns[k] || 0) + v; earned += v;
+      if (byIns[k] > top) top = byIns[k];
+    });
+    var ins = Object.keys(byIns).sort(function (a, b) { return byIns[b] - byIns[a]; });
+    var heads = {};
+    rows.forEach(function (r) { heads[r.sport] = (heads[r.sport] || 0) + 1; });
+
+    /* ---- 3. who is fading ---- */
+    var slipping = S.money ? fading(rows, S.money.from, S.money.to) : [];
+
+    return '<div class="card"><h3 style="font-size:15px;margin-bottom:2px">Where the week goes</h3>' +
+      '<div class="muted" style="margin-bottom:12px">How many children each day carries</div>' +
+      '<div class="week">' + week + "</div>" +
+      (load[quietest] < busiest * 0.6
+        ? '<div class="muted" style="margin-top:10px">' + DAY_NAMES[quietest] +
+          " is your quietest day \u2014 " + load[quietest] + " against " + busiest +
+          " at your busiest. That is room, not a gap.</div>"
+        : "") + "</div>" +
+
+      (ins.length
+        ? '<div class="card"><h3 style="font-size:15px;margin-bottom:2px">What each instrument earned</h3>' +
+          '<div class="muted" style="margin-bottom:12px">' + inr(earned) + " collected this month</div>" +
+          ins.map(function (k) {
+            var n = heads[k] || 0;
+            return '<div class="insbar" style="--hue:' + inst(k).hue + '">' +
+              '<span class="k">' + esc(k) + "</span>" +
+              '<span class="t"><i style="width:' + Math.round(byIns[k] / top * 100) + '%"></i></span>' +
+              '<span class="v">' + inr(byIns[k]) + "</span></div>" +
+              (n ? '<div class="insub">' + n + " playing \u00b7 " + inr(Math.round(byIns[k] / n)) +
+                   " each</div>" : "");
+          }).join("") + "</div>"
+        : "") +
+
+      (slipping.length
+        ? '<div class="card"><h3 style="font-size:15px;margin-bottom:2px">Losing the thread</h3>' +
+          '<div class="muted" style="margin-bottom:12px">Coming less than they used to. ' +
+          "Measured against their own earlier weeks, not against anyone else.</div>" +
+          slipping.slice(0, 8).map(function (f) {
+            return '<div class="dim-row" style="--hue:' + inst(f.r.sport).hue + '">' +
+              '<div class="nm"><b>' + esc(f.r.member_name) + "</b><span>" +
+              esc(f.r.sport || "") + " \u00b7 " + MZ.dayLabel(daysOf(f.r.batch_id)) + "</span></div>" +
+              '<svg class="hairpin" viewBox="0 0 60 16" aria-hidden="true">' +
+                '<path d="M1 2 L57 8 M1 14 L57 8"/></svg>' +
+              '<div class="fg"><b>' + f.was + "% \u2192 " + f.now + '%</b></div></div>';
+          }).join("") + "</div>"
+        : "");
+  }
+
   function viewMoney() {
     var mn = new Date(S.month.y, S.month.m - 1, 1)
       .toLocaleDateString("en-IN", { month: "long", year: "numeric" });
@@ -1353,7 +1488,8 @@ window.fetch = function (url) {
               (dead ? "" : '<button class="undo" data-void="' + p.id + '">Undo</button>') +
             "</div>";
           }).join("") + "</div>"
-        : "");
+        : "") +
+      viewInsights();
   }
 
   /* ============================================================
