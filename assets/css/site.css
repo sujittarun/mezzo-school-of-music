@@ -65,7 +65,11 @@ img { display: block; max-width: 100%; }
    the size with the toolbars showing — and it does not change while
    you scroll, which is exactly what a pinned section needs. The vh
    line stays first, as the fallback. */
-.act { position: relative; height: 420vh; height: 420svh; }
+/* 420svh was 4.2 screens of scrolling per act, five times over —
+   sixteen thousand pixels for a landing page. Modern scroll pieces run
+   two to three screens a beat; more than that and the page stops
+   feeling like it is answering you. */
+.act { position: relative; height: 340vh; height: 340svh; }
 /* Tall enough that the last screen has an entrance of its own, but
    it never dives, so it does not need four. */
 .act:last-of-type { height: 175vh; height: 175svh; }

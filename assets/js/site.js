@@ -94,7 +94,7 @@
       ap:     raw.length >= 3 && !raw.some(isNaN)
                 ? { cx: raw[0], cy: raw[1], r: raw[2],
                     ratio: raw.length > 3 ? raw[3] : 1 } : null,
-      top: 0, run: 1, h: 0, apX: 0, apY: 0, apR: 1, Rmax: 1,
+      top: 0, run: 1, h: 0, apX: 0, apY: 0, apR: 1, Rmax: 1, creep: 0.06,
       offX: 0, offY: 0, shown: false, last: {}
     };
   });
@@ -110,6 +110,8 @@
     memo[key] = val;
     el.style[prop] = val;
   }
+
+  function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 
   /* ---------- layout ----------
      Runs on load and on resize, never during a scroll. Everything a
@@ -147,6 +149,9 @@
       var side = vw >= 900 && vh <= 900;
       var gap  = Math.max(18, vh * 0.035);
       var H, W;
+      /* needed by the creep calculation below as well as by the stacked
+         layout, so it is worked out for both */
+      var copyBottom = a.copy ? (a.copy.offsetTop + a.copy.offsetHeight) : vh * 0.10;
 
       if (side) {
         H = vh * 0.80;
@@ -154,7 +159,6 @@
         if (W > vw * 0.42) { W = vw * 0.42; H = W / a.ar; }
         a.inst.style.marginTop = Math.round((vh - H) / 2) + "px";
       } else {
-        var copyBottom = a.copy ? (a.copy.offsetTop + a.copy.offsetHeight) : vh * 0.10;
         /* Leave the bottom of the screen alone: the scroll cue lives
            down there on the first act, and an instrument touching the
            edge reads as cropped rather than standing in the room. */
@@ -186,11 +190,33 @@
          only has to cover a circle. */
       a.Rmax   = Math.hypot(vw, vh) * 0.62;
       a.target = a.Rmax / a.apR;
+
+      /* HOW MUCH THE INSTRUMENT MAY CREEP WHILE THE WORDS ARE STILL UP.
+         The approach now starts at once rather than after a screen and
+         a half of nothing — but it scales about the APERTURE, which
+         sits inside the instrument, so growing pushes the top edge up
+         towards the headline. On a phone the headroom is thirty pixels
+         and an unchecked creep climbed forty-seven into the text.
+
+         So the creep is not a constant. Each act gets the largest share
+         its own layout can carry: solve (S-1) * apertureY <= headroom
+         for the share, and take the smaller of that and the share the
+         motion wants. Side-by-side layouts have no vertical conflict
+         and get the lot. Recomputed on every resize, because the
+         headroom is a measured thing. */
+      var wantShare = 0.06;
+      if (side) {
+        a.creep = wantShare;
+      } else {
+        var head  = Math.max(0, a.inst.offsetTop - copyBottom - 6);
+        var maxS  = 1 + head / Math.max(1, a.ap.cy * H);
+        a.creep   = clamp(Math.log(maxS) / Math.log(Math.max(1.001, a.target)),
+                          0.015, wantShare);
+      }
     });
   }
 
   /* ---------- easings ---------- */
-  function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
   function span(v, a, b)  { return clamp((v - a) / (b - a), 0, 1); }
   function outCubic(t)    { return 1 - Math.pow(1 - t, 3); }
 
@@ -214,8 +240,14 @@
       var dive = span(p, DIVE, 1);
 
       if (a.room) {
+        /* The room settles in and then STAYS. It used to zoom back out
+           again during the dive (+0.1 * dive), so at the exact moment
+           the instrument started flying at you the room behind it began
+           moving the other way — two contrary motions in one frame,
+           which is a thing the eye reads as "wrong" long before it can
+           say why. */
         set(a.room, "transform",
-            "scale(" + (1.14 - 0.14 * outCubic(hold) + 0.1 * dive).toFixed(4) + ")", m, "room");
+            "scale(" + (1.14 - 0.14 * outCubic(hold)).toFixed(4) + ")", m, "room");
       }
 
       if (a.copy) {
@@ -255,8 +287,34 @@
            scaling the SVGs this replaced meant re-rasterising vector
            art at twenty-five times the size of the screen, every
            frame. Same arithmetic, completely different cost. */
-        var S    = Math.pow(a.target, dive);
-        var panX = -a.offX * dive, panY = -a.offY * dive;
+        /* ONE NUMBER DRIVES THE APPROACH, AND IT IS NEVER ZERO.
+
+           This used to be Math.pow(target, dive), and dive is 0 for the
+           whole first half of the act — so the instrument sat at
+           scale 1.000 for 1,498px, a screen and a half, not moving by a
+           single pixel. Measured across the act: six of twelve steps
+           had a scale delta of exactly 0, and then the last 240px did
+           more than the first 1,700 put together. That is what "not in
+           sync with the scroll" is. It is not lag; it is a dead zone
+           followed by a rocket.
+
+           So `app` runs from 0 to 1 across the WHOLE act — a slow creep
+           while you are still reading (5% of the way in by the time the
+           dive proper begins, about 1.19x) and then the geometric rush.
+           It is continuous, it is monotonic, and the finger is never
+           doing nothing.
+
+           Scale AND pan AND the iris all come off this one number,
+           which is what keeps the hole welded to what is behind it. */
+        /* LINEAR on the hold, not eased. outCubic has zero slope at its
+           end, so an eased creep decelerates to a dead stop in the last
+           beat before the dive — measured as a growth ratio of exactly
+           1.00 for one whole step, then 1.52 the next. A hitch at the
+           join is the one place you must not put one. Linear keeps the
+           creep at a steady 1.03x per step right up to the handover. */
+        var app  = a.creep * hold + (1 - a.creep) * dive;
+        var S    = Math.pow(a.target, app);
+        var panX = -a.offX * app, panY = -a.offY * app;
         var br   = dive > 0 ? 1 : 1 + Math.sin(hold * Math.PI) * 0.025;
 
         set(a.inst, "transform",
@@ -279,8 +337,8 @@
            doorway stops being the point. */
         var ratio = a.ap.ratio + (1 - a.ap.ratio) * outCubic(dive);
         var RY = RX * ratio;
-        var cx = a.apX + (vw / 2 - a.apX) * dive;
-        var cy = a.apY + (a.vh / 2 - a.apY) * dive;
+        var cx = a.apX + (vw / 2 - a.apX) * app;
+        var cy = a.apY + (a.vh / 2 - a.apY) * app;
         set(a.portal, "clipPath",
             "ellipse(" + RX.toFixed(1) + "px " + RY.toFixed(1) + "px at " +
             cx.toFixed(1) + "px " + cy.toFixed(1) + "px)", m, "clip");
