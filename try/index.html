@@ -1610,8 +1610,11 @@ window.fetch = function (url) {
             return '<div class="srow"><div class="nm"><b>' + esc(e.detail || e.category) + "</b>" +
               "<span>" + new Date(e.on_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) +
               "</span></div><b>" + inr(e.amount) + "</b>" +
-              '<button class="mini" data-exedit="' + e.id + '" aria-label="Change">Change</button>' +
-              '<button class="mini" data-exkill="' + e.id + '" aria-label="Remove">\u00d7</button>' +
+              /* Two words plus an amount plus a name does not fit a
+                 382px row — the controls wrapped on top of the money.
+                 A pencil and a cross are the same two acts in 80px. */
+              '<button class="mini ic" data-exedit="' + e.id + '" aria-label="Change">\u270e</button>' +
+              '<button class="mini ic" data-exkill="' + e.id + '" aria-label="Remove">\u00d7</button>' +
             "</div>";
           }).join("") + "</div>"
         : "") +

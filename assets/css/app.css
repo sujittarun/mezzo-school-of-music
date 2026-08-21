@@ -1398,7 +1398,9 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
   /* the frog, and the hair */
   background-image:
     linear-gradient(90deg, rgba(0,0,0,.26) 0 13px, rgba(0,0,0,0) 13px),
-    linear-gradient(180deg, rgba(0,0,0,0) 62%, rgba(255,255,255,.34) 62% 64%, rgba(0,0,0,0) 64%);
+    /* the hair. At .34 over two pixels it read as a seam across the
+       button rather than as a line along a stick. */
+    linear-gradient(180deg, rgba(0,0,0,0) 76%, rgba(255,255,255,.20) 76% 77%, rgba(0,0,0,0) 77%);
   clip-path: polygon(0 0, calc(100% - 26px) 0, 100% 50%, calc(100% - 26px) 100%, 0 100%);
   transition: transform .1s ease-out, filter .14s;
 }
@@ -1441,13 +1443,15 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
 
 /* ---------- changing or removing an expense ---------- */
 .mini {
-  flex: 0 0 auto; min-height: 40px; padding: 0 12px; margin-left: 8px;
+  flex: 0 0 auto; min-height: 40px; padding: 0 12px; margin-left: 6px;
   border: 1px solid var(--rule); border-radius: 10px; background: #FFFDF6;
   color: var(--ink-2); font-size: 13px; font-weight: 700;
 }
+.mini.ic { width: 40px; padding: 0; font-size: 17px; line-height: 1; }
 .mini.go  { background: var(--brand); border-color: var(--brand); color: #fff; }
 .mini.bad { background: var(--no);    border-color: var(--no);    color: #fff; }
 .srow.exedit { gap: 6px; flex-wrap: wrap; }
+.srow .nm b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .srow.exedit input {
   flex: 1 1 90px; min-width: 0; min-height: 44px; padding: 0 11px;
   border: 1px solid var(--rule); border-radius: 10px; background: #FFFDF6; font-size: 15px;
