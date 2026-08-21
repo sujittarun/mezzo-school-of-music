@@ -186,11 +186,13 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
     assert(h.includes("1 of 2 in"), "the present count is wrong: " + (h.match(/\d+ of \d+ in/) || ["none"])[0]);
   });
 
-  /* The filters he asked for by name. Two things must hold: the sheet
-     actually narrows, AND it says out loud that it is narrowed — ten
-     names on a sheet that should hold eighty is either a quiet Tuesday
-     or a filter left on, and those look identical. */
-  await check("the instrument and batch filters narrow the sheet, and it says so", async () => {
+  /* The instrument filter. Two things must hold: the sheet actually
+     narrows, AND it says out loud that it is narrowed — ten names on a
+     sheet that should hold eighty is either a quiet Tuesday or a
+     filter left on, and those look identical.
+     There is no batch filter any more: every child has their own days
+     and the day view already picks a day. */
+  await check("the instrument filter narrows the sheet, and it says so", async () => {
     signIn();
     api.S.ref = { batches: [{ id: 9, days: [1,2,3,4,5], short_name: "Weekdays" },
                             { id: 10, days: [6], short_name: "Saturday" }],
@@ -201,12 +203,12 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
       { member_name: "Sat Kid",    enrollment_id: 3, batch_id: 10, sport: "Piano", present_days: 0, marks: {} },
     ];
     api.S.tab = "register"; api.S.mode = "today"; api.S.q = "";
-    api.S.showOff = false; api.S.fIns = null; api.S.fBat = null;
+    api.S.showOff = false; api.S.fIns = null;
     api.S.day = "2026-08-19";                       // a Wednesday
     api.enter(); await tick(); await tick();
     let h = byId("root").innerHTML;
     assert(/data-fi="Guitar"/.test(h), "there is no way to filter to an instrument");
-    assert(/data-fb="10"/.test(h), "there is no way to filter to a batch");
+    assert(!/data-fb=/.test(h), "the batch filter is back");
     assert(h.includes("Guitar Kid") && h.includes("Piano Kid"), "the unfiltered sheet is already short");
 
     /* circling an instrument */
@@ -231,7 +233,7 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
      whose only button cleared the INSTRUMENT — so the batch stayed on
      and the filter row that caused it was gone. A filter you cannot
      see is a filter you cannot undo. */
-  await check("an empty result keeps the filter that caused it, and one tap clears both", async () => {
+  await check("an empty result keeps the filter that caused it, and one tap clears it", async () => {
     signIn();
     api.S.ref = { batches: [{ id: 9, days: [1,2,3,4,5], short_name: "Weekdays" },
                             { id: 10, days: [6], short_name: "Saturday" }],
@@ -241,7 +243,7 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
       { member_name: "Piano Kid",  enrollment_id: 2, batch_id: 9, sport: "Piano",  present_days: 0, marks: {} },
     ];
     api.S.tab = "register"; api.S.mode = "today"; api.S.q = "";
-    api.S.showOff = false; api.S.fIns = "Guitar"; api.S.fBat = 10;   // nobody is both
+    api.S.showOff = false; api.S.fIns = "Tabla";   // an instrument nobody plays
     api.S.day = "2026-08-19";
     api.enter(); await tick(); await tick();
     let h = byId("root").innerHTML;
@@ -250,8 +252,7 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
 
     onClick({ target: { closest: (q) => (q === "[data-clear]" ? {} : null) } });
     await tick();
-    assert(api.S.fIns === null && api.S.fBat === null,
-      "the escape left a filter on: fIns=" + api.S.fIns + " fBat=" + api.S.fBat);
+    assert(api.S.fIns === null, "the escape left a filter on: fIns=" + api.S.fIns);
     h = byId("root").innerHTML;
     assert(h.includes("Guitar Kid") && h.includes("Piano Kid"), "clearing did not bring everyone back");
   });
@@ -334,6 +335,92 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
       "a preview token signed someone into the real app");
     assert(store["mz-session"] === undefined,
       "the preview token was refused but left behind to be found again");
+
+    /* ...and the preview itself must still work. Keying the refusal on
+       the token alone locked /try/ out of its own fixtures. */
+    ctx.window = ctx.window || {};
+    ctx.window.MZ_PREVIEW = 1;
+    store["mz-session"] = JSON.stringify({ access_token: "preview", tenant: "mezzo",
+      role: "staff", expires_at: Date.now() + 864e5 });
+    assert(ctx.MZ.signedIn() === true,
+      "the guard locked the published preview out of itself");
+    delete ctx.window.MZ_PREVIEW;
+  });
+
+  /* Adding a student now asks which DAYS they come, not which batch
+     they are in. Every one of these is a scenario that has to hold. */
+  await check("a new student is enrolled on the days he ticked, and none without days", async () => {
+    signIn(); fetchLog.length = 0;
+    nextBody = (url, body) => {
+      if (url.includes("/batches") && body) return [{ id: 12, ...body }];
+      if (url.includes("/batches")) return [
+        { id: 1, code: "d12345", name: "Mon\u2013Fri", days: [1,2,3,4,5],
+          start_time: "15:00", end_time: "20:00", centre_id: 4, active: true, sort: 1 }
+      ];
+      if (url.includes("/centres")) return [{ id: 4, code: "main", name: "Main" }];
+      if (url.includes("/members")) return [{ id: 77, name: "Nila" }];
+      if (url.includes("attendance_month")) return [];
+      return url.includes("/sports") ? [] : {};
+    };
+    await ctx.MZ.reference(true);
+    api.S.ref = await ctx.MZ.reference();
+    api.S.tab = "add"; api.S.nsDays = [];
+    api.render();
+
+    /* NOTHING TICKED must not enrol anybody. A student with no days is
+       a student who appears on every register for ever. */
+    byId("nsName").value = "Nila"; byId("nsPhone").value = "9000000001";
+    byId("nsIns").value = "Violin";
+    onClick({ target: { closest: (s) => (s === "#nsSave" ? {} : null) } });
+    for (let i = 0; i < 10; i++) await tick();
+    assert(calls("/enrollments").filter((c) => c.method === "POST").length === 0,
+      "a student was enrolled with no days at all");
+    assert(/at least one day/i.test(api.S.err || ""),
+      "no days were picked and nothing said so: " + JSON.stringify(api.S.err));
+
+    /* Now tick Wednesday and Saturday. */
+    fetchLog.length = 0; api.S.err = "";
+    onClick({ target: { closest: (s) => (s === "[data-daypick]"
+      ? { getAttribute: () => "nsDays:3" } : null) } });
+    onClick({ target: { closest: (s) => (s === "[data-daypick]"
+      ? { getAttribute: () => "nsDays:6" } : null) } });
+    assert(JSON.stringify(api.S.nsDays) === "[3,6]",
+      "the ticked days did not survive the redraw: " + JSON.stringify(api.S.nsDays));
+
+    byId("nsName").value = "Nila"; byId("nsPhone").value = "9000000001";
+    byId("nsIns").value = "Violin";
+    onClick({ target: { closest: (s) => (s === "#nsSave" ? {} : null) } });
+    for (let i = 0; i < 14; i++) await tick();
+
+    const made = calls("/batches").filter((c) => c.method === "POST");
+    assert(made.length === 1, "Wed+Sat did not become a pattern");
+    assert(JSON.stringify(made[0].body.days) === "[3,6]",
+      "wrong days on the pattern: " + JSON.stringify(made[0].body.days));
+    const enr = calls("/enrollments").filter((c) => c.method === "POST");
+    assert(enr.length === 1 && enr[0].body.batch_id === 12,
+      "the student was not enrolled on the pattern they picked");
+
+    /* And tapping a day twice takes it off again. */
+    onClick({ target: { closest: (s) => (s === "[data-daypick]"
+      ? { getAttribute: () => "nsDays:3" } : null) } });
+    assert(JSON.stringify(api.S.nsDays) === "[6]",
+      "a day could not be un-ticked: " + JSON.stringify(api.S.nsDays));
+  });
+
+  /* PostgREST answers an error with a four-key OBJECT, which is
+     truthy. `rows || []` kept it, and the register called .forEach on
+     it and took the tab down with a TypeError instead of showing an
+     empty day. */
+  await check("a non-list answer from the database empties the day, it does not crash it", async () => {
+    signIn();
+    api.S.ref = { batches: [{ id: 9, days: [1,2,3,4,5] }], centres: [], instruments: [] };
+    nextBody = { message: "permission denied", code: "42501", details: null, hint: null };
+    api.S.tab = "register"; api.S.mode = "today"; api.S.q = "";
+    api.S.showOff = false; api.S.fIns = null; api.S.day = "2026-08-19";
+    api.enter(); await tick(); await tick();
+    const h = byId("root").innerHTML;
+    assert(/No students yet|No class today|Nobody matches/.test(h),
+      "an error body did not render as an empty register: " + h.slice(0, 120));
   });
 
   /* The day patterns arrive on a SECOND request, after the register has
@@ -567,15 +654,20 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
   });
 
   await check("editing a student writes the member and the enrolment", async () => {
-    signIn(); fetchLog.length = 0; nextBody = {};
+    signIn(); fetchLog.length = 0;
+    /* Two patterns already exist. Wed+Sat is one of them. */
+    nextBody = (url) => url.includes("/batches") ? [
+      { id: 1, code: "d12345", name: "Mon\u2013Fri", days: [1,2,3,4,5], start_time: "15:00", end_time: "20:00" },
+      { id: 5, code: "d36",    name: "Wed, Sat",      days: [3,6],       start_time: "15:00", end_time: "20:00" }
+    ] : (url.includes("/centres") || url.includes("/sports")) ? [] : {};
+    await ctx.MZ.reference(true);
     api.S.who = { enrollment: 7, member: 3, name: "Deepak", sport: "Drums",
-                  batch: 1, phone: "9000000123", loaded: true, confirmStop: false };
+                  batch: 1, days: [3, 6], phone: "9000000123", loaded: true, confirmStop: false };
     byId("whName").value  = "Deepak S";
     byId("whPhone").value = "90000 00123";
     byId("whIns").value   = "Piano";
-    byId("whBatch").value = "2";
     onClick({ target: { closest: (s) => (s === "#whSave" ? {} : null) } });
-    await tick(); await tick(); await tick();
+    for (let i = 0; i < 12; i++) await tick();
 
     const mem = calls("/members").filter((c) => c.method === "PATCH");
     assert(mem.length === 1, "the member was not updated");
@@ -587,8 +679,49 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
 
     const enr = calls("/enrollments").filter((c) => c.method === "PATCH");
     assert(enr.length === 1, "the enrolment was not updated");
-    assert(enr[0].body.sport === "Piano" && enr[0].body.batch_id === 2,
-      "instrument or time window did not move: " + JSON.stringify(enr[0].body));
+    assert(enr[0].body.sport === "Piano", "the instrument did not move");
+    assert(enr[0].body.batch_id === 5,
+      "Wed+Sat did not resolve to the pattern that already exists: " + JSON.stringify(enr[0].body));
+    assert(calls("/batches").filter((c) => c.method === "POST").length === 0,
+      "a duplicate day pattern was created for days that already had one");
+  });
+
+  /* A pattern nobody has used yet has to be made, once, and then
+     shared by everyone who picks the same days. */
+  await check("a set of days nobody uses yet becomes one new pattern, cloned from a real row", async () => {
+    signIn(); fetchLog.length = 0;
+    nextBody = (url, body) => {
+      if (url.includes("/batches") && body) return [{ id: 9, ...body }];
+      if (url.includes("/batches")) return [
+        { id: 1, code: "d12345", name: "Mon\u2013Fri", days: [1,2,3,4,5],
+          start_time: "15:00", end_time: "20:00", centre_id: 4, active: true, sort: 1 }
+      ];
+      return url.includes("/centres") || url.includes("/sports") ? [] : {};
+    };
+    /* the adapter caches the reference; this test wants its own
+       template row to be the one that gets cloned */
+    await ctx.MZ.reference(true);
+    api.S.who = { enrollment: 7, member: 3, name: "Uma", sport: "Violin",
+                  batch: 1, days: [2, 4], phone: "9000000123", loaded: true, confirmStop: false };
+    byId("whName").value = "Uma"; byId("whPhone").value = "9000000123";
+    byId("whIns").value = "Violin";
+    onClick({ target: { closest: (s) => (s === "#whSave" ? {} : null) } });
+    for (let i = 0; i < 12; i++) await tick();
+
+    const made = calls("/batches").filter((c) => c.method === "POST");
+    assert(made.length === 1, "the new day pattern was not created (" + made.length + " posts)");
+    assert(JSON.stringify(made[0].body.days) === "[2,4]",
+      "the pattern has the wrong days: " + JSON.stringify(made[0].body.days));
+    assert(made[0].body.name === "Tue, Thu",
+      "the pattern is not named after its days: " + made[0].body.name);
+    /* Cloned, not invented: whatever columns the shared table requires,
+       an existing row already has a legal value for them. */
+    assert(made[0].body.centre_id === 4 && made[0].body.start_time === "15:00",
+      "the new pattern was not cloned from a real row: " + JSON.stringify(made[0].body));
+    assert(made[0].body.id === undefined, "the clone carried the template's id");
+
+    const enr = calls("/enrollments").filter((c) => c.method === "PATCH");
+    assert(enr[0].body.batch_id === 9, "the enrolment did not move to the new pattern");
   });
 
   /* THE ONE THAT COST A FAMILY ITS REMINDERS.

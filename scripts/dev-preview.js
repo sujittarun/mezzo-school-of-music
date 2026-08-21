@@ -79,8 +79,11 @@ const STUDENTS = [];
   MIX.forEach(([sport, count]) => {
     for (let i = 0; i < count; i++) {
       const name = FIRST[n % FIRST.length] + (n >= FIRST.length ? " " + String.fromCharCode(65 + (n % 26)) : "");
-      /* three in four come midweek */
-      const batch = rnd() < 0.76 ? 1 : 2;
+      /* Each child comes on their OWN days now — two a week for most,
+         three for a few, and a handful only on Saturday. */
+      const r0 = rnd();
+      const batch = r0 < 0.20 ? 1 : r0 < 0.34 ? 2 : r0 < 0.50 ? 3
+                  : r0 < 0.66 ? 4 : r0 < 0.80 ? 5 : r0 < 0.92 ? 6 : 7;
       /* attendance rate 0.55-1.0. The spread is the point: without it
          nothing can tell a child who is drifting from one who is not. */
       const rate = 0.55 + rnd() * 0.45;
@@ -92,16 +95,32 @@ const STUDENTS = [];
   });
 })();
 
+/* The day patterns in play. A batch row is nothing more than one of
+   these — see cloud.js. */
+const PATTERN = { 1: [1,2,3,4,5], 2: [6], 3: [3,6], 4: [2,4], 5: [1,4], 6: [1,3,5], 7: [2,5] };
+
 const Y = TODAY.getFullYear(), M = TODAY.getMonth() + 1, DOM = TODAY.getDate();
 function isoOf(d) { return Y + "-" + String(M).padStart(2, "0") + "-" + String(d).padStart(2, "0"); }
 function dowOf(d) { return new Date(Y, M - 1, d).getDay(); }
+
+/* the same label the app builds, so the fixture cannot disagree with it */
+function LABEL(v) {
+  const N = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], runs = [];
+  let i = 0;
+  while (i < v.length) {
+    let j = i; while (j + 1 < v.length && v[j + 1] === v[j] + 1) j++;
+    runs.push(j - i >= 2 ? N[v[i]] + "\u2013" + N[v[j]] : v.slice(i, j + 1).map((x) => N[x]).join(", "));
+    i = j + 1;
+  }
+  return runs.join(", ");
+}
 
 const fixtures = {
   register: STUDENTS.map((s) => {
     const marks = {};
     for (let d = 1; d <= DOM; d++) {
       const w = dowOf(d);
-      const runs = s.batch === 1 ? (w >= 1 && w <= 5) : w === 6;
+      const runs = (PATTERN[s.batch] || []).indexOf(w) >= 0;
       if (!runs) continue;
       const r = rnd();
       /* a child who is fading does it toward the END of the month,
@@ -148,10 +167,12 @@ const fixtures = {
     enrollments: [{ id: s.n + 1, sport: s.sport, batch_id: s.batch, status: "active" }]
   })),
   centres: [{ id: 1, code: "main", name: "Thadagam Road", short_name: "Main", sort: 1 }],
-  batches: [{ id: 1, code: "weekday", name: "Mon–Fri 3–8pm", short_name: "Mon–Fri",
-              days: [1,2,3,4,5], start_time: "15:00", end_time: "20:00", sort: 1 },
-            { id: 2, code: "saturday", name: "Saturday 10am–8pm", short_name: "Saturday",
-              days: [6], start_time: "10:00", end_time: "20:00", sort: 2 }],
+  batches: Object.keys(PATTERN).map((k) => ({
+    id: +k, code: "d" + PATTERN[k].join(""), tenant_id: "mezzo",
+    name: LABEL(PATTERN[k]), short_name: LABEL(PATTERN[k]),
+    days: PATTERN[k], start_time: "15:00", end_time: "20:00",
+    centre_id: 1, active: true, sort: +k
+  })),
   sports: ["Piano","Keyboard","Guitar","Violin","Ukulele","Drums","Vocals"]
            .map((n, i) => ({ id: i + 1, code: n.toLowerCase(), name: n, icon: null, sort: i }))
 };
@@ -166,6 +187,10 @@ return `<!doctype html>
 ${headOfBody}
 <div id="root"></div><div class="tabs" id="tabs" hidden></div>
 <script>
+/* THIS IS THE PREVIEW. cloud.js refuses a "preview" token on any page
+   that does not say so, which is what stops a token left in a shared
+   localStorage from booting the real app past its sign-in. */
+window.MZ_PREVIEW = 1;
 /* signed in as nobody, against nothing */
 localStorage.setItem("mz-session", JSON.stringify({
   access_token: "preview", refresh_token: "preview",

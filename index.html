@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" />
-<link rel="stylesheet" href="assets/css/app.css?v=20260821b" />
+<link rel="stylesheet" href="assets/css/app.css?v=20260821c" />
 </head>
 <body>
 <!-- ============================================================
@@ -92,9 +92,9 @@
     pay: null,                // the payment being taken: {enrollment,name,amount,months,mode}
     picker: null,             // the student list, when choosing who paid
     who: null,                // the student card: {enrollment,member,name,sport,batch,phone}
+    nsDays: [],               // the days ticked on the add-student form
     pulse: null,              // {sport, kind} — the section to play after the next paint
     fIns: null,               // instrument filter, null = all
-    fBat: null,               // batch filter, null = all
     showOff: false,
     register: null,           // rows from attendance_month
     dues: null,
@@ -203,6 +203,32 @@
      not come midweek. Showing all 80 names every day is noise; worse,
      an unmarked circle against a child who was never expected reads as
      "you forgot to mark them", which is the opposite of the truth. */
+  /* Which days this child actually comes. The pattern lives on the
+     enrolment's batch, which is now nothing more than a day pattern. */
+  function daysOf(batchId) {
+    var bs = (S.ref && S.ref.batches) || [];
+    for (var i = 0; i < bs.length; i++) if (bs[i].id === batchId) return (bs[i].days || []).slice();
+    return [];
+  }
+  var DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  /* Monday to Saturday, because the school is shut on Sunday and a
+     control that offers a day nobody can attend is a control that
+     invites a mistake. */
+  function dayPicker(id, sel) {
+    var out = '<div class="daypick" id="' + id + '">';
+    for (var d = 1; d <= 6; d++) {
+      out += '<button type="button" data-daypick="' + id + ':' + d + '"' +
+             (sel.indexOf(d) >= 0 ? ' class="on"' : "") + ">" + DAY_NAMES[d] + "</button>";
+    }
+    return out + "</div>";
+  }
+  function toggleDay(list, d) {
+    var i = list.indexOf(d);
+    if (i >= 0) list.splice(i, 1); else list.push(d);
+    list.sort(function (a, b) { return a - b; });
+    return list;
+  }
+
   function runsOn(batchId, iso) {
     var bs = (S.ref && S.ref.batches) || [];
     for (var i = 0; i < bs.length; i++) {
@@ -736,7 +762,12 @@
       ? { from: S.day, to: S.day }
       : MZ.monthRange(S.month.y, S.month.m);
     return MZ.register(r.from, r.to).then(function (rows) {
-      S.register = { rows: rows || [], from: r.from, to: r.to };
+      /* Array.isArray, not `rows || []`. PostgREST answers an error
+         with a four-key OBJECT, which is truthy, and the register then
+         called .forEach on it and took the whole tab down with a
+         TypeError instead of showing an empty day. Anything that is
+         not a list is no rows. */
+      S.register = { rows: Array.isArray(rows) ? rows : [], from: r.from, to: r.to };
       render();
     }).catch(fail);
   }
@@ -813,28 +844,22 @@
     });
     present.sort();
 
-    var bats = (S.ref && S.ref.batches) || [];
-    var showIns = present.length > 1, showBat = bats.length > 1;
+    /* THE BATCH FILTER IS GONE, because batches are gone. Filtering
+       by "weekday or Saturday" meant something when those were the two
+       groups; now every child has their own days and the day view
+       already picks a day. */
+    var showIns = present.length > 1;
     var filterHtml = "";
-    if (showIns || showBat) {
+    if (showIns) {
       filterHtml = '<div class="annot"><div class="row">' +
-        (showIns
-          ? word("", "Everyone", !S.fIns, "fi") +
-            present.map(function (n) {
-              return word(esc(n), esc(n), S.fIns === n, "fi", inst(n).hue);
-            }).join("")
-          : "") +
-        (showIns && showBat ? '<span class="sep"></span>' : "") +
-        (showBat
-          ? bats.map(function (b) {
-              return word(b.id, esc(batchWord(b)), S.fBat === b.id, "fb");
-            }).join("")
-          : "") +
+        word("", "Everyone", !S.fIns, "fi") +
+        present.map(function (n) {
+          return word(esc(n), esc(n), S.fIns === n, "fi", inst(n).hue);
+        }).join("") +
       "</div></div>";
     }
 
     if (S.fIns) rows = rows.filter(function (r) { return r.sport === S.fIns; });
-    if (S.fBat) rows = rows.filter(function (r) { return r.batch_id === S.fBat; });
     if (S.q) {
       var q = S.q.toLowerCase();
       rows = rows.filter(function (r) {
@@ -865,8 +890,8 @@
          empty sheet and a dead end. It is really a request to see the
          Saturday children — which is exactly the makeup-lesson case —
          so open that set instead of showing him nothing. */
-      var openOff = S.showOff || (!!S.fBat && !due.length && off.length > 0);
-      body += setList(due, off, filterHtml, bats.length > 1, openOff);
+      var openOff = S.showOff;
+      body += setList(due, off, filterHtml, true, openOff);
     } else {
       /* The month is still the old grid. The annotation goes on a torn
          strip of the same paper so the filter is the one control in
@@ -906,7 +931,7 @@
       n++;
       var st = r.marks && r.marks[S.day];
       var cls = st === "present" ? " present" : st === "absent" ? " absent" : "";
-      var bat = batchName(r.batch_id);
+      var bat = MZ.dayLabel(daysOf(r.batch_id));
       return '<div class="sl-ln' + cls + (S.busy[r.enrollment_id] ? " busy" : "") +
           '" data-key="' + r.enrollment_id + '">' +
         '<button class="mark" data-mark="' + r.enrollment_id + '"' +
@@ -920,9 +945,10 @@
             '<svg class="st" viewBox="0 0 300 22" preserveAspectRatio="none" aria-hidden="true">' +
             '<path d="M2 12 C 70 6, 150 16, 298 9"/></svg></span>' +
         "</button>" +
-        /* Only in the off-day set. Everyone in today's set runs today
-           by definition, so a batch label there is noise that collides
-           with the name it sits beside. */
+        /* Only in the off-day set — and there it is the whole
+           explanation: "Wed, Sat" is WHY this child is not expected on
+           a Thursday. In today's set it would be noise colliding with
+           the name beside it. */
         (tailOn && showBatchTail && bat ? '<span class="tail">' + esc(bat) + "</span>" : "") +
         '<button class="open" data-who="' + r.enrollment_id + '" data-mem="' + (r.member_id || "") +
           '" data-nm="' + esc(r.member_name) + '" data-sport="' + esc(r.sport || "") +
@@ -983,8 +1009,7 @@
     body += due.length ? sets(due)
           : (narrowedBy() && !off.length
               ? '<div class="sl-note">Nobody matches that.</div>'
-              : '<div class="sl-note">No class today' +
-                (S.fBat ? " for " + esc(batchName(S.fBat)) : "") + ".</div>");
+              : '<div class="sl-note">No class today.</div>');
 
     tailOn = true;
     if (off.length && openOff) {
@@ -1008,22 +1033,10 @@
   function narrowedBy() {
     var bits = [];
     if (S.fIns) bits.push(S.fIns);
-    if (S.fBat) bits.push(batchName(S.fBat));
     if (S.q)    bits.push('"' + S.q + '"');
     return bits.length ? bits.filter(Boolean).join(" \u00b7 ") + " only" : "";
   }
 
-  function batchName(id) {
-    var bs = (S.ref && S.ref.batches) || [];
-    for (var i = 0; i < bs.length; i++) if (bs[i].id === id) return batchWord(bs[i]);
-    return "";
-  }
-  /* A filter word has to be a WORD. "Mon-Fri 3-8pm" is the timetable,
-     which is a fine batch name and a terrible thing to circle. */
-  function batchWord(b) {
-    var n = b.short_name || b.name || "";
-    return n.split(/\s+|,/)[0].replace(/[:\-\u2013]$/, "") || n;
-  }
 
   function monthGrid(rows) {
     var y = S.month.y, m = S.month.m, days = MZ.monthRange(y, m).days;
@@ -1419,11 +1432,10 @@
           return '<option value="' + esc(i.name) + '"' +
                  (i.name === w.sport ? " selected" : "") + ">" + esc(i.name) + "</option>";
         }).join("") + "</select></label>" +
-      '<label class="field"><span>Comes on</span><select id="whBatch">' +
-        bs.map(function (b) {
-          return '<option value="' + b.id + '"' +
-                 (b.id === w.batch ? " selected" : "") + ">" + esc(b.name) + "</option>";
-        }).join("") + "</select></label>" +
+      '<div class="field"><span>Comes on</span>' + dayPicker("whDays", w.days || []) +
+        '<em class="daysum' + (w.days && w.days.length ? "" : " dim") + '">' +
+        esc(w.days && w.days.length ? MZ.dayLabel(w.days) : "Pick the days he comes") +
+        "</em></div>" +
 
       '<button class="btn" id="whSave">Save changes</button>' +
       '<button class="btn ghost" id="whPay" style="margin-top:8px">Record a payment</button>' +
@@ -1452,13 +1464,21 @@
       name: el.getAttribute("data-nm") || "",
       sport: el.getAttribute("data-sport") || "",
       batch: +el.getAttribute("data-batch") || null,
+      days: daysOf(+el.getAttribute("data-batch")),
       phone: "", loaded: false,
       confirmStop: false
     };
     var want = S.who;
     /* The instrument and batch pickers need the reference data, which
        may not have arrived yet on a cold open. */
-    if (!S.ref) MZ.reference().then(function (r) { S.ref = r; render(); }).catch(function () {});
+    if (!S.ref) MZ.reference().then(function (r) {
+      S.ref = r;
+      /* The days are read OUT of the reference, so on a cold open the
+         picker would have come up blank and saving would have wiped
+         the child's days. Fill them in when it lands. */
+      if (S.who === want && !want.days.length) want.days = daysOf(want.batch);
+      render();
+    }).catch(function () {});
     /* And the phone number is not in the register's data at all. */
     if (want.member) {
       MZ.student(want.member).then(function (m) {
@@ -1484,7 +1504,7 @@
     var b = document.getElementById("whSave");
     if (b) { b.disabled = true; b.textContent = "Saving…"; }
     var name  = (document.getElementById("whName") || {}).value;
-    var insEl = document.getElementById("whIns"), batEl = document.getElementById("whBatch");
+    var insEl = document.getElementById("whIns");
     /* undefined, not "", when the number has not loaded: editStudent
        skips a field it is not given, and writing an empty box over a
        real number would silently cut that family off from reminders. */
@@ -1497,7 +1517,7 @@
     MZ.editStudent(w.member, { name: name, phone: phone })
       .then(function () {
         return MZ.moveEnrollment(w.enrollment, {
-          instrument: insEl && insEl.value, batch: batEl && +batEl.value
+          instrument: insEl && insEl.value, days: w.days
         });
       })
       .then(function () {
@@ -1533,9 +1553,10 @@
       '<label class="field"><span>Instrument</span><select id="nsIns">' +
         ins.map(function (i) { return '<option value="' + esc(i.name) + '">' + esc(i.name) + "</option>"; }).join("") +
       "</select></label>" +
-      '<label class="field"><span>Comes on</span><select id="nsBatch">' +
-        bs.map(function (b) { return '<option value="' + b.id + '">' + esc(b.name) + "</option>"; }).join("") +
-      "</select></label>" +
+      '<div class="field"><span>Comes on</span>' + dayPicker("nsDays", S.nsDays || []) +
+        (S.nsDays && S.nsDays.length
+          ? '<em class="daysum">' + esc(MZ.dayLabel(S.nsDays)) + "</em>"
+          : '<em class="daysum dim">Pick the days he comes</em>') + "</div>" +
       '<div class="muted" style="margin:-2px 0 14px">The fee is set from the ' +
         "instrument. You do not need to enter it.</div>" +
       '<button class="btn" id="nsSave">Save student</button>' +
@@ -1556,7 +1577,9 @@
     if (!MZ.signedIn()) return gate();
     drawTabs();
     var sub = S.tab === "register" ? "Attendance register"
-            : S.tab === "dues" ? "Fees to collect" : "Money this month";
+            : S.tab === "dues" ? "Fees to collect"
+            : S.tab === "add"  ? "A new student"
+            : "Money this month";
     var inner = S.tab === "add" ? viewAdd()
               : S.tab === "register" ? viewRegister()
               : S.tab === "dues" ? viewDues() : viewMoney();
@@ -1649,7 +1672,6 @@
     }
     /* the day filter is not an instrument, so it gets the lowest
        voice in the room and cannot be confused with one */
-    if (t.closest("[data-fb]"))             return pluck(40, 0.75);        /* double bass */
     if (t.closest("[data-clear]"))          return breath(74, 0.5);        /* flute — clearing the air */
     if (t.closest("[data-mode]"))           return reed(67, 0.55);         /* keyboard — changing register */
     if (t.closest("[data-day],[data-mon]")) return struck(76, 0.45);       /* a high piano step */
@@ -1682,17 +1704,24 @@
       S.month = n < 1 ? { y: S.month.y - 1, m: 12 } : n > 12 ? { y: S.month.y + 1, m: 1 } : { y: S.month.y, m: n };
       (S.tab === "money" ? loadMoney : loadRegister)(); render(); return;
     }
-    if (t.closest("[data-clear]")) { S.fIns = null; S.fBat = null; S.q = ""; render(); return; }
+    var dp = t.closest("[data-daypick]");
+    if (dp) {
+      var parts = dp.getAttribute("data-daypick").split(":"), d = +parts[1];
+      if (parts[0] === "whDays" && S.who) toggleDay(S.who.days = S.who.days || [], d);
+      else toggleDay(S.nsDays = S.nsDays || [], d);
+      /* the days he picked must survive the redraw, so they live in
+         state, not in the DOM the redraw is about to replace */
+      render(); return;
+    }
+    if (t.closest("[data-clear]")) { S.fIns = null; S.q = ""; render(); return; }
     var fi = t.closest("[data-fi]");
     if (fi) { var v = fi.getAttribute("data-fi"); S.fIns = v || null; S.q = ""; render(); return; }
-    var fb = t.closest("[data-fb]");
-    if (fb) { var n = +fb.getAttribute("data-fb"); S.fBat = S.fBat === n ? null : n; render(); return; }
     if (t.closest("[data-off]")) { S.showOff = true; render(); return; }
     var md = t.closest("[data-mode]");
     if (md) { S.mode = md.getAttribute("data-mode"); loadRegister(); render(); return; }
 
     if (t.closest("[data-add]")) {
-      S.tab = "add";
+      S.tab = "add"; S.nsDays = [];
       MZ.reference().then(function (r) { S.ref = r; render(); }).catch(fail);
       render(); return;
     }
@@ -1776,7 +1805,7 @@
       name: document.getElementById("nsName").value,
       phone: document.getElementById("nsPhone").value.replace(/\D/g, ""),
       instrument: document.getElementById("nsIns").value,
-      batch: +document.getElementById("nsBatch").value,
+      days: (S.nsDays || []).slice(),
       centre: (S.ref.centres[0] || {}).id
     }).then(function (m) {
       toast(m.name + " added"); S.tab = "register"; loadRegister(); render();

@@ -42,8 +42,12 @@
        token would boot index.html straight past the sign-in screen
        into a register that cannot load, which reads as a broken app
        rather than as a stale preview. So the real client refuses it
-       outright and forgets it. */
-    if (s && s.access_token === "preview") { clear(); return null; }
+       outright and forgets it.
+
+       The test is the PAGE, not the token: /try/ sets MZ_PREVIEW before
+       this file loads. Keying on the token alone locked the preview out
+       of itself, which is how this was found. */
+    if (s && s.access_token === "preview" && !win().MZ_PREVIEW) { clear(); return null; }
     return s;
   }
   function save(s)  { try { localStorage.setItem(SKEY, JSON.stringify(s)); } catch (e) {} }
@@ -172,12 +176,20 @@
   /* ---------------- reference data ----------------
      Instruments and the two time windows change roughly never, and every
      screen needs them, so they are read once per page load. */
+  /* `window` is not defined in the check harness's VM, and a guard
+     that throws is worse than the thing it guards. */
+  function win() { try { return window; } catch (e) { return {}; } }
+
   var refCache = null;
   function reference(force) {
     if (refCache && !force) return Promise.resolve(refCache);
     return Promise.all([
       get("/centres?" + T + "&active=is.true&order=sort&select=id,code,name,short_name"),
-      get("/batches?" + T + "&active=is.true&order=sort&select=id,code,name,days,start_time,end_time"),
+      /* select=* on purpose. A new day-pattern is created by CLONING an
+         existing batch row and overriding three fields, which means we
+         never have to guess which columns are NOT NULL on a shared
+         table this repo cannot see the DDL for. */
+      get("/batches?" + T + "&active=is.true&order=sort&select=*"),
       get("/sports?"  + T + "&active=is.true&order=sort&select=id,code,name,icon")
     ]).then(function (r) {
       refCache = { centres: r[0] || [], batches: r[1] || [], instruments: r[2] || [] };
@@ -201,6 +213,82 @@
                "&select=id,name,phone,parent_name,parent_phone")
       .then(function (rows) { return (rows && rows[0]) || null; });
   }
+  /* ============================================================
+     DAYS, NOT BATCHES.
+
+     He does not run a weekday batch and a Saturday batch. He runs one
+     school, and each child comes on their own days — Wednesday and
+     Saturday, say, or Tuesday and Thursday. So the app asks for days.
+
+     Underneath, a batch row IS a day pattern: `batches.days` is
+     already an integer array of weekdays, and an enrolment already
+     points at exactly one batch. So "Wed + Sat" is simply the batch
+     whose days are [3,6], created the first time somebody needs it
+     and shared by everyone after that.
+
+     Why not delete batches outright: `sessions.batch_id` is NOT NULL
+     and `mark_attendance()` takes a batch, on tables six other
+     academies share. Removing the column is a platform migration that
+     would reach every one of them. Removing the WORD from this app
+     costs nothing and is what was actually wanted — he never sees it
+     again.
+
+     The happy accident: existing students already sit on a [1,2,3,4,5]
+     or a [6] pattern, so they read back as "Mon-Fri" and "Sat" with no
+     migration and nothing to convert.
+     ============================================================ */
+  var DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  function dayKey(d) {
+    return (d || []).slice().sort(function (a, b) { return a - b; }).join(",");
+  }
+  function dayLabel(d) {
+    var v = (d || []).slice().sort(function (a, b) { return a - b; });
+    if (!v.length) return "No days set";
+    /* a run of three or more collapses: 1,2,3,4,5 reads "Mon-Fri" */
+    var runs = [], i = 0;
+    while (i < v.length) {
+      var j = i; while (j + 1 < v.length && v[j + 1] === v[j] + 1) j++;
+      runs.push(j - i >= 2 ? DAY_SHORT[v[i]] + "\u2013" + DAY_SHORT[v[j]]
+                           : v.slice(i, j + 1).map(function (x) { return DAY_SHORT[x]; }).join(", "));
+      i = j + 1;
+    }
+    return runs.join(", ");
+  }
+  /* Find the pattern, or make it. Never a duplicate: the key is the
+     sorted day list, so [6,3] and [3,6] are the same Wednesday-and-
+     Saturday pattern and share one row. */
+  function batchForDays(days) {
+    var key = dayKey(days);
+    if (!key) return Promise.reject(new Error("Pick at least one day."));
+    return reference().then(function (r) {
+      var bs = r.batches || [];
+      for (var i = 0; i < bs.length; i++) if (dayKey(bs[i].days) === key) return bs[i];
+      var tpl = bs[0] || {};
+      var body = {};
+      /* clone every column the existing row has, then override the
+         three that make this pattern itself */
+      Object.keys(tpl).forEach(function (k) {
+        if (k !== "id" && k !== "created_at" && k !== "updated_at") body[k] = tpl[k];
+      });
+      body.tenant_id = TENANT;
+      body.code = "d" + key.replace(/,/g, "");
+      body.name = dayLabel(days);
+      body.short_name = dayLabel(days);
+      body.days = dayKey(days).split(",").map(Number);
+      body.active = true;
+      return post("/batches", body).then(function (rows) {
+        var made = (rows && rows[0]) || null;
+        if (!made) return Promise.reject(new Error("Could not save those days."));
+        /* THE CACHE MUST FORGET. runsOn() decides who is expected today
+           from this list; if it still holds the old one, the child just
+           added shows up on every day of the week until a reload — which
+           looks exactly like the day picker not working. */
+        refCache = null;
+        return made;
+      });
+    });
+  }
+
   function addStudent(a) {
     /* Two writes, deliberately in order: the member, then the enrolment
        that carries the instrument. The instrument is what prices them —
@@ -208,7 +296,8 @@
        is a student nobody can bill. */
     if (!a.name)       return Promise.reject(new Error("A name is needed."));
     if (!a.instrument) return Promise.reject(new Error("Pick an instrument."));
-    if (!a.batch)      return Promise.reject(new Error("Pick weekday or Saturday."));
+    if (!a.days || !a.days.length) return Promise.reject(new Error("Pick at least one day."));
+    return batchForDays(a.days).then(function (batch) {
     return post("/members", {
       tenant_id: TENANT, name: a.name.trim(), phone: a.phone || null,
       parent_name: a.parentName || null, parent_phone: a.phone || null,
@@ -216,10 +305,11 @@
     }).then(function (rows) {
       var m = rows[0];
       return post("/enrollments", {
-        tenant_id: TENANT, member_id: m.id, centre_id: a.centre, batch_id: a.batch,
+        tenant_id: TENANT, member_id: m.id, centre_id: a.centre, batch_id: batch.id,
         sport: a.instrument, plan_months: 1, joined_on: a.joined || todayIso(),
         renewal_on: a.renewalOn || monthOn(a.joined || todayIso(), 1), status: "active"
       }).then(function () { report("student_added", {}); return m; });
+    });
     });
   }
   /* STOPPING A STUDENT IS AN RPC, NOT A PATCH.
@@ -251,10 +341,13 @@
   function moveEnrollment(enrollmentId, a) {
     var body = {};
     if (a.instrument) body.sport = a.instrument;
-    if (a.batch)      body.batch_id = a.batch;
-    if (!Object.keys(body).length) return Promise.resolve(null);
-    return patch("/enrollments?" + T + "&id=eq." + enrollmentId, body)
-      .then(function (r) { report("enrollment_changed", {}); return r; });
+    var days = a.days && a.days.length ? a.days : null;
+    return (days ? batchForDays(days) : Promise.resolve(null)).then(function (batch) {
+      if (batch) body.batch_id = batch.id;
+      if (!Object.keys(body).length) return null;
+      return patch("/enrollments?" + T + "&id=eq." + enrollmentId, body)
+        .then(function (r) { report("enrollment_changed", {}); return r; });
+    });
   }
   /* Reversing a payment. void_payment() also recomputes which months
      the money had covered, which a status flip on the row would not. */
@@ -366,6 +459,7 @@
     feeFor: feeFor, takePayment: takePayment, payments: payments,
     expenses: expenses, addExpense: addExpense,
     dues: dues, logReminder: logReminder,
-    todayIso: todayIso, iso: iso, monthOn: monthOn, monthRange: monthRange
+    todayIso: todayIso, iso: iso, monthOn: monthOn, monthRange: monthRange,
+    dayLabel: dayLabel, dayKey: dayKey
   };
 })();

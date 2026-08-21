@@ -994,3 +994,31 @@ table.reg td.c.o { color: var(--ink-3); opacity: .38; font-size: 13px; }
 @media (prefers-reduced-motion: reduce) {
   .ig svg, .fresh .sl-set { animation: none !important; }
 }
+
+/* ============================================================
+   THE DAY PICKER
+
+   Six buttons, Monday to Saturday. No Sunday: the school is shut, and
+   a control that offers a day nobody can attend is a control that
+   invites a mistake.
+
+   These are 48px tall like every other thing in this app that changes
+   real data — unlike the filter words, where a mis-tap costs a wrong
+   list for one second. Picking the wrong day here puts a child on the
+   wrong register for as long as nobody notices.
+   ============================================================ */
+.daypick { display: flex; gap: 6px; margin-bottom: 6px; }
+.daypick button {
+  flex: 1 1 0; min-width: 0; min-height: 48px; padding: 0 2px;
+  border: 1.5px solid var(--rule); border-radius: 11px;
+  background: #FFFDF6; color: var(--ink-2);
+  font-size: 14px; font-weight: 700; letter-spacing: .01em;
+  transition: background .14s, color .14s, border-color .14s, transform .1s;
+}
+.daypick button.on {
+  background: var(--brand); border-color: var(--brand); color: #fff;
+}
+.daypick button:active { transform: translateY(1px); }
+.daysum { display: block; font-style: normal; font-size: 13.5px; font-weight: 600;
+  color: var(--brand); margin-bottom: 2px; }
+.daysum.dim { color: var(--ink-3); font-weight: 500; }
