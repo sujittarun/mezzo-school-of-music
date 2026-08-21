@@ -108,6 +108,14 @@ const STUDENTS = [];
 const PATTERN = { 1: [1,2,3,4,5], 2: [6], 3: [3,6], 4: [2,4], 5: [1,4], 6: [1,3,5], 7: [2,5] };
 
 const Y = TODAY.getFullYear(), M = TODAY.getMonth() + 1, DOM = TODAY.getDate();
+/* n days from today, as an ISO date */
+function plusDays(n) {
+  const d = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() + n);
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") +
+         "-" + String(d.getDate()).padStart(2, "0");
+}
+/* 1 to 30 days out, deterministic */
+function renewIso(n) { return plusDays(1 + ((n * 7) % 30)); }
 function isoOf(d) { return Y + "-" + String(M).padStart(2, "0") + "-" + String(d).padStart(2, "0"); }
 function dowOf(d) { return new Date(Y, M - 1, d).getDay(); }
 
@@ -181,9 +189,13 @@ const fixtures = {
       parent_phone: "900000" + String(1000 + s.n).slice(-4), joined: ji,
       /* a few are away for a while — enough to see the Paused band
          and to prove a paused child is off the register */
+      /* The renewal date is the whole axis of the members tab now:
+         thirty days out is far left, the day itself is dead centre,
+         and past it slides right. Spread across the coming month so
+         the slider has something to say. */
       enrollments: [{ id: s.n + 1, sport: s.sport, batch_id: s.batch,
                       status: s.n % 23 === 5 ? "paused" : "active",
-                      joined_on: ji }]
+                      joined_on: ji, renewal_on: renewIso(s.n) }]
     };
   }),
   centres: [{ id: 1, code: "main", name: "Thadagam Road", short_name: "Main", sort: 1 }],

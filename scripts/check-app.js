@@ -665,6 +665,26 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
       ", which enrollments_plan_months_check will reject");
   });
 
+  /* `.gate` is the SIGN-IN SCREEN — full-bleed, min-height 100svh,
+     dark. A plain `.gate` used inside a card paints a slab down the
+     entire page. That has now happened twice: once on the dues rows,
+     once on the members slider. It stops being a thing to remember
+     and becomes a thing that fails. */
+  await check("no card reuses a class that belongs to the sign-in screen", async () => {
+    /* the sign-in screen still owns it, or this guard means nothing */
+    assert(/\.gate\s*\{[^}]*min-height:\s*100vh/.test(cssSrc),
+      "the sign-in screen no longer claims .gate — this guard is now meaningless");
+
+    /* the whole page script AFTER gate() — every view that renders
+       inside the app rather than instead of it */
+    const afterGate = html.slice(html.indexOf("function viewRegister"));
+    const tokens = [...afterGate.matchAll(/class="([^"'+]*)"/g)]
+      .flatMap((m) => m[1].split(/\s+/)).filter(Boolean);
+    const stolen = ["gate", "ginner"].filter((c) => tokens.includes(c));
+    assert(stolen.length === 0,
+      "a card inside the app reuses the sign-in screen's class: " + stolen.join(", "));
+  });
+
   /* The day patterns arrive on a SECOND request, after the register has
      already painted. Without a re-render when they land, the filter sits
      on its safe fallback — show everybody — and looks broken while being
@@ -814,13 +834,22 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
     assert(h.includes("₹4,000"), "the total owing is wrong");
     assert(/Out of tune \u2014 2/.test(h), "the out-of-tune count is wrong");
 
-    /* The mark has to sit further from centre for 40 days than for 1,
-       or the scale is decoration. */
-    const lefts = [...h.matchAll(/class="mtrack"><i style="left:([\d.]+)%/g)].map((m) => +m[1]);
+    /* THE AXIS IS THE FEE CYCLE. A month before the fee is due the
+       mark is at the far left; it reaches dead centre on the day
+       itself and carries on right afterwards. So 40 days over must sit
+       further RIGHT than 1 day over. */
+    const lefts = [...h.matchAll(/class="mk" style="left:([\d.]+)%/g)].map((m) => +m[1]);
     assert(lefts.length >= 3, "three rows, " + lefts.length + " marks");
-    assert(lefts[0] < lefts[1] - 10,
-      "40 days does not read as flatter than 1 day: " + lefts.join(" vs "));
-    assert(lefts[lefts.length - 1] === 50, "a settled member is not at dead centre");
+    assert(lefts[0] > lefts[1] + 10,
+      "40 days over does not sit further right than 1 day over: " + lefts.join(" vs "));
+    assert(lefts[0] === 100, "a month overdue is not pinned at the right end: " + lefts[0]);
+
+    /* And the colour is a SWEEP, not three buckets: every mark a
+       different shade, none of them repeated. */
+    const cols = [...h.matchAll(/--mark:(hsl\([^)]*\))/g)].map((m) => m[1]);
+    assert(cols.length >= 3, "no swept colours were emitted");
+    assert(new Set(cols).size === cols.length,
+      "two members share a colour — the sweep has become buckets: " + cols.join(" | "));
   });
 
   await check("the WhatsApp link carries the country code and no stray characters", async () => {

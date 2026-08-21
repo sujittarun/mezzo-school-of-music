@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" />
-<link rel="stylesheet" href="assets/css/app.css?v=20260821o" />
+<link rel="stylesheet" href="assets/css/app.css?v=20260821p" />
 </head>
 <body>
 <!-- ============================================================
@@ -1505,6 +1505,50 @@
         "Someone else paid \u2014 record it</button></div>";
   }
 
+  /* ============================================================
+     THE SLIDER IS THE FEE CYCLE, NOT JUST LATENESS
+
+     Thirty days before the fee falls due the mark sits at the far
+     LEFT. It creeps right one day at a time, reaches dead CENTRE on
+     the renewal day itself, and carries on right as the days go past.
+
+     So the position answers "where is this family in the month" —
+     which is a thing he can act on early — rather than only "how late
+     are they", which he can only act on once it is already a problem.
+
+     THE COLOUR IS A SWEEP, NOT THREE BUCKETS. It is one hue moving
+     continuously from green through yellow and amber to red as the
+     mark travels, so a family one day further on is a shade further
+     over. Stepped colours would say "you have crossed into the amber
+     band", which is a thing that did not happen to them.
+     ============================================================ */
+  var DUE_SPAN = 30;                     /* days either side of centre */
+
+  /* days until the fee is due: positive is still to come, negative is
+     already past. reminder_queue is the authority once they are late;
+     the enrolment's renewal date is all we have before that. */
+  function daysToDue(p) {
+    if (p.due && p.due.days_since != null) return -Number(p.due.days_since);
+    if (!p.renewal_on) return null;
+    var d0 = new Date(MZ.todayIso()), d1 = new Date(p.renewal_on);
+    if (isNaN(d1)) return null;
+    return Math.round((d1 - d0) / 864e5);
+  }
+  /* 0 at the far left (a month to go) to 1 at the far right (a month
+     over), 0.5 on the day itself */
+  function duePos(days) {
+    if (days == null) return 0.5;
+    return Math.min(1, Math.max(0, 0.5 - (days / DUE_SPAN) * 0.5));
+  }
+  /* One hue, swept. 145 is green, 45 is amber at the centre, 2 is red
+     — and every value between them is a real colour rather than a
+     bucket boundary. */
+  function dueColour(t) {
+    var h = t <= 0.5 ? 145 - (t / 0.5) * 100 : 45 - ((t - 0.5) / 0.5) * 43;
+    var l = t <= 0.5 ? 34 + (t / 0.5) * 4 : 38 - ((t - 0.5) / 0.5) * 4;
+    return "hsl(" + h.toFixed(0) + " 62% " + l.toFixed(0) + "%)";
+  }
+
   function memberRow(p, i) {
     var hue = inst(p.sport).hue;
     if (p.paused) {
@@ -1514,26 +1558,34 @@
         '<span class="mtrack rest"></span>' +
         '<span class="mamt"><b>\u2016</b><span>paused</span></span></button>';
     }
-    if (!p.due) {
-      /* settled: the mark sits dead centre and it is green. Nothing
-         else on the row, because there is nothing to do about it. */
-      return '<button class="mrow ok" data-fam="' + i + '" style="--hue:' + hue + '">' +
-        '<span class="mnote">' + (TUNER_NOTE[p.sport] || "\u266a") + "</span>" +
-        '<span class="mwho"><b>' + esc(p.name) + "</b><span>" + esc(p.sport || "") + "</span></span>" +
-        '<span class="mtrack"><i style="left:50%"></i></span>' +
-        '<span class="mamt"><b>\u2713</b><span>in tune</span></span></button>';
+
+    var days = daysToDue(p), t = duePos(days), col = dueColour(t);
+    var ticks = "";
+    for (var k = 0; k <= 8; k++) {
+      ticks += '<i class="mtk' + (k === 4 ? " mid" : "") + '" style="left:' + (k * 12.5) + '%"></i>';
     }
-    var off = flatness(p.due.days_since), col = tuneColour(off);
-    var left = (50 - off * 44).toFixed(1);
-    return '<button class="mrow" data-fam="' + i + '" style="--hue:' + hue +
-        ';--mark:' + col + '">' +
+    var amt = p.due
+      ? "<b>" + inr(p.due.amount) + "</b><span>" +
+        p.due.days_since + (p.due.days_since === 1 ? " day over" : " days over") + "</span>"
+      : days == null
+        ? "<b>\u2713</b><span>in tune</span>"
+        : days === 0
+          ? "<b>\u2713</b><span>due today</span>"
+          : "<b>\u2713</b><span>in " + days + (days === 1 ? " day" : " days") + "</span>";
+
+    return '<button class="mrow' + (p.due ? "" : " ok") + '" data-fam="' + i +
+        '" style="--hue:' + hue + ';--mark:' + col + '">' +
       '<span class="mnote" style="color:' + col + '">' +
         (TUNER_NOTE[p.sport] || "\u266a") + "</span>" +
       '<span class="mwho"><b>' + esc(p.name) + "</b><span>" + esc(p.sport || "") +
-        (p.due.already_sent ? " \u00b7 asked" : "") + "</span></span>" +
-      '<span class="mtrack"><i style="left:' + left + '%"></i></span>' +
-      '<span class="mamt"><b>' + inr(p.due.amount) + "</b><span>" +
-        p.due.days_since + (p.due.days_since === 1 ? " day" : " days") + "</span></span></button>";
+        (p.due && p.due.already_sent ? " \u00b7 asked" : "") + "</span></span>" +
+      /* mgate, NOT gate. `.gate` is the SIGN-IN SCREEN — position
+         fixed, inset 0 — and a plain `.gate` inside a row paints a
+         black slab down the whole page. This is the second time; the
+         check below now fails the build if it comes back. */
+      '<span class="mtrack">' + ticks + '<span class="mgate"></span>' +
+        '<i class="mk" style="left:' + (t * 100).toFixed(1) + '%"></i></span>' +
+      '<span class="mamt">' + amt + "</span></button>";
   }
 
   /* ============================================================

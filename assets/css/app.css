@@ -1327,16 +1327,22 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
 .mwho span { display: block; font-size: 12px; color: var(--ink-3);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* the shared scale. One hairline, one dot, no repeated furniture. */
-.mtrack { position: relative; flex: 0 0 auto; width: min(104px, 26vw); height: 22px; }
+/* THE SLIDER. A month before the fee is due the mark is at the far
+   left; it reaches the gate on the day itself and carries on right
+   afterwards. Ticks and a centre gate, because that is what makes it
+   read as a tuner rather than a progress bar. */
+.mtrack { position: relative; flex: 0 0 auto; width: min(116px, 27vw); height: 26px; }
 .mtrack::before { content: ""; position: absolute; left: 0; right: 0; top: 50%;
   height: 1px; background: var(--rule); }
-.mtrack::after { content: ""; position: absolute; left: 50%; top: 4px; bottom: 4px;
-  width: 1.4px; margin-left: -.7px; background: var(--rule); }
-.mtrack i { position: absolute; top: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px;
+.mtrack .mtk { position: absolute; top: 8px; width: 1px; height: 5px;
+  background: var(--rule); }
+.mtrack .mtk.mid { top: 3px; height: 15px; width: 1.4px; background: #C6BCA6; }
+.mtrack .mgate { position: absolute; left: 50%; top: 2px; width: 17px; height: 17px;
+  margin-left: -8.5px; border: 1.2px solid var(--rule); border-radius: 3px; }
+.mtrack .mk { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px;
   border-radius: 50%; background: var(--mark, var(--ok));
-  transition: left .5s cubic-bezier(.22,1.3,.36,1); }
-.mrow.ok .mtrack i { background: var(--ok); box-shadow: 0 0 0 3px rgba(29,107,74,.16); }
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mark, var(--ok)) 20%, transparent);
+  transition: left .5s cubic-bezier(.22,1.3,.36,1), background .5s; }
 
 .mamt { flex: 0 0 auto; text-align: right; min-width: 62px; }
 .mamt b { display: block; font-size: 14.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
