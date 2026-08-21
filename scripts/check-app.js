@@ -294,6 +294,32 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
       "the day rows no longer have a fixed height");
   });
 
+  /* Graphite is the sound of marking a child. It had leaked out onto
+     the filters, the tabs, the day arrows and the view toggle, and
+     once paper is the sound of everything it is the sound of nothing.
+     This pins it to the one function that marks. */
+  await check("pencil sounds belong to marking, and to nothing else", async () => {
+    const cyc = html.slice(html.indexOf("function cycle("));
+    const cycleBody = cyc.slice(0, cyc.indexOf("\n  function ", 10));
+    const click = html.slice(html.indexOf("function clickTone("));
+    const clickBody = click.slice(0, click.indexOf("\n  document.addEventListener"));
+
+    assert(/pencilTick\(\)/.test(cycleBody) && /pencilStrike\(\)/.test(cycleBody) &&
+           /paperBrush\(\)/.test(cycleBody),
+      "marking a child no longer sounds like a pencil");
+    assert(!/pencil|paperBrush|pageTurn|\bstroke\(/.test(clickBody),
+      "a paper sound leaked back onto a button, a filter or a tab");
+
+    /* And every other control has to have a voice of its OWN — eight
+       distinct instruments, not one beep reused. */
+    const voices = [...clickBody.matchAll(/return (\w+)\(/g)].map((m) => m[1])
+      .filter((v) => v !== "playInstrument");
+    assert(new Set(voices).size >= 5,
+      "the controls share too few voices: " + [...new Set(voices)].join(","));
+    assert(/data-fi/.test(clickBody) && /playInstrument/.test(clickBody),
+      "circling an instrument no longer plays that instrument");
+  });
+
   /* The day patterns arrive on a SECOND request, after the register has
      already painted. Without a re-render when they land, the filter sits
      on its safe fallback — show everybody — and looks broken while being

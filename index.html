@@ -375,23 +375,6 @@
   function pencilStrike() { stroke(0.20, 1900, 0.30, 0.7); }
   /* Rubbed out: dull, quiet, no grain. */
   function paperBrush() { stroke(0.13, 900, 0.13, 0.55); }
-  /* Circling a word on the sheet is also a pencil act. */
-  function pencilRing() { stroke(0.17, 2600, 0.17, 0.8); }
-  /* A page turning: a sweep rather than a stroke. */
-  function pageTurn() {
-    var a = ac(); if (!a) return;
-    var t = a.currentTime;
-    var src = a.createBufferSource(); src.buffer = noiseBuf(a); src.playbackRate.value = 0.6;
-    var bp = a.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = 1.1;
-    bp.frequency.setValueAtTime(700, t);
-    bp.frequency.exponentialRampToValueAtTime(3400, t + 0.26);
-    var g = a.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(0.16, t + 0.07);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.30);
-    src.connect(bp); bp.connect(g); g.connect(a.destination);
-    src.start(t); src.stop(t + 0.34);
-  }
   /* A plucked string: a bright transient that dies fast, through a
      filter that closes as it decays — which is what a real string
      does and what a plain sine never does. */
@@ -438,6 +421,89 @@
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
     o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.95);
   }
+  /* A struck piano string: three partials, the upper ones slightly
+     SHARP of the harmonic. Real strings are stiff and their overtones
+     run sharp, which is the whole reason a piano sounds like a piano
+     and a stack of pure sines sounds like a test tone. */
+  function struck(midi, level) {
+    var a = ac(); if (!a) return;
+    level = level === undefined ? 1 : level;
+    var t = a.currentTime, f = 440 * Math.pow(2, (midi - 69) / 12);
+    [[1, 0.17, 1.0], [2.004, 0.06, 0.7], [3.012, 0.022, 0.45]].forEach(function (h) {
+      var o = a.createOscillator(); o.type = "sine"; o.frequency.value = f * h[0];
+      var g = a.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(h[1] * level, t + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.85 * h[2]);
+      o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.9);
+    });
+  }
+  /* A struck head: the pitch DROPS as the skin relaxes, and the noise
+     is low and short. Nothing here is bandpassed up where the pencil
+     lives, so a drum can never be mistaken for paper. */
+  function hit(midi, level) {
+    var a = ac(); if (!a) return;
+    level = level === undefined ? 1 : level;
+    var t = a.currentTime, f = 440 * Math.pow(2, (midi - 69) / 12);
+    var o = a.createOscillator(); o.type = "sine";
+    o.frequency.setValueAtTime(f * 1.9, t);
+    o.frequency.exponentialRampToValueAtTime(f * 0.75, t + 0.14);
+    var g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.30 * level, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.30);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.34);
+    stroke(0.05, 420, 0.14 * level, 0.4);          /* the skin, not the pencil */
+  }
+  /* A flute is mostly air: a soft sine with breath either side of it. */
+  function breath(midi, level) {
+    var a = ac(); if (!a) return;
+    level = level === undefined ? 1 : level;
+    var t = a.currentTime, f = 440 * Math.pow(2, (midi - 69) / 12);
+    var o = a.createOscillator(); o.type = "sine"; o.frequency.value = f;
+    var g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.17 * level, t + 0.06);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.46);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.5);
+    stroke(0.14, 2000, 0.045 * level, 0.35);       /* the breath across the lip */
+  }
+  /* An electric keyboard: square, steady, no decay to speak of. It is
+     the one voice here that does not die away, which is exactly what
+     tells it apart from the piano beside it. */
+  function reed(midi, level) {
+    var a = ac(); if (!a) return;
+    level = level === undefined ? 1 : level;
+    var t = a.currentTime, f = 440 * Math.pow(2, (midi - 69) / 12);
+    var o = a.createOscillator(); o.type = "square"; o.frequency.value = f;
+    var lp = a.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = f * 4;
+    var g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.11 * level, t + 0.012);
+    g.gain.setValueAtTime(0.11 * level, t + 0.24);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.40);
+    o.connect(lp); lp.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.44);
+  }
+  /* A sung note: two formants over the fundamental, which is roughly
+     what makes a vowel a vowel. */
+  function voiceNote(midi, level) {
+    var a = ac(); if (!a) return;
+    level = level === undefined ? 1 : level;
+    var t = a.currentTime, f = 440 * Math.pow(2, (midi - 69) / 12);
+    var o = a.createOscillator(); o.type = "sawtooth"; o.frequency.value = f;
+    var g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.16 * level, t + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+    var out = g;
+    [[720, 5], [1180, 7]].forEach(function (fm) {          /* an "ah" */
+      var bp = a.createBiquadFilter(); bp.type = "peaking";
+      bp.frequency.value = fm[0]; bp.Q.value = fm[1]; bp.gain.value = 11;
+      out.connect(bp); out = bp;
+    });
+    o.connect(g); out.connect(a.destination); o.start(t); o.stop(t + 0.6);
+  }
+
   /* The ledger stamp. Low, wooden, over before you notice it. */
   function woodThunk(level) {
     var a = ac(); if (!a) return;
@@ -1538,30 +1604,65 @@
      this screen and nothing else should compete with it. A filter
      chip plays its own instrument, which is the nicest of these: tap
      Violin and you hear one. */
-  /* Each control sounds like the thing it does, and the three tabs
-     each announce their own room. Nothing here is a generic beep. */
-  var TAB_SOUND = {
-    register: function () { pageTurn(); },                 /* a sheet turning over */
-    dues:     function () { bow(64, 0.55); },              /* the tuner, bowed */
-    money:    function () { woodThunk(0.7); },             /* the ledger stamp */
-    add:      function () { pluck(69, 0.5); }
+  /* ============================================================
+     PENCIL IS FOR THE REGISTER, AND ONLY THE REGISTER.
+
+     Graphite is the sound of MARKING A CHILD — a tick, a strike, a
+     rub-out. It used to leak out across the filters, the tabs, the
+     day arrows and the view toggle, and once paper is the sound of
+     everything it stops being the sound of anything. It now appears
+     in exactly one place in this file: cycle().
+
+     Everything else is an instrument, and no two controls share one.
+     The rule that picks which: play the thing the control is ABOUT.
+     ============================================================ */
+  var VOICE = {
+    Piano: struck, Keyboard: reed, Guitar: pluck, Violin: bow,
+    Ukulele: pluck, Drums: hit, Vocals: voiceNote, Flute: breath
   };
+  /* Circling "Drums" plays a drum. Circling "Violin" plays a bow.
+     The filter names an instrument, so the obvious sound for it is
+     that instrument, and eight filters get eight voices for free. */
+  function playInstrument(name, level) {
+    var i = inst(name);
+    return (VOICE[name] || pluck)(i.note, level === undefined ? 0.75 : level);
+  }
+
+  var TAB_SOUND = {
+    register: function () { struck(60, 0.6); },   /* piano — the register's home */
+    dues:     function () { bow(64, 0.55); },     /* violin — the tuner */
+    money:    function () { woodThunk(0.7); },    /* woodblock — the ledger stamp */
+    add:      function () { voiceNote(69, 0.5); } /* a voice — someone new */
+  };
+
   function clickTone(t) {
     if (!t.closest) return;
     var el;
     if ((el = t.closest("[data-tab]"))) {
       var f = TAB_SOUND[el.getAttribute("data-tab")];
-      return f ? f() : pageTurn();
+      return f ? f() : struck(60, 0.6);
     }
-    /* Circling a word on the sheet is a pencil act too — the ring is
-       drawn on screen, so it is drawn in the ear as well. */
-    if (t.closest("[data-fi],[data-fb],[data-clear]")) return pencilRing();
-    if (t.closest("[data-mode]"))           return pageTurn();
-    if (t.closest("[data-day],[data-mon]")) return stroke(0.09, 1500, 0.13, 0.62);
-    if (t.closest(".acts .paid"))           return intoTune(72, 42, 1);   /* flat, then true */
+    /* an instrument filter plays its own instrument */
+    if ((el = t.closest("[data-fi]"))) {
+      var v = el.getAttribute("data-fi");
+      return v ? playInstrument(v, 0.7) : reed(72, 0.5);   /* "Everyone" — the organ, all of them */
+    }
+    /* the day filter is not an instrument, so it gets the lowest
+       voice in the room and cannot be confused with one */
+    if (t.closest("[data-fb]"))             return pluck(40, 0.75);        /* double bass */
+    if (t.closest("[data-clear]"))          return breath(74, 0.5);        /* flute — clearing the air */
+    if (t.closest("[data-mode]"))           return reed(67, 0.55);         /* keyboard — changing register */
+    if (t.closest("[data-day],[data-mon]")) return struck(76, 0.45);       /* a high piano step */
+    if (t.closest("[data-off]"))            return breath(69, 0.45);
+    /* opening a child's card plays THAT child's instrument */
+    if ((el = t.closest("[data-who],[data-pick],[data-paid]"))) {
+      var sp = el.getAttribute("data-sport");
+      return sp ? playInstrument(sp, 0.6) : pluck(64, 0.55);
+    }
+    if (t.closest(".acts .paid"))           return intoTune(72, 42, 1);    /* flat, then true */
     if (t.closest("#exSave"))               return woodThunk(0.9);
-    if (t.closest(".acts a"))               return bow(67, 0.5);          /* the ask goes out */
-    if (t.closest(".btn"))                  return pluck(65, 0.6);
+    if (t.closest(".acts a"))               return bow(67, 0.5);           /* the ask goes out */
+    if (t.closest(".btn"))                  return pluck(65, 0.6);         /* guitar */
   }
 
   document.addEventListener("click", function (e) {
