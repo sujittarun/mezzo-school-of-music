@@ -1196,7 +1196,13 @@ window.fetch = function (url) {
       perf += '<td class="pf"></td>';
     }
 
-    var body = rows.map(function (r) {
+    /* data-r is the ENROLMENT, not the row number. The row light is
+       keyed on it, and a positional key means that filtering by
+       instrument silently moves the light onto a different child. It
+       also makes the two tables' pairing an identity check rather than
+       a counting one. */
+    var body = rows.map(function (r, ri) {
+      var rid = r.enrollment_id != null ? r.enrollment_id : "i" + ri;
       var cells = "", seen = 0, came = 0;
       for (i = 1; i <= days; i++) {
         iso = y + "-" + String(m).padStart(2, "0") + "-" + String(i).padStart(2, "0");
@@ -1212,7 +1218,7 @@ window.fetch = function (url) {
                       : '<td class="c shut' + (iso === today ? " today" : "") + '"></td>';
       }
       var rate = seen ? Math.round(came / seen * 100) : 0;
-      return '<tr style="--hue:' + inst(r.sport).hue + '">' + cells +
+      return '<tr data-r="' + rid + '" style="--hue:' + inst(r.sport).hue + '">' + cells +
         '<td class="tot"><b>' + (seen ? rate + "%" : "\u2013") + "</b>" +
         '<i style="width:' + (seen ? rate : 0) + '%"></i></td></tr>';
     }).join("");
@@ -1226,8 +1232,9 @@ window.fetch = function (url) {
 
        The two tables stay in step because every row is one fixed
        height in both. They are one line of text; nothing can wrap. */
-    var names = rows.map(function (r) {
-      return '<tr style="--hue:' + inst(r.sport).hue + '"><td class="nmcol">' +
+    var names = rows.map(function (r, ri) {
+      return '<tr data-r="' + (r.enrollment_id != null ? r.enrollment_id : "i" + ri) +
+        '" style="--hue:' + inst(r.sport).hue + '"><td class="nmcol">' +
         esc(r.member_name) + '<span class="sp">' + esc(r.sport || "") + "</span></td></tr>";
     }).join("");
 
@@ -1236,6 +1243,12 @@ window.fetch = function (url) {
        against the wrong child's marks — the third time this pair has
        drifted, and the reason both now get identical rows or none. */
     return '<div class="card roll"><div class="gridwrap">' +
+      /* The light is ONE absolutely-positioned bar over the whole
+         gridwrap, not a class on the cells. Every mark in this grid IS
+         a cell background, so tinting cells would wash out the very
+         thing he is reading — and a row light that dims the marks is
+         worse than none. */
+      '<div class="rowlight" hidden></div>' +
       '<table class="reg names"><thead><tr><th class="nmcol"></th></tr></thead>' +
         '<tbody><tr class="perf"><td class="nmcol"></td></tr>' +
           names +
@@ -2680,8 +2693,113 @@ window.fetch = function (url) {
       (S.err ? '<div class="err">' + esc(S.err) + "</div>" : "") + inner + "</div>";
     playSection();
     paintNeedle();
+    fitNames();
+    wireGrid();
     scrubWave();
     showAsk();
+  }
+
+  /* ============================================================
+     THE MONTH GRID OPENS WHERE HE IS, AND REMEMBERS WHERE HE WAS
+
+     It opened on the 1st. On a phone that is a 173px window onto a
+     868px month, so on the 21st today's column sat 520px off-screen
+     and every single visit began with three screens of sideways
+     scrolling to reach the week he is actually in.
+
+     And a re-render rebuilt the table, which reset scrollLeft to 0 —
+     so opening a child's card threw away wherever he had scrolled to.
+     Both are the same fix: the horizontal position is state, not an
+     accident of the DOM.
+     ============================================================ */
+  function wireGrid() {
+    var sc = root.querySelector(".gridscroll");
+    if (!sc) return;
+    /* A new month, or arriving in the month view, forgets the old
+       position and lands on today. A re-render of the same month keeps
+       whatever he had scrolled to. */
+    /* The width is in the key, bucketed. A remembered scrollLeft is a
+       remembered DAY only while the window is the same size — rotate
+       the iPad and the same pixel offset lands on a different part of
+       the month, with today anywhere. Bucketed by 40px (about a day
+       and a half) so a rotation re-lands on today and a pixel of
+       scrollbar noise does not. */
+    var key = S.month.y + "-" + S.month.m + "|" + S.mode +
+              "|" + Math.round(sc.clientWidth / 40);
+    if (S.gridKey !== key) { S.gridKey = key; S.gridX = null; }
+    if (S.gridX == null) {
+      var td = sc.querySelector("td.c.today");
+      /* two days of run-up, so today is in context and not jammed
+         against the left edge */
+      S.gridX = td ? Math.max(0, td.offsetLeft - (td.offsetWidth || 26) * 2) : 0;
+    }
+    sc.scrollLeft = S.gridX;
+    sc.addEventListener("scroll", function () { S.gridX = sc.scrollLeft; }, { passive: true });
+
+    /* THE ROW LIGHT. Thirty-one columns wide and a narrow name column
+       beside it: the thing that goes wrong is losing which row you are
+       reading. Touch a row and a bar rules across both tables until you
+       touch another; touch the same one again and it goes out.
+
+       pointerdown, not click: this grid is made of plain <td>s, and iOS
+       does not reliably bubble click from an element that is not
+       interactive. The same trap as the SVG shapes earlier. */
+    var wrap = root.querySelector(".gridwrap");
+    var bar  = root.querySelector(".rowlight");
+    if (!wrap || !bar) return;
+    if (S.litRow != null) placeLight(wrap, bar, S.litRow);
+    wrap.addEventListener("pointerdown", function (ev) {
+      var tr = ev.target && ev.target.closest && ev.target.closest("tr[data-r]");
+      var i = tr ? tr.getAttribute("data-r") : null;
+      S.litRow = i == null || i === S.litRow ? null : i;
+      placeLight(wrap, bar, S.litRow);
+    });
+  }
+
+  /* THE NAME COLUMN IS AS WIDE AS THE LONGEST NAME, AND NO WIDER.
+     Measured, not guessed from character count: "Wm" and "iiii" are
+     four characters each and nothing like the same width. Ninety-six
+     scrollWidth reads is one forced layout on a tree that has already
+     settled, and it only happens when the list itself changes. */
+  function fitNames() {
+    var card = root.querySelector(".card.tuner");
+    if (!card) return;
+    var bs = card.querySelectorAll(".mwho b");
+    if (!bs.length) return;
+    var sig = bs.length + ":" + (S.people && S.people.length);
+    if (S.nameFit && S.nameFit.sig === sig) {
+      card.style.setProperty("--namew", S.nameFit.w + "px");
+      return;
+    }
+    /* A Range around the text, NOT the element's scrollWidth. These are
+       display:block, so scrollWidth is the BOX — the column measured
+       its own current width and locked to it, reporting "Tanvi" as
+       128px. A range measures the glyphs. */
+    var w = 0, i, rng = null;
+    try { rng = document.createRange(); } catch (e) {}
+    if (!rng) return;
+    for (i = 0; i < bs.length; i++) {
+      rng.selectNodeContents(bs[i]);
+      var tw = rng.getBoundingClientRect().width;
+      if (tw > w) w = tw;
+    }
+    var row = card.querySelector(".mrow");
+    /* Never more than 40% of the row: one absurdly long name must not
+       squeeze the scale everybody else is read against. */
+    var cap = row ? Math.round(row.getBoundingClientRect().width * 0.4) : 220;
+    w = Math.max(104, Math.min(cap, Math.ceil(w) + 2));
+    S.nameFit = { sig: sig, w: w };
+    card.style.setProperty("--namew", w + "px");
+  }
+
+  function placeLight(wrap, bar, i) {
+    if (i == null) { bar.hidden = true; return; }
+    var tr = wrap.querySelector('.reg.names tr[data-r="' + i + '"]');
+    if (!tr) { bar.hidden = true; return; }
+    var g = wrap.getBoundingClientRect(), r = tr.getBoundingClientRect();
+    bar.style.top = (r.top - g.top) + "px";
+    bar.style.height = r.height + "px";
+    bar.hidden = false;
   }
 
   /* A question he cannot see is a button that did nothing. The one-day

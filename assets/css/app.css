@@ -354,8 +354,20 @@ table.reg .nmcol {
 table.reg tbody .nmcol { height: 44px; max-height: 44px;
   font-size: 13px; line-height: 17px; padding-top: 5px; }
 table.reg .nmcol .sp { line-height: 15px; }
-/* The frozen column and the scroller, side by side. */
-.gridwrap { display: flex; align-items: flex-start; }
+/* The frozen column and the scroller, side by side. Positioned,
+   because the row light is an overlay inside it. */
+.gridwrap { display: flex; align-items: flex-start; position: relative; }
+
+/* THE ROW LIGHT — a ruler across both tables.
+   Not a class on the cells: every mark in this grid IS a cell
+   background, so tinting cells would wash out the exact thing he is
+   reading across. One bar, over the top, touching nothing. */
+.rowlight {
+  position: absolute; left: 0; right: 0; pointer-events: none; z-index: 3;
+  background: rgba(201,138,46,.10);
+  box-shadow: inset 0 1.5px 0 rgba(160,110,26,.85), inset 0 -1.5px 0 rgba(160,110,26,.85);
+}
+.rowlight[hidden] { display: none; }
 .gridwrap .reg.names { flex: 0 0 auto; }
 .gridscroll { flex: 1 1 auto; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 /* Both tables march in step because every row is the SAME fixed
@@ -372,6 +384,17 @@ table.reg thead th.sun { color: var(--no); }
    line of CSS that implies an optimisation it does not deliver is
    worse than no line at all. */
 table.reg tbody tr { border-top: 1px solid var(--line); }
+
+/* On a phone the name column was 146px of a 375px screen — 39% of it,
+   leaving a 173px window onto a month 868px wide, which is 6.7 days
+   of 31. The names do not need that much: the column narrows, the
+   type comes down a step, and the instrument stays because the colour
+   bar alone cannot be read as a word. */
+@media (max-width: 480px) {
+  table.reg .nmcol { width: 104px; padding: 0 6px 0 7px; }
+  table.reg tbody .nmcol { font-size: 12.5px; line-height: 16px; padding-top: 6px; }
+  table.reg .nmcol .sp { font-size: 10.5px; line-height: 14px; }
+}
 
 /* ---------- the roll's paint ----------
    Every mark is a BACKGROUND on a cell that already exists, so none of
@@ -1396,7 +1419,12 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
 .mnote { width: 26px; height: 26px; flex: none; border: 1.5px solid currentColor;
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
   font: 600 13px/1 "Cormorant Garamond", Georgia, serif; color: var(--ok); }
-.mwho { flex: 1 1 auto; min-width: 0; }
+/* ONE width for every name, not one per row.
+   The track has to start at the same x on all ninety-six rows or "Tanvi
+   is further right than Keerthi" stops meaning anything — a shared
+   scale is the whole idea. So the column is sized to the LONGEST name
+   in the list (measured, see fitNames) and every row uses it. */
+.mwho { flex: 0 0 var(--namew, 140px); min-width: 0; }
 .mwho b { display: block; font-size: 15.5px; font-weight: 700;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mwho span { display: block; font-size: 12px; color: var(--ink-3);
@@ -1406,7 +1434,12 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
    left; it reaches the gate on the day itself and carries on right
    afterwards. Ticks and a centre gate, because that is what makes it
    read as a tuner rather than a progress bar. */
-.mtrack { position: relative; flex: 0 0 auto; width: min(116px, 27vw); height: 26px; }
+/* The track takes everything left over, from the end of the name block
+   to the amount. It was a fixed 116px, which on a 1280px desktop left
+   it marooned in the middle of a row with 900px of empty name column
+   beside it. The ticks are positioned in per cent, so a wider track
+   just spreads them. */
+.mtrack { position: relative; flex: 1 1 auto; min-width: 84px; height: 26px; }
 .mtrack::before { content: ""; position: absolute; left: 0; right: 0; top: 50%;
   height: 1px; background: var(--rule); }
 .mtrack .mtk { position: absolute; top: 8px; width: 1px; height: 5px;
@@ -1427,7 +1460,12 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
 .mtrack.lit .mgate { border-color: var(--ok); background: rgba(29,107,74,.10);
   box-shadow: 0 0 0 2px rgba(29,107,74,.20); }
 
-.mamt { flex: 0 0 auto; text-align: right; min-width: 62px; }
+/* FIXED, not min-width. The track flexes into whatever is left, so an
+   amount block that is 62px on one row and 70px on the next made the
+   scale 8px shorter on the second — and the centre gates, which are
+   supposed to be one fixed target down the whole column, spread over
+   4px. Measured: the widest line here is 70px ("25 days over"). */
+.mamt { flex: 0 0 72px; text-align: right; }
 .mamt b { display: block; font-size: 14.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .mamt span { display: block; font-size: 11px; color: var(--ink-3); font-weight: 600; }
 .mrow.ok .mamt b { color: var(--ok); font-size: 17px; }

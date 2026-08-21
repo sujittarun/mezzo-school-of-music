@@ -292,13 +292,23 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
        name is sitting beside row M's marks. */
     const nameTbl = h.slice(h.indexOf('reg names'), h.indexOf('gridscroll'));
     const dayTbl  = h.slice(h.indexOf('gridscroll'));
-    const hues = (frag) => [...frag.matchAll(/<tr style="--hue:(#[0-9A-Fa-f]{6})"/g)].map((m) => m[1]);
+    /* index AND hue together. The index is what the row light pairs the
+       two tables on, so if it ever drifts the light rules a bar across
+       one child's name and another child's marks. */
+    const hues = (frag) =>
+      [...frag.matchAll(/<tr data-r="(\d+)" style="--hue:(#[0-9A-Fa-f]{6})"/g)]
+        .map((m) => m[1] + ":" + m[2]);
     const nh = hues(nameTbl), dh = hues(dayTbl);
     assert(nh.length === 4, "the name table has " + nh.length + " rows, not 4");
     assert(dh.length === 4, "the day table has " + dh.length + " rows, not 4");
     assert(nh.join(",") === dh.join(","),
       "the two tables are out of step — row N's name would sit beside row M's marks:\n  names " +
       nh.join(",") + "\n  days  " + dh.join(","));
+    /* the enrolment id, not the row number: the row light is keyed on it
+       and a positional key moves the light to a different child the
+       moment he filters by instrument */
+    assert(nh.join(",") === "1:#4A46B8,2:#9A6B12,3:#4F5B66,4:#B0344A",
+      "the rows are not keyed on the enrolment, in order: " + nh.join(","));
 
     /* And the CSS that makes the rows the same height in both. A table
        row's height is a MINIMUM, so without a capped, overflow-hidden
@@ -1344,6 +1354,81 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
       "the frame loop can fight the backstop and re-park the needle mid-sweep");
     assert(/function land\(\)[\s\S]{0,200}rotate\(" \+ to \+/.test(fn),
       "the backstop does not land on data-deg");
+  });
+
+  /* The month grid opened on the 1st. On a phone that is a 173px window
+     onto an 868px month, so on the 21st today sat 520px off-screen and
+     every visit began with three screens of sideways scrolling. And a
+     re-render reset scrollLeft to 0, throwing away wherever he had got
+     to. Shape check — the geometry needs a real browser — but it pins
+     both halves. */
+  await check("the month grid opens on today and keeps its place across renders", () => {
+    const fn = appSrc.slice(appSrc.indexOf("function wireGrid("),
+                            appSrc.indexOf("function fitNames("));
+    assert(/querySelector\("td\.c\.today"\)/.test(fn),
+      "the grid no longer looks for today; it will open on the 1st again");
+    assert(/S\.gridKey !== key/.test(fn) && /S\.month\.y \+ "-" \+ S\.month\.m \+ "\|" \+ S\.mode/.test(fn),
+      "the landing is not keyed on month+mode — it will yank him back to today mid-scroll");
+    assert(/sc\.clientWidth \/ 40/.test(fn),
+      "the width is not in the key: rotating the iPad restores a pixel offset that now " +
+      "points at a different day, with today anywhere");
+    assert(/sc\.scrollLeft = S\.gridX/.test(fn), "the remembered position is never restored");
+    assert(/sc\.addEventListener\("scroll",[\s\S]{0,90}S\.gridX = sc\.scrollLeft/.test(fn),
+      "nothing records where he scrolled to, so the next render throws it away");
+  });
+
+  /* Every mark in the month grid IS a cell background. A row highlight
+     that tints cells therefore washes out the exact thing being read,
+     so the light is one overlay bar and must never touch a cell. */
+  await check("the row light rules across the grid without tinting a single mark", () => {
+    assert(/class="rowlight" hidden/.test(appSrc), "the row light overlay is gone");
+    assert(!/tr\.lit[^{]*\{[^}]*background/.test(cssSrc),
+      "the row light is tinting cells — the marks it is meant to help him read will wash out");
+    const rule = cssSrc.slice(cssSrc.indexOf(".rowlight {"), cssSrc.indexOf(".rowlight[hidden]"));
+    assert(/pointer-events: none/.test(rule),
+      "the light will swallow taps meant for the grid");
+    assert(/position: absolute/.test(rule) && /\.gridwrap \{[^}]*position: relative/.test(cssSrc),
+      "the light has nothing to position against and will land at the top of the page");
+    /* pointerdown, not click: this grid is plain <td>s and iOS does not
+       reliably bubble click from a non-interactive element. */
+    const fn = appSrc.slice(appSrc.indexOf("function wireGrid("),
+                            appSrc.indexOf("function fitNames("));
+    assert(/addEventListener\("pointerdown"/.test(fn),
+      "the row light is on click; on iOS a plain <td> will not fire it");
+  });
+
+  /* One shared scale means the track must start AND end at the same x
+     on all ninety-six rows. It flexes, so anything else that flexes
+     beside it moves the scale. */
+  await check("every row's scale is the same scale", () => {
+    assert(/\.mwho \{ flex: 0 0 var\(--namew/.test(cssSrc),
+      "the name block flexes per row again — the tracks will not line up");
+    assert(/\.mtrack \{ position: relative; flex: 1 1 auto/.test(cssSrc),
+      "the track no longer fills the row; it is back to a fixed width marooned on a desktop");
+    assert(/\.mamt \{ flex: 0 0 \d+px/.test(cssSrc),
+      "the amount block is elastic again — it steals a different amount from each row's " +
+      "track and the centre gates stop lining up");
+    assert(!/\.mamt \{[^}]*min-width/.test(cssSrc), "the amount block is back on min-width");
+
+    /* and the width is MEASURED, not read off the box */
+    const fn = appSrc.slice(appSrc.indexOf("function fitNames("),
+                            appSrc.indexOf("function placeLight("));
+    assert(/createRange\(\)/.test(fn) && /selectNodeContents/.test(fn),
+      "fitNames is not measuring the text");
+    assert(!/bs\[i\]\.scrollWidth/.test(fn),
+      "fitNames is measuring scrollWidth on a display:block element — that is the BOX, " +
+      "so the column measures its own current width and locks to it");
+  });
+
+  /* The name column was 146px of a 375px screen. */
+  await check("the name column gets out of the way on a phone", () => {
+    const q = cssSrc.slice(cssSrc.indexOf("@media (max-width: 480px) {\n  table.reg .nmcol"));
+    assert(q.indexOf("table.reg .nmcol { width: 104px") > -1,
+      "the phone name column is back to its desktop width");
+    /* and the height locks that keep the two tables in step must NOT be
+       inside the media query, or the register drifts on a phone only */
+    assert(!/@media[^{]*\{[^}]*max-height: 44px/.test(cssSrc.replace(/\n/g, "")),
+      "a row height lock moved inside a media query — the two tables will drift at one width");
   });
 
   console.log(failed ? "\n" + failed + " failed" : "\nall app checks passed");
