@@ -26,6 +26,7 @@ const ROOT = path.join(__dirname, "..");
 const cloudSrc = fs.readFileSync(path.join(ROOT, "assets/js/cloud.js"), "utf8");
 const html = fs.readFileSync(path.join(ROOT, "app.html"), "utf8");
 const siteSrc = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+const scrollSrc = fs.readFileSync(path.join(ROOT, "assets/js/site.js"), "utf8");
 const cssSrc = fs.readFileSync(path.join(ROOT, "assets/css/app.css"), "utf8");
 let appSrc = html.slice(html.lastIndexOf("<script>") + 8, html.lastIndexOf("</script>"));
 
@@ -1605,6 +1606,44 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
     assert(/translate\(130px, 118px\) rotate\(-?[\d.]+deg\) translate\(-130px, -118px\)/.test(kf),
       "the waver no longer pivots on the hub by hand — it will swing from the wrong point " +
       "or rely on transform-box being supported");
+  });
+
+  /* THE LANDING PAGE HAS TWO SCROLL ENGINES AND MUST ONLY EVER RUN ONE.
+     The CSS one lets the browser advance the animation straight from
+     the scroll position, on the compositor; the JS one is the original
+     rAF loop, kept for browsers without scroll-driven animations — and
+     as the way back if the new one is ever wrong. Both running at once
+     would fight over the same transforms. */
+  await check("the landing page runs exactly one scroll engine", () => {
+    assert(/CSS\.supports\("animation-timeline", "view\(\)"\)/.test(scrollSrc),
+      "nothing checks whether the browser has scroll-driven animations");
+    assert(/scroll=\(css\|js\)/.test(scrollSrc),
+      "?scroll=js is gone — there is no way to compare the two on one device");
+    /* the rAF loop must not start when CSS is driving */
+    assert(/if \(useCSS\) \{[\s\S]{0,300}\} else \{\s*requestAnimationFrame\(frame\);/.test(scrollSrc),
+      "the rAF engine is started unconditionally — both engines would write the same transforms");
+    assert(/if \(useCSS\) writeTimelines\(\);/.test(scrollSrc),
+      "the keyframes are not regenerated from layout(), so a resize leaves stale geometry");
+  });
+
+  /* Two things in the generated CSS decide whether it works at all. */
+  await check("the scroll timeline covers the pinned run, for its whole length", () => {
+    const fn = scrollSrc.slice(scrollSrc.indexOf("function writeTimelines("),
+                               scrollSrc.indexOf("function lightWork("));
+    /* contain 0% -> contain 100% is exactly the stretch where the act
+       covers the scrollport: the same range the JS engine called
+       rel = 0 .. run. cover, or any other range, animates over a
+       different amount of scroll than the geometry was computed for. */
+    assert(/animation-range:contain 0% contain 100%/.test(fn),
+      "the animation range is no longer the pinned run — the dive would finish early or late");
+    /* auto, not a time: with a scroll timeline a duration in ms makes
+       the animation complete in the first instant and hold. */
+    assert(/animation-duration:auto/.test(fn),
+      "animation-duration is a time again; the whole act would play in its first pixel");
+    assert(/animation-timing-function:linear/.test(fn),
+      "the keyframes are sampled points of a curve — easing between them bends it twice");
+    assert(/view-timeline-name:--mzact/.test(fn),
+      "the acts are not timelines any more");
   });
 
   console.log(failed ? "\n" + failed + " failed" : "\nall app checks passed");

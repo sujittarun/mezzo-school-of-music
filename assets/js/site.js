@@ -39,6 +39,34 @@
   var reduce = window.matchMedia &&
                window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  /* ============================================================
+     WHO DRIVES THE SCROLL.
+
+     Two engines, one set of geometry.
+
+       css  — the browser drives it. layout() writes the numbers into
+              generated @keyframes and CSS scroll-driven animations
+              (animation-timeline: view()) advance them straight from
+              the scroll position, on the compositor. No JavaScript
+              runs while you scroll at all.
+
+       js   — the original: requestAnimationFrame reads pageYOffset and
+              writes transforms. Correct, but it is the main thread
+              chasing a scroll the compositor has already performed, so
+              it is always at least a frame behind the sticky stage it
+              sits inside. That gap is what "not in sync" was.
+
+     The CSS engine is used when the browser has it — Safari 26+,
+     Chrome 115+ — and the JS one otherwise, so nothing regresses for
+     anyone. ?scroll=js and ?scroll=css force either, which is how you
+     compare the two on the same device without deploying anything. */
+  var forced  = (location.search.match(/[?&]scroll=(css|js)/) || [])[1];
+  var canCSS  = !!(window.CSS && CSS.supports &&
+                   CSS.supports("animation-timeline", "view()"));
+  var useCSS  = forced ? forced === "css" : canCSS;
+  if (useCSS && !canCSS) useCSS = false;         /* asked for it, cannot have it */
+  document.documentElement.setAttribute("data-scroll-engine", useCSS ? "css" : "js");
+
   /* ---------- letters ----------
      Each character rises on its own, a beat after the one before, the
      way notes in a phrase arrive. Words are wrapped before letters are:
@@ -131,6 +159,7 @@
       a.h   = a.el.offsetHeight;
       a.run = Math.max(1, a.h - vh);
       a.vh  = vh;
+      a.vw  = vw;
       a.last = {};
 
       if (!a.ap || !a.inst || !a.portal) return;
@@ -214,6 +243,11 @@
                           0.015, wantShare);
       }
     });
+
+    /* The keyframes ARE the layout. Anything that changes a number
+       above has to rewrite them, which is why this is the last line of
+       layout() rather than a call anybody has to remember to make. */
+    if (useCSS) writeTimelines();
   }
 
   /* ---------- easings ---------- */
@@ -360,6 +394,138 @@
     if (window.MZSound) window.MZSound.levels(levels);
   }
 
+  /* ============================================================
+     THE CSS ENGINE — the same arithmetic, written down instead of run.
+
+     update() computes a value for a given p every frame. This walks p
+     from 0 to 1 ONCE, writes what it finds as @keyframes, and hands the
+     lot to the browser to advance from the scroll position itself.
+
+     Every act gets its own keyframes because every act has its own
+     geometry — where the soundhole is, how far it has to fly, how much
+     creep its headline can afford. Regenerated whenever layout() runs,
+     which is exactly when those numbers change.
+
+     STEPS is why the exponential survives being written as keyframes.
+     CSS interpolates linearly between them, and the instrument's scale
+     is geometric; across 24 samples each step is a factor of about
+     1.16, and a straight line across a 16% geometric step is wrong by
+     roughly 0.3% in the middle. That is a third of a pixel on a
+     thousand-pixel instrument.
+     ============================================================ */
+  var STEPS = 24;
+  var styleEl = null;
+
+  function pct(n) { return (n * 100 / STEPS).toFixed(3) + "%"; }
+
+  function writeTimelines() {
+    /* Every act is a timeline, including the last one — it has no
+       aperture and never dives, but its words still arrive on scroll.
+       Naming them all the same is deliberate: a descendant resolves
+       --mzact against its nearest ancestor, so each act's animations
+       find their own act and nothing has to be numbered. */
+    var css = [".act{view-timeline-name:--mzact;view-timeline-axis:block}"];
+
+    acts.forEach(function (a, i) {
+      if (!a.el.id) a.el.id = "act-gen-" + i;
+      var nm = "mz" + i;
+      var room = [], copy = [], inst = [], port = [];
+
+      for (var k = 0; k <= STEPS; k++) {
+        var p    = k / STEPS;
+        var hold = span(p, 0, DIVE);
+        var dive = span(p, DIVE, 1);
+        var at   = pct(k);
+
+        room.push(at + "{transform:scale(" + (1.14 - 0.14 * outCubic(hold)).toFixed(4) + ")}");
+
+        var inN  = i === 0 ? 1 : span(p, 0.03, 0.24);
+        var outN = a.ap ? span(p, 0.40, DIVE) : 0;
+        var o    = outCubic(inN) * (1 - outN);
+        var ty   = (1 - outCubic(inN)) * 34 - outN * 60;
+        copy.push(at + "{opacity:" + o.toFixed(3) +
+                  ";transform:translateY(" + ty.toFixed(2) + "px)}");
+
+        if (a.ap && a.inst && a.portal) {
+          var app  = a.creep * hold + (1 - a.creep) * dive;
+          var S    = Math.pow(a.target, app);
+          var panX = -a.offX * app, panY = -a.offY * app;
+          var br   = dive > 0 ? 1 : 1 + Math.sin(hold * Math.PI) * 0.025;
+          inst.push(at + "{transform:translate(" + panX.toFixed(1) + "px," + panY.toFixed(1) +
+                    "px) scale(" + (S * br).toFixed(4) + ");opacity:" +
+                    (1 - span(dive, 0.42, 0.80)).toFixed(3) + "}");
+
+          var RX    = a.apR * S;
+          var ratio = a.ap.ratio + (1 - a.ap.ratio) * outCubic(dive);
+          var cx    = a.apX + (a.vw / 2 - a.apX) * app;
+          var cy    = a.apY + (a.vh / 2 - a.apY) * app;
+          port.push(at + "{clip-path:ellipse(" + RX.toFixed(1) + "px " +
+                    (RX * ratio).toFixed(1) + "px at " + cx.toFixed(1) + "px " +
+                    cy.toFixed(1) + "px)}");
+        }
+      }
+
+      if (a.room)   css.push("@keyframes " + nm + "r{" + room.join("") + "}");
+      if (a.copy)   css.push("@keyframes " + nm + "c{" + copy.join("") + "}");
+      if (inst.length) css.push("@keyframes " + nm + "i{" + inst.join("") + "}");
+      if (port.length) css.push("@keyframes " + nm + "p{" + port.join("") + "}");
+
+      /* contain 0% -> contain 100% is EXACTLY the pinned run: the act's
+         top meeting the top of the scrollport, to its bottom meeting the
+         bottom. The same range the JS engine called rel = 0 .. run, so
+         both engines are driven over the identical stretch of scroll. */
+      var sel = "#" + a.el.id + " ";
+      var tl  = "animation-timeline:--mzact;animation-range:contain 0% contain 100%;" +
+                "animation-timing-function:linear;animation-fill-mode:both;" +
+                /* auto, NOT a time. The scroll-driven spec changed
+                   animation-duration's initial value to `auto`, meaning
+                   "fill the whole range". Give it 1ms instead and the
+                   animation completes in the first thousandth of the
+                   act and holds its end state for the rest of it. */
+                "animation-duration:auto;animation-iteration-count:1;";
+      if (a.room)      css.push(sel + ".room img{animation-name:" + nm + "r;" + tl + "}");
+      if (a.copy)      css.push(sel + ".copy{animation-name:" + nm + "c;" + tl + "}");
+      if (inst.length) css.push(sel + ".instrument{animation-name:" + nm + "i;" + tl + "}");
+      if (port.length) css.push(sel + ".portal{animation-name:" + nm + "p;" + tl + "}");
+    });
+
+    if (!styleEl) {
+      styleEl = document.createElement("style");
+      styleEl.id = "mz-timelines";
+      document.head.appendChild(styleEl);
+    }
+    styleEl.textContent = css.join("\n");
+  }
+
+  /* The letters and the ladder and the sound do not need a frame each.
+     On the CSS engine nothing else runs during a scroll, so these ride
+     a passive scroll listener instead — an audio crossfade and a nav
+     dot are not things anybody can see land a frame late. */
+  function lightWork() {
+    var vh = (acts[0] && acts[0].vh) || window.innerHeight;
+    var y = window.pageYOffset, mid = y + vh * 0.5;
+    for (var i = 0; i < acts.length; i++) {
+      var a = acts[i], rel = y - a.top;
+      if (rel < -vh || rel > a.h) continue;
+      var p = clamp(rel / a.run, 0, 1);
+      if (p > 0.02 && !a.shown) {
+        a.shown = true;
+        for (var c = 0; c < a.chars.length; c++) {
+          a.chars[c].style.opacity = 1; a.chars[c].style.transform = "none";
+        }
+      }
+      if (p > 0.02 && p < 0.999) {
+        var depth = i + span(p, DIVE, 0.95);
+        for (var v = 0; v < 4; v++) levels[v] = clamp(depth - v + 1, 0, 1);
+      }
+      if (mid >= a.top && mid < a.top + a.h && active !== i) {
+        active = i;
+        for (var l = 0; l < ladder.length; l++) ladder[l].classList.toggle("on", l === i);
+      }
+    }
+    if (window.MZSound) window.MZSound.levels(levels);
+  }
+
   /* One number in, transforms out. Nothing is measured here. */
   var lastY = -1, dirty = true;
   function frame() {
@@ -411,7 +577,15 @@
       c.style.transition = "opacity .6s cubic-bezier(.22,.61,.36,1), transform .6s cubic-bezier(.22,.61,.36,1)";
     });
     layout();
-    requestAnimationFrame(frame);
+    if (useCSS) {
+      /* Nothing of ours runs during a scroll on this path. The listener
+         is passive and moves a nav dot and an audio level, nothing that
+         anybody can see land a frame late. */
+      lightWork();
+      window.addEventListener("scroll", lightWork, { passive: true });
+    } else {
+      requestAnimationFrame(frame);
+    }
     /* Let the first headline play itself in on load rather than
        waiting for a scroll that may never come. */
     setTimeout(function () {
@@ -425,7 +599,7 @@
   var rt = null;
   window.addEventListener("resize", function () {
     clearTimeout(rt);
-    rt = setTimeout(function () { layout(); dirty = true; }, 120);
+    rt = setTimeout(function () { layout(); dirty = true; if (useCSS) lightWork(); }, 120);
   });
   window.addEventListener("orientationchange", function () {
     setTimeout(function () { layout(); dirty = true; }, 260);
