@@ -322,7 +322,14 @@
         joined_on: a.joined || todayIso(),
         renewal_on: a.renewalOn || monthOn(a.joined || todayIso(), plan),
         status: "active"
-      }).then(function () { report("student_added", {}); return m; });
+      }).then(function (er) {
+        report("student_added", {});
+        /* the enrolment comes back too: the fee is priced by the
+           database against an enrolment id, so without it there is
+           nothing to ask about */
+        m.enrollment = (er && er[0] && er[0].id) || null;
+        return m;
+      });
     });
     });
   }

@@ -381,18 +381,43 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
     api.render();
 
     /* NOTHING TICKED must not enrol anybody. A student with no days is
-       a student who appears on every register for ever. */
+       a student who appears on every register for ever. And the
+       message belongs UNDER the field, not in a banner he has to map
+       back onto a box that is usually off-screen. */
     byId("nsName").value = "Nila"; byId("nsPhone").value = "9000000001";
     byId("nsIns").value = "Violin";
     onClick({ target: { closest: (s) => (s === "#nsSave" ? {} : null) } });
     for (let i = 0; i < 10; i++) await tick();
     assert(calls("/enrollments").filter((c) => c.method === "POST").length === 0,
       "a student was enrolled with no days at all");
-    assert(/at least one day/i.test(api.S.err || ""),
-      "no days were picked and nothing said so: " + JSON.stringify(api.S.err));
+    assert(/day/i.test((api.S.nsErr || {}).days || ""),
+      "no days were picked and the day picker did not say so: " + JSON.stringify(api.S.nsErr));
+
+    /* A name is needed, and so is a number: the entire dues tab is
+       reminders, and there is nobody to remind without one. */
+    api.S.nsDays = [3];
+    byId("nsName").value = ""; byId("nsPhone").value = "9000000001";
+    onClick({ target: { closest: (s) => (s === "#nsSave" ? {} : null) } });
+    for (let i = 0; i < 6; i++) await tick();
+    assert((api.S.nsErr || {}).name, "an unnamed student was accepted");
+
+    byId("nsName").value = "Nila"; byId("nsPhone").value = "";
+    onClick({ target: { closest: (s) => (s === "#nsSave" ? {} : null) } });
+    for (let i = 0; i < 6; i++) await tick();
+    assert(/number/i.test((api.S.nsErr || {}).phone || ""),
+      "a family with no phone number was accepted");
+
+    byId("nsPhone").value = "90000";
+    onClick({ target: { closest: (s) => (s === "#nsSave" ? {} : null) } });
+    for (let i = 0; i < 6; i++) await tick();
+    assert(/5 digits/.test((api.S.nsErr || {}).phone || ""),
+      "a five-digit phone number was accepted: " + JSON.stringify(api.S.nsErr));
+    assert(calls("/enrollments").filter((c) => c.method === "POST").length === 0,
+      "one of the invalid attempts still wrote a student");
+    api.S.nsErr = {};
 
     /* Now tick Wednesday and Saturday. */
-    fetchLog.length = 0; api.S.err = "";
+    fetchLog.length = 0; api.S.err = ""; api.S.nsDays = [];
     onClick({ target: { closest: (s) => (s === "[data-daypick]"
       ? { getAttribute: () => "nsDays:3" } : null) } });
     onClick({ target: { closest: (s) => (s === "[data-daypick]"

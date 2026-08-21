@@ -1501,3 +1501,37 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
 .wnote .out { color: var(--no); }
 .wnote .quiet { color: var(--ink-3); font-weight: 500; }
 .wnote.quiet-only { min-height: 0; padding: 9px 13px; }
+
+/* ---------- the pencil, the month strip, field errors ---------- */
+/* A PENCIL, not a tuning peg. The register is a setlist and the way a
+   name gets onto a setlist is that somebody writes it — which is the
+   same pencil that ticks and strikes on the sheet below. */
+.peg svg { width: 26px; height: 26px; display: block; fill: none;
+  stroke: var(--brand); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.peg .pin { display: none; }
+.peg { gap: 2px; }
+.peg:active svg { transform: translate(1px, 1px) rotate(-6deg); }
+
+/* the date is a button now */
+.daybar .d { background: none; border: 0; padding: 4px 6px; flex: 1; min-width: 0;
+  text-align: center; border-radius: 10px; }
+.daybar .d:active { background: rgba(150,132,92,.16); }
+
+/* twelve months, one tap to any of them */
+.mstrip { display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  padding: 2px 2px 8px; margin-bottom: 8px; }
+.mchip {
+  flex: 0 0 auto; min-width: 56px; min-height: 52px; padding: 6px 10px;
+  border: 1px solid var(--rule); border-radius: 11px; background: #FFFDF6;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  color: var(--ink-2);
+}
+.mchip b { font-size: 14px; font-weight: 700; }
+.mchip span { font-size: 10.5px; color: var(--ink-3); font-weight: 600; min-height: 13px; }
+.mchip.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+.mchip.on span { color: rgba(255,255,255,.8); }
+
+/* a message under the field it is about */
+.field.bad input, .field.bad select { border-color: var(--no); }
+.ferr { display: block; font-style: normal; font-size: 12.5px; font-weight: 600;
+  color: var(--no); margin-top: 5px; }
