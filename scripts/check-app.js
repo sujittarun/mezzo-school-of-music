@@ -277,7 +277,10 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
     api.enter(); await tick(); await tick();
     const h = byId("root").innerHTML;
 
-    const names = [...h.matchAll(/<td class="nmcol">([^<]*)</g)].map((m) => m[1]);
+    /* [^<]+ , not [^<]* — the roll's tractor-feed rows carry an empty
+       nmcol at the top and bottom of the name table, and counting them
+       as students made this fail with "6 rows, not 4". */
+    const names = [...h.matchAll(/<td class="nmcol">([^<]+)</g)].map((m) => m[1]);
     assert(names.length === 4, "the frozen name column has " + names.length + " rows, not 4");
     assert(names.join(",") === "Alpha,Beta,Gamma,Delta",
       "the name column is out of order: " + names.join(","));
