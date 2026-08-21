@@ -116,11 +116,25 @@ is keyed on filename + sha256; never rename an applied file.
 ## Where things stand
 
 - Live and paying: ₹899/month from 2026-08-19, first invoice 19 Sep.
-- Six sample students are seeded with `is_demo = true`. On go-live:
-  `delete from members where tenant_id='mezzo' and is_demo;`
-- The repo has **no GitHub remote yet** and is not hosted anywhere.
-- His staff login needs `app_metadata` (not user metadata) of
-  `{"am_role":"staff","tenant_id":"mezzo"}`.
+- **Sixteen demo students, and not one real family yet.** Six were
+  seeded at handover; ten more (`2026-08-21d`) so the app is worth
+  opening. Every one carries `is_demo = true`, so go-live is still one
+  line: `delete from members where tenant_id='mezzo' and is_demo;`
+- **The ten new ones have no phone number, deliberately.** There is no
+  automated sender for this tenant — `config.whatsapp` is null — but an
+  invented Indian mobile is somebody's real number the day one gets
+  wired up. Put a real number on one from the student card to try the
+  WhatsApp path.
+- Hosted at `https://sujittarun.github.io/mezzo-school-of-music/`. The
+  **root is the school's public page**; the app is `app.html` behind
+  the Sign in link, and a signed-in visit to the root hands over to it
+  before anything paints. That URL is pinned in three places outside
+  this repo, including a migration that raises if
+  `tenants.config.app.url` is anything else — which is why the app
+  moved to a filename rather than a path.
+- His staff login has `app_metadata` (not user metadata) of
+  `{"am_role":"staff","tenant_id":"mezzo"}`; he confirmed he can sign in
+  on 2026-08-21.
 
 Start by telling me what you have read and what you believe the current
 state is, before proposing any change.

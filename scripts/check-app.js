@@ -1535,6 +1535,33 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
       "the three figures are no longer three equal columns");
   });
 
+  /* A COLUMN THAT DOES NOT EXIST IS A 400, AND THE FIXTURES CANNOT SEE IT.
+     batchForDays cloned a real batch row and then set short_name by
+     hand — a column `batches` has never had. The first student put on a
+     new pair of days could not be saved, and nothing here caught it,
+     because the preview stubs fetch and a fake POST always succeeds.
+
+     So the columns it names by hand are pinned to the real table. This
+     list came from information_schema on the live database on
+     2026-08-21; if the schema gains a column, add it here deliberately
+     rather than discovering it through a failed save. */
+  await check("adding a day pattern only names columns batches actually has", () => {
+    const REAL = ["id", "tenant_id", "centre_id", "code", "name", "sport", "days",
+                  "start_time", "end_time", "coach_id", "capacity", "active", "sort",
+                  "created_at", "upi_id", "upi_name"];
+    /* to the NEXT function, not to some named one further down: the
+       first draft sliced as far as runsOn(), which is not the next
+       thing in the file, and swept up addStudent's body keys too */
+    const from = cloudSrc.indexOf("function batchForDays(");
+    const fn = cloudSrc.slice(from, cloudSrc.indexOf("\n  function ", from + 10));
+    const set = [...fn.matchAll(/\bbody\.(\w+)\s*=/g)].map((m) => m[1]);
+    assert(set.length, "batchForDays no longer builds a body");
+    const invented = set.filter((k) => REAL.indexOf(k) === -1);
+    assert(invented.length === 0,
+      "batchForDays sets column(s) batches does not have: " + invented.join(", ") +
+      " — PostgREST answers that with a 400 and the student cannot be saved");
+  });
+
   console.log(failed ? "\n" + failed + " failed" : "\nall app checks passed");
   process.exit(failed ? 1 : 0);
 })();

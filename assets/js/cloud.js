@@ -285,7 +285,13 @@
       body.tenant_id = TENANT;
       body.code = "d" + key.replace(/,/g, "");
       body.name = dayLabel(days);
-      body.short_name = dayLabel(days);
+      /* NOT short_name. There is no such column on batches — checked
+         against the real table — so PostgREST answered the insert with
+         a 400 and the first student put on a new pair of days could not
+         be saved at all. It never showed up here because the preview
+         stubs fetch: the fake POST returned a fake row and every test
+         passed. Only the clone above may name columns; anything set by
+         hand has to actually exist. */
       body.days = dayKey(days).split(",").map(Number);
       body.active = true;
       return post("/batches", body).then(function (rows) {
