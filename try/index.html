@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mezzo — preview (fixtures, not real data)</title>
-<base href="../"><link rel="stylesheet" href="assets/css/app.css?v=20260821r">
+<base href="../"><link rel="stylesheet" href="assets/css/app.css?v=20260821s">
 </head><body>
 
 <!-- ============================================================
@@ -1451,14 +1451,37 @@ window.fetch = function (url) {
            " A" + r + " " + r + " 0 0 0 " + p1[0].toFixed(1) + " " + p1[1].toFixed(1);
   }
 
-  function tunerFace(flat, total, owedTotal) {
-    /* dead centre is 90 degrees. Flat swings left, toward 170. */
+  /* THE DIAL IS BRASS AND IVORY, NOT BLACK GLASS.
+
+     It was a dark slab, and the CSS above it used to argue that "the
+     contrast against the cream is most of why it reads at all". That
+     is exactly what was wrong with it: it read as a foreign widget
+     dropped onto the sheet, the only dark object below the header.
+
+     A real tuner is not the only kind of real instrument. A VU meter
+     on a valve amp, or the face of a Wittner metronome, is brass and
+     ivory with a printed scale — an OBJECT, warm, and at home on
+     paper. Same device, same needle, same lamps; different material.
+
+     ONE reading, and only one: how many of the school are behind.
+     Centre is nobody, hard left is everybody. The needle is a fixed
+     ink red and never carries the alarm — the lamps do that, which is
+     what lamps are for and what stops the dial having two meanings.
+
+     `band` is {flat, ok, paused}, computed ONCE by viewDues and used
+     both here and by the section headings, so a lamp and the heading
+     it jumps to can never disagree. */
+  function tunerFace(band, owedTotal) {
+    var flat = band.flat, total = band.flat + band.ok + band.paused;
     var share = total ? flat / total : 0;
+    /* dead centre is 90 degrees. Flat swings left, toward 168. */
     var deg = 90 + Math.min(1, share) * 78;
-    var lit = share === 0 ? "ok" : share < 0.18 ? "warn" : share < 0.4 ? "mid" : "bad";
+    /* SVG rotates clockwise from the needle's drawn position, which is
+       straight up. Positive rotation swings it right, so flat is
+       negative. */
+    var rot = (90 - deg).toFixed(2);
     var cx = 130, cy = 118, r = 96;
 
-    /* a real tuner has a numbered scale, not just marks */
     var ticks = "", labels = "";
     for (var t = 0; t <= 12; t++) {
       var a = 12 + t * 13, big = t % 3 === 0;
@@ -1473,43 +1496,169 @@ window.fetch = function (url) {
          left is numbered in members behind; the right keeps its ticks
          and stays blank, the way the sharp side of a tuner does when
          you are only ever flat. */
-      if (big && a >= 90) {
+      /* NOT a >= 90. The centre label is a "0" printed at the exact
+         angle the needle rests at when everybody has paid — so the
+         happy state drew the needle straight through its own numeral.
+         The green band already says zero, and it says it where the
+         needle cannot cross it. Same lesson as the readout that had
+         to move out from under the sweep. */
+      if (big && a > 90) {
         var lp = polar(cx, cy, r - 30, a);
         var v = Math.round((a - 90) / 78 * total);
         labels += '<text x="' + lp[0].toFixed(1) + '" y="' + (lp[1] + 4).toFixed(1) + '">' +
           v + "</text>";
       }
     }
-    var n = polar(cx, cy, r - 26, deg);
 
-    return '<div class="face ' + lit + '">' +
-      '<svg viewBox="0 0 260 150" aria-hidden="true">' +
+    /* A meter needle is a taper with a counterweight past the pivot,
+       not a stick. It is two more points on a polygon and it is most
+       of the difference between a drawing and an instrument. */
+    var BLADE = "129.2,34 130.8,34 132.4,118 131.2,126 128.8,126 127.6,118";
+
+    /* viewBox cropped to what is actually drawn — the arc tops out at
+       y=18 with its stroke and the counterweight ends at 128. The old
+       box carried 14px of empty sky and 18px of empty floor, and this
+       block sits at the top of a phone screen where that is a row and
+       a half of names. */
+    return '<div class="face"><div class="plate">' +
+      '<svg viewBox="0 14 260 116" aria-hidden="true">' +
         '<path class="bg" d="' + arcPath(cx, cy, r, 12, 168) + '"/>' +
-        '<path class="ok" d="' + arcPath(cx, cy, r, 84, 96) + '"/>' +
+        '<path class="okband" d="' + arcPath(cx, cy, r, 84, 96) + '"/>' +
         '<g class="tk">' + ticks + "</g>" +
         '<g class="lb">' + labels +
-          '<text class="sym" x="30" y="112">\u266d</text>' +
-          '<text class="sym dim" x="232" y="112">\u266f</text></g>' +
-        /* the needle, with its own shadow just under it */
-        '<line class="sh" x1="' + (cx + 1) + '" y1="' + (cy + 2) + '" x2="' +
-          (n[0] + 1).toFixed(1) + '" y2="' + (n[1] + 2).toFixed(1) + '"/>' +
-        '<line class="ndl" x1="' + cx + '" y1="' + cy + '" x2="' + n[0].toFixed(1) +
-          '" y2="' + n[1].toFixed(1) + '"/>' +
-        '<circle class="hub" cx="' + cx + '" cy="' + cy + '" r="8"/>' +
-        '<circle class="hub2" cx="' + cx + '" cy="' + cy + '" r="3.4"/>' +
-        /* three lamps along the foot, the way a tuner shows flat /
-           in tune / sharp — only one of them is ever lit */
-        '<g class="lamps">' +
-          '<circle class="l flatlamp" cx="' + (cx - 44) + '" cy="140" r="5"/>' +
-          '<circle class="l okl"      cx="' + cx + '" cy="140" r="6"/>' +
-          '<circle class="l sharp"    cx="' + (cx + 44) + '" cy="140" r="5"/>' +
+          '<text class="sym" x="26" y="114">\u266d</text>' +
+          '<text class="sym dim" x="236" y="114">\u266f</text></g>' +
+        /* Drawn straight up and rotated into place, so the swing is one
+           attribute rather than two recomputed endpoints. The shadow
+           rides in the same group. */
+        '<g class="nd" data-deg="' + rot + '" transform="rotate(' + rot + ' ' + cx + ' ' + cy + ')">' +
+          '<polygon class="sh" points="' + BLADE + '" transform="translate(1.6 2.6)"/>' +
+          '<polygon class="ndl" points="' + BLADE + '"/>' +
         "</g>" +
+        '<circle class="hub" cx="' + cx + '" cy="' + cy + '" r="8.5"/>' +
+        '<circle class="hub2" cx="' + cx + '" cy="' + cy + '" r="3.4"/>' +
       "</svg></div>" +
-      '<div class="reading">' +
-        (flat ? "<b>" + flat + "</b><span>out of tune</span>"
-              : '<b>\u2713</b><span>all in tune</span>') + "</div>" +
+      /* The lamps live INSIDE the bezel, along the foot, which is where
+         a tuner puts them and what keeps this one object instead of a
+         dial with a row of tiles parked under it. */
+      lampRow(band) +
+      "</div>" +
       '<div class="facesub">' + total + (total === 1 ? " member" : " members") +
         (owedTotal ? " \u00b7 " + inr(owedTotal) + " owing" : "") + "</div>";
+  }
+
+  /* THE LAMPS DO SOMETHING NOW.
+
+     Three lamps were painted along the foot of the dial and none of
+     them was a control — they were decoration on a device whose whole
+     point is that its lamps mean something.
+
+     They are the three bands, they carry the count, and touching one
+     takes you to it. On a roll six thousand pixels long the four
+     paused children sit at the bottom of ninety-six names, and this is
+     the only way to reach them without scrolling past everybody.
+
+     They JUMP, they do not filter. The list that comes back is still
+     the whole list — filtering here is how his screen and his WhatsApp
+     message start disagreeing.
+
+     Exactly one is lit, the way a tuner lights one: the band that
+     wants him. An empty band is a dead bulb and is not tappable,
+     because a control that goes nowhere is worse than no control. */
+  var LAMPS = [["flat", "out of tune"], ["ok", "in tune"], ["paused", "paused"]];
+
+  function lampRow(band) {
+    var lit = band.flat ? "flat" : "ok";
+    return '<div class="lamprow">' + LAMPS.map(function (L) {
+      var n = band[L[0]] || 0;
+      return '<button class="lamp ' + L[0] + (L[0] === lit ? " on" : "") +
+        (n ? "" : " dead") + '" data-band="' + L[0] + '"' + (n ? "" : " disabled") +
+        ' aria-label="' + n + " " + L[1] + '">' +
+        '<span class="lmp"><i class="jew"></i><b>' + n + "</b></span>" +
+        "<span>" + L[1] + "</span></button>";
+    }).join("") + "</div>";
+  }
+
+  /* Scroll, then flash what you landed on. A jump with no mark left
+     behind reads as the page having lost its place.
+
+     TWO THINGS HERE ARE NOT PREFERENCES.
+
+     The target is CLAMPED to the bottom of the document. A smooth
+     scroll to a position past the end does not clamp — it silently
+     does nothing, measured in the preview: auto went to 5533, smooth
+     stayed at 0. Paused is always the LAST section, so its target is
+     always past the end, so that lamp never worked at all — and it is
+     the one lamp that exists because four names at the bottom of
+     ninety-six are otherwise unreachable.
+
+     And the jump is INSTANT, not smooth. Six thousand pixels of glide
+     is two seconds of flying past seventy-eight names. A jump control
+     promises you are there; the flash says where. */
+  function jumpBand(b) {
+    var sec = root.querySelector('.msec[data-sec="' + b + '"]');
+    if (!sec) return;
+    var de = document.documentElement;
+    var max = Math.max(0, de.scrollHeight - (window.innerHeight || de.clientHeight || 0));
+    var y = sec.getBoundingClientRect().top + (window.pageYOffset || 0) - 10;
+    window.scrollTo(0, Math.max(0, Math.min(max, y)));
+    sec.classList.remove("jumped");
+    void sec.offsetWidth;
+    sec.classList.add("jumped");
+  }
+
+  /* A NEEDLE THAT IS ALREADY THERE IS A PICTURE OF A NEEDLE.
+
+     It sweeps up from hard flat and settles, overshooting a little the
+     way a real one does — and when the count changes because somebody
+     paid, it swings from where it was to where it now is rather than
+     cutting. That is the whole reason to draw a needle instead of a
+     number.
+
+     The transform ATTRIBUTE, not a CSS transform: rotating a group
+     about an arbitrary point needs transform-box/transform-origin,
+     which is a support question on iPad, while rotate(a cx cy) is SVG
+     1.1 and is not. Measured in the preview: both worked in Chromium,
+     only one of them is guaranteed. */
+  function paintNeedle() {
+    var g = root.querySelector(".card.tuner .nd");
+    if (!g) { S.lastDeg = null; return; }
+    var to = Number(g.getAttribute("data-deg"));
+    var from = S.lastDeg == null ? -78 : S.lastDeg;
+    S.lastDeg = to;
+    var still = false;
+    try { still = matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
+    if (still || from === to) return;          /* the attribute is already right */
+
+    /* THE SWING MUST NOT BE ABLE TO LIE.
+       requestAnimationFrame does not run while the page is not being
+       painted, so a swing interrupted by switching apps stops wherever
+       it had got to — and where it got to is a reading of the school
+       that is simply wrong. Caught in the preview with the needle
+       parked at -25.68 while the truth was -11.38.
+
+       So the landing is a promise kept by a timer, not by the loop. */
+    var done = false, t0 = 0;
+    function land() {
+      if (done) return;
+      done = true;
+      if (g.isConnected) g.setAttribute("transform", "rotate(" + to + " 130 118)");
+    }
+    function frame(ts) {
+      /* render() rebuilds the DOM, so the node this loop started on can
+         be detached mid-swing. Writing to it would be silent and the
+         real needle would sit at the old angle for ever. */
+      if (done || !g.isConnected) return;
+      if (!t0) t0 = ts;
+      var k = Math.min(1, (ts - t0) / 780);
+      var u = k - 1, e = 1 + 2.0 * u * u * u + 1.3 * u * u;   /* settle, with a little overshoot */
+      g.setAttribute("transform",
+        "rotate(" + (from + (to - from) * e).toFixed(2) + " 130 118)");
+      if (k < 1) requestAnimationFrame(frame); else done = true;
+    }
+    g.setAttribute("transform", "rotate(" + from + " 130 118)");
+    requestAnimationFrame(frame);
+    setTimeout(land, 900);
   }
 
   function viewDues() {
@@ -1523,16 +1672,20 @@ window.fetch = function (url) {
     }
 
     var paused = S.people.filter(function (p) { return p.paused; });
+    /* ONE count per band, read by the lamp AND by the heading it jumps
+       to. Two places counting the same thing is how a lamp saying 14
+       ends up over a heading saying 13. */
+    var band = { flat: flat.length, paused: paused.length,
+                 ok: S.people.length - flat.length - paused.length };
+    var TITLE = { flat: "Out of tune", ok: "In tune", paused: "Paused" };
+
     var shown = {}, rows = "";
     S.people.forEach(function (p, i) {
-      var band = p.paused ? "paused" : p.due ? "flat" : "ok";
-      if (!shown[band]) {
-        shown[band] = true;
-        rows += '<div class="msec">' +
-          (band === "flat"   ? "Out of tune \u2014 " + flat.length
-         : band === "ok"     ? "In tune \u2014 " +
-             (S.people.length - flat.length - paused.length)
-         :                     "Paused \u2014 " + paused.length) + "</div>";
+      var b = p.paused ? "paused" : p.due ? "flat" : "ok";
+      if (!shown[b]) {
+        shown[b] = true;
+        rows += '<div class="msec" data-sec="' + b + '">' +
+          TITLE[b] + " \u2014 " + band[b] + "</div>";
       }
       rows += memberRow(p, i);
     });
@@ -1542,7 +1695,7 @@ window.fetch = function (url) {
        under the dial, where the eye lands first, competing with the
        ninety-six names it is not about. It goes to the foot of the
        roll, as a line rather than a button. */
-    return '<div class="card tuner">' + tunerFace(flat.length, S.people.length, owedTotal) +
+    return '<div class="card tuner">' + tunerFace(band, owedTotal) +
       rows +
       '<button class="rest-link" data-other="1" style="margin-top:16px">' +
         "Someone else paid \u2014 record it</button></div>";
@@ -2526,6 +2679,7 @@ window.fetch = function (url) {
     root.innerHTML = header(sub) + '<div class="wrap' + (fresh ? " fresh" : "") + '">' +
       (S.err ? '<div class="err">' + esc(S.err) + "</div>" : "") + inner + "</div>";
     playSection();
+    paintNeedle();
     scrubWave();
     showAsk();
   }
@@ -2615,6 +2769,15 @@ window.fetch = function (url) {
       var v = el.getAttribute("data-fi");
       return v ? playInstrument(v, 0.7) : reed(72, 0.5);   /* "Everyone" — the organ, all of them */
     }
+    /* A tuner lamp gives you a reference pitch, so it sounds like one.
+       MIDI 69 is A440 itself — the note the whole room tunes to — and
+       the flat lamp answers a semitone and a half under it. */
+    if ((el = t.closest("[data-band]"))) {
+      var bnd = el.getAttribute("data-band");
+      return bnd === "ok" ? bow(69, 0.5)
+           : bnd === "flat" ? bow(66, 0.5)
+           : breath(60, 0.4);
+    }
     /* the day filter is not an instrument, so it gets the lowest
        voice in the room and cannot be confused with one */
     if (t.closest("[data-clear]"))          return breath(74, 0.5);        /* flute — clearing the air */
@@ -2693,6 +2856,8 @@ window.fetch = function (url) {
       render(); return;
     }
     if (t.closest("#famClose")) { S.fam = null; S.famInfo = null; render(); return; }
+    var bd = t.closest("[data-band]");
+    if (bd) { jumpBand(bd.getAttribute("data-band")); return; }
     var po = t.closest("[data-pausing]");
     if (po) { S.pausing = +po.getAttribute("data-pausing"); S.pauseMonths = 1; render(); return; }
     if (t.closest("[data-pausecancel]")) { S.pausing = null; render(); return; }

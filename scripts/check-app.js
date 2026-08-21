@@ -725,19 +725,29 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
      entire page. That has now happened twice: once on the dues rows,
      once on the members slider. It stops being a thing to remember
      and becomes a thing that fails. */
-  await check("no card reuses a class that belongs to the sign-in screen", async () => {
-    /* the sign-in screen still owns it, or this guard means nothing */
-    assert(/\.gate\s*\{[^}]*min-height:\s*100vh/.test(cssSrc),
-      "the sign-in screen no longer claims .gate — this guard is now meaningless");
+  /* THE SAME BUG, THREE TIMES. A nested .gate painted a black slab
+     down the page, twice. Then a .top inside a tuner lamp inherited
+     the purple header's box and made every lamp 91px tall.
+
+     The shape is always the same: a short, obvious class name that
+     page chrome already owns, reused inside a component. So the guard
+     is the whole chrome vocabulary now, not just the two names that
+     have bitten so far. */
+  await check("no card reuses a class that belongs to the page chrome", async () => {
+    const CHROME = ["gate", "ginner", "top", "tabs", "wrap"];
+    /* each must still be claimed by the chrome, or the guard is a
+       list of names nobody uses */
+    CHROME.forEach((c) => assert(new RegExp("\\." + c + "[\\s,{.:]").test(cssSrc),
+      "." + c + " is no longer a chrome class — this guard is drifting"));
 
     /* the whole page script AFTER gate() — every view that renders
        inside the app rather than instead of it */
     const afterGate = html.slice(html.indexOf("function viewRegister"));
     const tokens = [...afterGate.matchAll(/class="([^"'+]*)"/g)]
       .flatMap((m) => m[1].split(/\s+/)).filter(Boolean);
-    const stolen = ["gate", "ginner"].filter((c) => tokens.includes(c));
+    const stolen = CHROME.filter((c) => tokens.includes(c));
     assert(stolen.length === 0,
-      "a card inside the app reuses the sign-in screen's class: " + stolen.join(", "));
+      "a card inside the app reuses page chrome's class: " + stolen.join(", "));
   });
 
   /* The day patterns arrive on a SECOND request, after the register has
@@ -1223,6 +1233,117 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
     assert(/\|\| p\.name/.test(row), "no fallback for a payment with no member row");
     const head = row.slice(row.indexOf('"nm"'), row.indexOf("</span></div>"));
     assert(!/inr\(/.test(head), "the amount is back in the headline instead of the payer");
+  });
+
+  /* THE LAST LAMP IS THE ONE THAT MATTERS AND IT IS THE ONE THAT
+     BREAKS. Paused is always the final section, so its scroll target
+     is always past the bottom of the document — and a SMOOTH scroll
+     to a position past the end silently does nothing rather than
+     clamping. Measured in a browser: auto reached 5533, smooth stayed
+     at 0. So the target is clamped here, and this pins it. */
+  await check("a band lamp reaches the last section, whose target is past the page end", () => {
+    const scrolls = [];
+    const savedScroll = ctx.scrollTo, savedIH = ctx.innerHeight;
+    ctx.scrollTo = function (x, y) { scrolls.push({ x: x, y: y, args: arguments.length }); };
+    ctx.innerHeight = 800;
+    ctx.pageYOffset = 0;
+    doc.documentElement.scrollHeight = 6345;              /* max scroll = 5545 */
+
+    const flashes = [];
+    const sec = mkEl("div");
+    sec.getBoundingClientRect = () => ({ top: 5884, bottom: 5904, left: 0, right: 300,
+                                         width: 300, height: 20 });
+    sec.classList = { add: (c) => flashes.push("+" + c), remove: (c) => flashes.push("-" + c),
+                      toggle() {}, contains: () => false };
+    const rootEl = byId("root"), savedQ = rootEl.querySelector;
+    rootEl.querySelector = (q) => (String(q).includes('data-sec="paused"') ? sec : null);
+
+    onClick({ target: { closest: (q) => (q === "[data-band]"
+      ? { getAttribute: () => "paused" } : null) } });
+
+    rootEl.querySelector = savedQ;
+    ctx.scrollTo = savedScroll; ctx.innerHeight = savedIH;
+
+    assert(scrolls.length === 1, "the lamp scrolled " + scrolls.length + " times");
+    const y = scrolls[0].y;
+    /* 5884 - 10 = 5874 is past the end. It must land AT the end, not
+       be dropped on the floor. */
+    assert(y === 5545, "the jump asked for y=" + y +
+      " — anything over 5545 is past the page end and a smooth scroll ignores it entirely");
+    assert(scrolls[0].args === 2,
+      "the jump went back to the options form; a smooth scroll past the end does nothing");
+    assert(flashes.indexOf("+jumped") > flashes.indexOf("-jumped"),
+      "the landing was not flashed, so the jump reads as the page losing its place");
+  });
+
+  /* The lamp counts and the headings they jump to are the same numbers.
+     Two places counting the same thing is how a lamp saying 14 ends up
+     over a heading saying 13. */
+  await check("every lamp count equals the heading it jumps to", async () => {
+    signIn(); fetchLog.length = 0;
+    nextBody = (url) => {
+      if (url.includes("reminder_queue")) return [
+        { enrollment_id: 1, member_id: 1, name: "Aarthi", member_name: "Aarthi",
+          sport: "Piano", amount: 1500, days_since: 4, phone: "9000000111" }];
+      if (url.includes("/members")) return [
+        { id: 1, name: "Aarthi", status: "active",
+          enrollments: [{ id: 1, sport: "Piano", batch_id: 1, status: "active" }] },
+        { id: 2, name: "Bharath", status: "active",
+          enrollments: [{ id: 2, sport: "Guitar", batch_id: 1, status: "active" }] },
+        { id: 3, name: "Chitra", status: "active",
+          enrollments: [{ id: 3, sport: "Violin", batch_id: 1, status: "paused" }] },
+        { id: 4, name: "Deepak", status: "active",
+          enrollments: [{ id: 4, sport: "Drums", batch_id: 1, status: "paused" }] }];
+      return [];
+    };
+    api.S.tab = "dues"; api.enter();
+    for (let i = 0; i < 10; i++) await tick();
+    const h = byId("root").innerHTML;
+
+    [["flat", "Out of tune", 1], ["ok", "In tune", 1], ["paused", "Paused", 2]].forEach((b) => {
+      const lamp = new RegExp('data-band="' + b[0] + '"[^>]*>.*?<b>(\\d+)</b>').exec(h);
+      const head = new RegExp('data-sec="' + b[0] + '">' + b[1] + ' \\u2014 (\\d+)').exec(h);
+      assert(lamp, "no lamp for the " + b[0] + " band");
+      assert(head, "no heading for the " + b[0] + " band");
+      assert(lamp[1] === head[1],
+        b[0] + ": the lamp says " + lamp[1] + " and the heading it jumps to says " + head[1]);
+      assert(Number(lamp[1]) === b[2],
+        b[0] + " counted " + lamp[1] + ", expected " + b[2]);
+    });
+
+    /* exactly one lit, the way a tuner lights one */
+    const lit = (h.match(/class="lamp [a-z]+ on/g) || []).length;
+    assert(lit === 1, lit + " lamps are lit; a tuner lights exactly one");
+  });
+
+  /* Nothing may sit on the needle's axis. The centre numeral was a "0"
+     printed at the exact angle the needle rests at when everybody has
+     paid, so the happy state drew the needle through its own label. */
+  await check("the dial prints no numeral where the needle rests", () => {
+    const face = appSrc.slice(appSrc.indexOf("function tunerFace("),
+                              appSrc.indexOf("function lampRow("));
+    assert(/big && a > 90/.test(face),
+      "the centre numeral is back on the needle's axis");
+    assert(!/\.face\s*\{[^}]*background:\s*linear-gradient\(178deg/.test(cssSrc),
+      "the dial is a dark slab again");
+    assert(/#9E3324/.test(cssSrc), "the needle lost its ink colour");
+  });
+
+  /* An animation that can be interrupted must still end in the right
+     place. rAF does not run while the page is not painted, so a swing
+     interrupted by switching apps parks the needle mid-sweep — and a
+     needle parked mid-sweep is a wrong reading of the school, drawn
+     confidently. Caught in the preview at -25.68 against a truth of
+     -11.38. */
+  await check("an interrupted needle swing still lands on the true reading", () => {
+    const fn = appSrc.slice(appSrc.indexOf("function paintNeedle("),
+                            appSrc.indexOf("function viewDues("));
+    assert(/setTimeout\(land,/.test(fn),
+      "the swing has no backstop; an interrupted one parks at a wrong angle for ever");
+    assert(/if \(done \|\| !g\.isConnected\) return;/.test(fn),
+      "the frame loop can fight the backstop and re-park the needle mid-sweep");
+    assert(/function land\(\)[\s\S]{0,200}rotate\(" \+ to \+/.test(fn),
+      "the backstop does not land on data-deg");
   });
 
   console.log(failed ? "\n" + failed + " failed" : "\nall app checks passed");

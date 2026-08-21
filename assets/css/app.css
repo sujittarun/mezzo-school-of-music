@@ -1238,66 +1238,141 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
    need the outline that forced the extra layer. */
 .btn.plec:active { transform: scale(.97); background: linear-gradient(180deg, #CDBFEE, #BCACE6); }
 
-/* ---------- ONE DIAL, AND IT IS A DEVICE ----------
-   The paper version of this read as a drawing of a tuner. A tuner is
-   an OBJECT: a dark face behind glass, a bright printed scale, a
-   needle with a shadow under it and three lamps along the foot. So it
-   is built as one — a small machine lying on the sheet — and the
-   contrast against the cream is most of why it reads at all.
+/* ---------- ONE DIAL, AND IT IS A BRASS ONE ----------
+   This was a black glass slab, and the note that used to sit here
+   argued that "the contrast against the cream is most of why it reads
+   at all". That was the bug, written down as a feature: it was the
+   only dark object on the sheet and it read as a widget pasted on.
+
+   A device does not have to be dark to be a device. A VU meter on a
+   valve amp is a brass bezel over an ivory plate with a printed scale
+   and a red needle — as real an object as an LCD tuner, and made of
+   the same materials as this page. Warm on warm, and it still reads,
+   because the brass ring is darker and shinier than anything else
+   here and the plate is lighter than the card it lies on.
 
    Still one dial for the whole school, not one per row. */
 .card.tuner .face {
-  position: relative; margin: 2px auto 0; max-width: 320px; padding: 10px 12px 4px;
-  border-radius: 18px;
-  background: linear-gradient(178deg, #2A2431 0%, #191420 62%, #221C2A 100%);
-  box-shadow: 0 1px 0 rgba(255,255,255,.14) inset,
-              0 -2px 6px rgba(0,0,0,.5) inset,
-              0 6px 18px rgba(40,28,16,.28);
-  border: 1px solid #0E0A14;
+  position: relative; margin: 2px auto 0; max-width: 320px;
+  padding: 5px;                                  /* this padding IS the bezel */
+  border-radius: 20px;
+  /* A turned metal ring is dark, then bright, then dark again — light
+     wrapping around a curve. A single light-to-dark sweep reads as a
+     yellow border, which is what the first attempt was. */
+  background:
+    linear-gradient(148deg, #6F5210 0%, #E9CE7C 11%, #C09220 27%,
+                    #8A6913 46%, #644B0E 60%, #A98118 74%, #E4C971 90%, #7A5B12 100%);
+  box-shadow: 0 1px 0 rgba(255,255,255,.5) inset,
+              0 -1px 0 rgba(0,0,0,.3) inset,
+              0 7px 18px rgba(74,52,14,.24),
+              0 1px 2px rgba(74,52,14,.32);
 }
-/* the glass */
-.card.tuner .face::after {
+/* the ivory plate the scale is printed on */
+.card.tuner .face .plate {
+  position: relative; border-radius: 15px 15px 4px 4px; padding: 8px 11px 2px;
+  overflow: hidden;
+  background: radial-gradient(122% 112% at 50% 0%,
+              #FDF8EA 0%, #F5ECD6 44%, #EADCBB 84%, #E0D1AA 100%);
+  box-shadow: inset 0 3px 9px rgba(112,86,34,.22),
+              inset 0 -1px 0 rgba(255,255,255,.75);
+}
+/* domed glass: a sheen across the top corner, not a wash over the
+   whole plate. At .72 across half the face it bleached the printed
+   scale off its own dial. */
+.card.tuner .face .plate::after {
   content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-  background: linear-gradient(160deg, rgba(255,255,255,.13) 0%, rgba(255,255,255,.03) 34%,
-              rgba(255,255,255,0) 55%);
+  background: linear-gradient(146deg, rgba(255,255,255,.5) 0%,
+              rgba(255,255,255,.14) 22%, rgba(255,255,255,0) 40%);
 }
-.card.tuner .face svg { width: 100%; height: auto; display: block; }
+.card.tuner .face svg { width: 100%; height: auto; display: block; position: relative; }
 
-.card.tuner .face .bg { fill: none; stroke: rgba(255,255,255,.13); stroke-width: 8; stroke-linecap: round; }
-.card.tuner .face .ok { fill: none; stroke: #3FCB8A; stroke-width: 8; stroke-linecap: round; }
-.card.tuner .face .tk line { stroke: rgba(255,255,255,.34); stroke-width: 1.4; }
-.card.tuner .face .tk line.big { stroke: rgba(255,255,255,.78); stroke-width: 2.2; }
-.card.tuner .face .lb text { fill: rgba(255,255,255,.62); font-size: 11px; font-weight: 700;
+/* printed in ink on ivory, so it is dark-on-light like the rest of
+   the app rather than light-on-dark like nothing else in it */
+.card.tuner .face .bg     { fill: none; stroke: rgba(70,52,18,.34); stroke-width: 6; stroke-linecap: round; }
+.card.tuner .face .okband { fill: none; stroke: #1D6B4A; stroke-width: 6; stroke-linecap: round; }
+.card.tuner .face .tk line     { stroke: rgba(58,52,38,.46); stroke-width: 1.4; }
+.card.tuner .face .tk line.big { stroke: #3A342A; stroke-width: 2.2; }
+.card.tuner .face .lb text { fill: #6A6250; font-size: 10.5px; font-weight: 700;
   text-anchor: middle; font-variant-numeric: tabular-nums; }
-.card.tuner .face .lb .sym { font-size: 17px; fill: rgba(255,255,255,.55); }
-.card.tuner .face .lb .sym.dim { fill: rgba(255,255,255,.18); }
+.card.tuner .face .lb .sym { font-size: 15px; fill: #7C7461; }
+.card.tuner .face .lb .sym.dim { fill: #C3B89F; }
 
-.card.tuner .face .sh { stroke: rgba(0,0,0,.55); stroke-width: 4; stroke-linecap: round; }
-.card.tuner .face .ndl { stroke: #FF6B4A; stroke-width: 3; stroke-linecap: round;
-  transition: all .7s cubic-bezier(.22,1.3,.36,1); }
-.card.tuner .face.ok  .ndl { stroke: #3FCB8A; }
-.card.tuner .face.warn .ndl { stroke: #F5C462; }
-.card.tuner .face.mid  .ndl { stroke: #FF9A4A; }
-.card.tuner .face .hub  { fill: #0D0912; stroke: rgba(255,255,255,.30); stroke-width: 1.2; }
-.card.tuner .face .hub2 { fill: rgba(255,255,255,.45); }
+/* The needle is ONE colour, always. It points; it does not also warn.
+   The lamps carry the alarm, which is what lamps are for and what
+   keeps the dial from having two meanings at once. */
+.card.tuner .face .sh  { fill: rgba(96,72,26,.26); }
+.card.tuner .face .ndl { fill: #9E3324; }
+.card.tuner .face .hub  { fill: #B08A24; stroke: #6E5210; stroke-width: 1.3; }
+.card.tuner .face .hub2 { fill: #3A2F10; }
 
-/* the three lamps. Exactly one is ever lit, which is what a tuner
-   does and what a row of dots on a dashboard never does. */
-.card.tuner .face .lamps .l { fill: rgba(255,255,255,.10); }
-.card.tuner .face.ok   .okl      { fill: #3FCB8A; filter: drop-shadow(0 0 6px rgba(63,203,138,.9)); }
-.card.tuner .face.warn .flatlamp { fill: #F5C462; filter: drop-shadow(0 0 5px rgba(245,196,98,.85)); }
-.card.tuner .face.mid  .flatlamp { fill: #FF9A4A; filter: drop-shadow(0 0 5px rgba(255,154,74,.85)); }
-.card.tuner .face.bad  .flatlamp { fill: #FF6B4A; filter: drop-shadow(0 0 6px rgba(255,107,74,.9)); }
+/* ---------- the lamps, which are now the way into the roll ----------
+   Real buttons, not circles inside the SVG: a jewel drawn at r=5 is a
+   ten-pixel target, and the audit that walks buttons and inputs never
+   sees an SVG circle at all. Jewel and count on one line, label under
+   — stacked three deep they were 86px tall each, on a block already
+   taking a third of a phone. */
+.card.tuner .lamprow {
+  display: grid; grid-template-columns: 1.22fr 1fr 1fr; gap: 1px;
+  margin-top: 3px; border-radius: 4px 4px 15px 15px; overflow: hidden;
+  background: rgba(110,82,16,.34);               /* the hairlines between lamps */
+}
+.card.tuner .lamp {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1px; min-height: 50px; padding: 6px 3px; cursor: pointer; border: 0;
+  background: linear-gradient(180deg, #EFE6CF, #E4D8B9);
+  box-shadow: 0 1px 0 rgba(255,255,255,.55) inset;
+  transition: background .16s;
+}
+.card.tuner .lamp .lmp { display: flex; align-items: center; gap: 6px; }
+.card.tuner .lamp .jew {
+  width: 9px; height: 9px; border-radius: 50%; flex: none;
+  background: radial-gradient(62% 62% at 36% 30%, #FFFDF7 0%, #CFC2A4 44%, #A4977A 100%);
+  box-shadow: 0 1px 1px rgba(80,62,26,.34) inset;
+}
+.card.tuner .lamp b {
+  font: 700 18px/1 inherit; color: var(--ink); font-variant-numeric: tabular-nums;
+}
+.card.tuner .lamp span {
+  font-size: 9.5px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink-2); text-align: center; white-space: nowrap;
+}
+/* The number he opens this tab to see stays the big one. */
+.card.tuner .lamp.flat b { font-size: 24px; }
+.card.tuner .lamp:active:not(:disabled) { background: linear-gradient(180deg, #E2D6B6, #D8CAA6); }
 
-/* Below the dial, not inside it. A needle sweeps the whole radius, so
-   anything on that axis gets a line drawn straight through it. */
-.card.tuner .reading { text-align: center; margin-top: 9px; display: flex;
-  align-items: baseline; justify-content: center; gap: 8px; color: var(--ink); }
-.card.tuner .reading b { font: 700 30px/1 inherit; font-variant-numeric: tabular-nums; }
-.card.tuner .reading span { font-size: 11.5px; font-weight: 700;
-  letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+/* Exactly one is lit, the way a tuner lights one. */
+.card.tuner .lamp.flat.on { background: linear-gradient(180deg, #F6E3DA, #EFD6C9); }
+.card.tuner .lamp.flat.on .jew {
+  background: radial-gradient(62% 62% at 36% 30%, #FFD9CE 0%, #CE4A31 44%, #8E2C1B 100%);
+  box-shadow: 0 0 7px rgba(178,59,43,.75), 0 1px 1px rgba(90,30,20,.4) inset;
+}
+.card.tuner .lamp.flat.on b { color: #8E2A1D; }
+.card.tuner .lamp.ok.on { background: linear-gradient(180deg, #E4F0E1, #D4E6D0); }
+.card.tuner .lamp.ok.on .jew {
+  background: radial-gradient(62% 62% at 36% 30%, #D6FBE4 0%, #2A8A62 44%, #114730 100%);
+  box-shadow: 0 0 7px rgba(29,107,74,.7), 0 1px 1px rgba(10,50,32,.4) inset;
+}
+.card.tuner .lamp.ok.on b { color: #14543A; }
+
+/* An empty band is a dead bulb, and a control that goes nowhere is
+   worse than no control. Dim the CONTENTS, not the lamp: opacity on
+   the whole button made its face translucent and the brass bezel came
+   through it as a mustard block. */
+.card.tuner .lamp.dead { cursor: default; }
+.card.tuner .lamp.dead b, .card.tuner .lamp.dead span { opacity: .4; }
+.card.tuner .lamp.dead .jew { opacity: .55; }
+
 .card.tuner .facesub { text-align: center; color: var(--ink-3); font-size: 13.5px;
-  font-weight: 600; margin-top: 2px; }
+  font-weight: 600; margin-top: 8px; }
+
+/* You landed here. Without the flash a jump reads as the page having
+   lost its place. */
+@keyframes seclit {
+  0%   { background: rgba(201,162,39,.30); }
+  100% { background: rgba(201,162,39,0); }
+}
+.msec.jumped { animation: seclit 1.25s ease-out; border-radius: 8px; }
+@media (prefers-reduced-motion: reduce) { .msec.jumped { animation: none; } }
 
 /* a quiet line, not a button: rare acts should not compete with
    ninety-six names */
