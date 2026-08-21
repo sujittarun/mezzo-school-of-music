@@ -844,6 +844,16 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
       "40 days over does not sit further right than 1 day over: " + lefts.join(" vs "));
     assert(lefts[0] === 100, "a month overdue is not pinned at the right end: " + lefts[0]);
 
+    /* The indicator is a NEEDLE — a line that sweeps toward a gate
+       that never moves. A round dot travelling along a rail is a
+       slider, and that is what this looked like. */
+    assert(/\.mtrack \.mk \{[^}]*width: 2\.6px/.test(cssSrc),
+      "the needle went back to being a dot");
+    assert(!/\.mtrack \.mk \{[^}]*border-radius: 50%/.test(cssSrc),
+      "the indicator is round again — that is a slider, not a tuner");
+    assert(/\.mtrack\.lit \.mgate/.test(cssSrc),
+      "the gate no longer lights when the needle is inside it");
+
     /* And the colour is a SWEEP, not three buckets: every mark a
        different shade, none of them repeated. */
     const cols = [...h.matchAll(/--mark:(hsl\([^)]*\))/g)].map((m) => m[1]);

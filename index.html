@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" />
-<link rel="stylesheet" href="assets/css/app.css?v=20260821p" />
+<link rel="stylesheet" href="assets/css/app.css?v=20260821q" />
 </head>
 <body>
 <!-- ============================================================
@@ -1560,6 +1560,9 @@
     }
 
     var days = daysToDue(p), t = duePos(days), col = dueColour(t);
+    /* inside the gate: due within a day either way, which is the one
+       moment a tuner is telling you to stop turning */
+    var inGate = days != null && Math.abs(days) <= 1;
     var ticks = "";
     for (var k = 0; k <= 8; k++) {
       ticks += '<i class="mtk' + (k === 4 ? " mid" : "") + '" style="left:' + (k * 12.5) + '%"></i>';
@@ -1583,7 +1586,15 @@
          fixed, inset 0 — and a plain `.gate` inside a row paints a
          black slab down the whole page. This is the second time; the
          check below now fails the build if it comes back. */
-      '<span class="mtrack">' + ticks + '<span class="mgate"></span>' +
+      /* A NEEDLE, NOT A DOT.
+         On a tuner one thing moves and one thing stays: the needle
+         sweeps, the gate holds the centre, and the read is watching
+         a line travel toward a fixed target. A dot sliding along a
+         rail is a slider — which is why this never looked like a
+         tuner however the gate was drawn. The gate lights when the
+         needle is inside it. */
+      '<span class="mtrack' + (inGate ? " lit" : "") + '">' + ticks +
+        '<span class="mgate"></span>' +
         '<i class="mk" style="left:' + (t * 100).toFixed(1) + '%"></i></span>' +
       '<span class="mamt">' + amt + "</span></button>";
   }

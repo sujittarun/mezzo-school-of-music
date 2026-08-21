@@ -1339,10 +1339,18 @@ table.reg .tot i { display: block; height: 3px; border-radius: 2px; background: 
 .mtrack .mtk.mid { top: 3px; height: 15px; width: 1.4px; background: #C6BCA6; }
 .mtrack .mgate { position: absolute; left: 50%; top: 2px; width: 17px; height: 17px;
   margin-left: -8.5px; border: 1.2px solid var(--rule); border-radius: 3px; }
-.mtrack .mk { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px;
-  border-radius: 50%; background: var(--mark, var(--ok));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mark, var(--ok)) 20%, transparent);
-  transition: left .5s cubic-bezier(.22,1.3,.36,1), background .5s; }
+/* THE NEEDLE. A thin vertical line that sweeps toward a gate which
+   never moves — that is the whole mechanism of a tuner. This was a
+   10px circle, and a circle travelling along a rail reads as a
+   slider no matter what is drawn behind it. */
+.mtrack .mk { position: absolute; top: 1px; bottom: 1px; width: 2.6px; margin-left: -1.3px;
+  border-radius: 2px; background: var(--mark, var(--ok));
+  box-shadow: 0 0 6px color-mix(in srgb, var(--mark, var(--ok)) 50%, transparent);
+  transition: left .55s cubic-bezier(.22,1.3,.36,1), background .55s; }
+/* the gate lights when the needle is in it — the one moment the
+   instrument is telling you to stop turning */
+.mtrack.lit .mgate { border-color: var(--ok); background: rgba(29,107,74,.10);
+  box-shadow: 0 0 0 2px rgba(29,107,74,.20); }
 
 .mamt { flex: 0 0 auto; text-align: right; min-width: 62px; }
 .mamt b { display: block; font-size: 14.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
