@@ -36,7 +36,7 @@ let appSrc = html.slice(html.lastIndexOf("<script>") + 8, html.lastIndexOf("</sc
 const before = appSrc.length;
 appSrc = appSrc.replace(/"use strict";/,
   '"use strict"; __x(function () { return { S: S, render: render, enter: enter, boot: boot, ' +
-  'openWho: openWho }; });');
+  'openWho: openWho, openPay: openPay }; });');
 if (appSrc.length === before) { console.error("could not inject the accessor"); process.exit(1); }
 
 /* ---- the browser, and only the browser ---- */
@@ -393,6 +393,9 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
   await check("a new student is enrolled on the days he ticked, and none without days", async () => {
     signIn(); fetchLog.length = 0;
     nextBody = (url, body) => {
+      /* the duplicate-name lookup: nobody of that name yet, which is
+         the state every one of these was written under */
+      if (url.includes("name=ilike.")) return [];
       if (url.includes("/batches") && body) return [{ id: 12, ...body }];
       if (url.includes("/batches")) return [
         { id: 1, code: "d12345", name: "Mon\u2013Fri", days: [1,2,3,4,5],
@@ -497,6 +500,9 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
   await check("enrolling for six months sets the plan AND the date six months out", async () => {
     signIn(); fetchLog.length = 0;
     nextBody = (url, body) => {
+      /* the duplicate-name lookup: nobody of that name yet, which is
+         the state every one of these was written under */
+      if (url.includes("name=ilike.")) return [];
       if (url.includes("/batches") && body) return [{ id: 21, ...body }];
       if (url.includes("/batches")) return [
         { id: 1, days: [1,2,3,4,5], start_time: "15:00", end_time: "20:00", centre_id: 4, active: true }];
@@ -557,6 +563,9 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
   await check("one day a week is asked about once and then saved", async () => {
     signIn(); fetchLog.length = 0;
     nextBody = (url, body) => {
+      /* the duplicate-name lookup: nobody of that name yet, which is
+         the state every one of these was written under */
+      if (url.includes("name=ilike.")) return [];
       if (url.includes("/batches") && body) return [{ id: 31, ...body }];
       if (url.includes("/batches")) return [
         { id: 1, days: [1,2,3,4,5], start_time: "15:00", end_time: "20:00", centre_id: 4, active: true }];
@@ -624,6 +633,9 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
   await check("pausing a student is a status flip, not a discontinue", async () => {
     signIn(); fetchLog.length = 0;
     nextBody = (url) => {
+      /* the duplicate-name lookup: nobody of that name yet, which is
+         the state every one of these was written under */
+      if (url.includes("name=ilike.")) return [];
       if (url.includes("reminder_queue")) return [];
       if (url.includes("/members")) return [
         { id: 1, name: "Aarthi", phone: "9000000111", status: "active",
@@ -691,6 +703,9 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
   await check("a student can be paused from the register card, not only from Members", async () => {
     signIn(); fetchLog.length = 0;
     nextBody = (url) => {
+      /* the duplicate-name lookup: nobody of that name yet, which is
+         the state every one of these was written under */
+      if (url.includes("name=ilike.")) return [];
       if (url.includes("attendance_month")) return [];
       if (url.includes("attendance_roster")) return [
         { enrollment_id: 11, member_id: 1, member_name: "Aarthi", sport: "Piano", batch_id: 1 }];
@@ -728,6 +743,9 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
   await check("a plan of months the database will not accept never leaves the client", async () => {
     signIn(); fetchLog.length = 0;
     nextBody = (url, body) => {
+      /* the duplicate-name lookup: nobody of that name yet, which is
+         the state every one of these was written under */
+      if (url.includes("name=ilike.")) return [];
       if (url.includes("/batches") && body) return [{ id: 41, ...body }];
       if (url.includes("/batches")) return [
         { id: 1, days: [1,2,3,4,5], start_time: "15:00", end_time: "20:00", centre_id: 4, active: true }];
@@ -891,6 +909,9 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
   await check("the members tab shows everyone, and never drops a name reminder_queue gave it", async () => {
     signIn();
     nextBody = (url) => {
+      /* the duplicate-name lookup: nobody of that name yet, which is
+         the state every one of these was written under */
+      if (url.includes("name=ilike.")) return [];
       if (url.includes("reminder_queue")) return [
         { enrollment_id: 5, member_name: "Chitra", parent_name: "Uma", phone: "9000000665",
           sport: "Violin", amount: 1500, days_since: 1, due_date: "2026-08-18" },
@@ -1101,6 +1122,9 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
   await check("a set of days nobody uses yet becomes one new pattern, cloned from a real row", async () => {
     signIn(); fetchLog.length = 0;
     nextBody = (url, body) => {
+      /* the duplicate-name lookup: nobody of that name yet, which is
+         the state every one of these was written under */
+      if (url.includes("name=ilike.")) return [];
       if (url.includes("/batches") && body) return [{ id: 9, ...body }];
       if (url.includes("/batches")) return [
         { id: 1, code: "d12345", name: "Mon\u2013Fri", days: [1,2,3,4,5],
@@ -1309,6 +1333,9 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
   await check("every lamp count equals the heading it jumps to", async () => {
     signIn(); fetchLog.length = 0;
     nextBody = (url) => {
+      /* the duplicate-name lookup: nobody of that name yet, which is
+         the state every one of these was written under */
+      if (url.includes("name=ilike.")) return [];
       if (url.includes("reminder_queue")) return [
         { enrollment_id: 1, member_id: 1, name: "Aarthi", member_name: "Aarthi",
           sport: "Piano", amount: 1500, days_since: 4, phone: "9000000111" }];
@@ -1644,6 +1671,136 @@ function calls(needle) { return fetchLog.filter((c) => c.url.includes(needle)); 
       "the keyframes are sampled points of a curve — easing between them bends it twice");
     assert(/view-timeline-name:--mzact/.test(fn),
       "the acts are not timelines any more");
+  });
+
+  /* THE BUG, EXACTLY AS IT HAPPENED. The database quoted 2,500 for a
+     piano; he typed 1500; the button went on saying "Record ₹2,500"
+     while confirmPay wrote 1,500. The number written was right and the
+     last thing he read before it was written was wrong. */
+  await check("the amount on the button is the amount that gets recorded", async () => {
+    signIn(); fetchLog.length = 0;
+    nextBody = (url) => {
+      if (url.includes("name=ilike.")) return [];
+      if (url.includes("enrollment_fee")) return { amount: 2500 };
+      return [];
+    };
+    api.S.tab = "dues";
+    api.openPay(77, "Sri", "Piano", 2500);
+    for (let i = 0; i < 6; i++) await tick();
+
+    let h = byId("root").innerHTML;
+    assert(/id="payGo">Record ₹2,500</.test(h),
+      "the sheet did not open quoting the database's price: " + h.slice(h.indexOf("payGo"), 60));
+
+    /* he types a different number */
+    const amt = byId("payAmt"); amt.value = "1500";
+    const go  = byId("payGo");
+    onInput({ target: amt });
+    assert(go.textContent === "Record ₹1,500",
+      'the button still says "' + go.textContent + '" while the box says 1500');
+
+    /* and the write agrees with the button */
+    fetchLog.length = 0;
+    onClick({ target: { closest: (q) => (q === "#payGo" ? go : null) } });
+    for (let i = 0; i < 6; i++) await tick();
+    const wrote = calls("record_fee_payment")[0];
+    assert(wrote, "nothing was recorded");
+    assert(wrote.body.p_amount === 1500,
+      "recorded " + wrote.body.p_amount + ", but the button offered " + go.textContent);
+
+    /* an empty box may not offer a number at all */
+    amt.value = ""; onInput({ target: amt });
+    assert(go.textContent === "Record payment",
+      'an empty amount still offers "' + go.textContent + '"');
+  });
+
+  /* THE GENERAL RULE, so the next one is caught by shape rather than by
+     him noticing on a phone: a control that names a value must read it
+     from the same place the action does. */
+  await check("no control names a value the action does not read", () => {
+    /* the pay sheet is the only label in the app carrying a figure —
+       if a second one appears, it has to come through a shared read too */
+    const labels = (appSrc.match(/<button[^"]*"[^>]*>['"]? \+ inr\(/g) || []);
+    assert(labels.length === 0,
+      labels.length + " button label(s) interpolate inr() directly instead of " +
+      "going through a helper the action shares");
+    const view = appSrc.slice(appSrc.indexOf("function viewPay("),
+                              appSrc.indexOf("function payAmount("));
+    assert(/payLabel\(p\.amount\)/.test(view), "the pay button no longer uses payLabel");
+    const conf = appSrc.slice(appSrc.indexOf("function confirmPay("),
+                              appSrc.indexOf("function confirmPay(") + 400);
+    assert(/var amt = payAmount\(\);/.test(conf),
+      "confirmPay reads the field on its own again — the label can drift from the write");
+    assert(/e\.target\.id === "payAmt"[\s\S]{0,180}payLabel\(payAmount\(\)\)/.test(appSrc),
+      "typing an amount no longer retitles the button");
+  });
+
+  /* TWO STUDENTS CALLED SRI, ADDED FIFTY-THREE SECONDS APART, WITH
+     DIFFERENT PHONE NUMBERS. A name+phone check would have let both
+     through; the name is what repeated. */
+  await check("a name already on the roll is asked about before it is added again", async () => {
+    signIn(); fetchLog.length = 0;
+    nextBody = (url, body) => {
+      if (url.includes("name=ilike."))
+        return [{ id: 2381, name: "Sri", phone: "7656787655",
+                  enrollments: [{ sport: "Piano", status: "active" }] }];
+      if (url.includes("/batches") && body) return [{ id: 41, ...body }];
+      if (url.includes("/batches")) return [{ id: 9, days: [1,2,3,4,5], code: "weekday",
+        centre_id: 1, name: "Weekdays", sort: 1, active: true }];
+      if (url.includes("/centres")) return [{ id: 1, code: "c", name: "Mezzo" }];
+      if (url.includes("/sports")) return [{ code: "piano", name: "Piano" }];
+      if (url.includes("/members") && body) return [{ id: 900, ...body }];
+      return [];
+    };
+    api.S.tab = "add"; api.S.nsDays = [1, 4]; api.S.nsPlan = 1;
+    api.S.nsErr = {}; api.S.nsDupe = null; api.S.nsDupeOk = false;
+    api.S.ref = { batches: [{ id: 9, days: [1,2,3,4,5] }], centres: [{ id: 1 }], instruments: [] };
+    byId("nsName").value = "sri";            /* lower case — ilike must still find him */
+    byId("nsPhone").value = "9876543210";
+    byId("nsIns").value = "Piano";
+    api.render();
+
+    fetchLog.length = 0;
+    onClick({ target: { closest: (q) => (q === "#nsSave" ? byId("nsSave") : null) } });
+    for (let i = 0; i < 8; i++) await tick();
+
+    assert(calls("/members").filter((c) => c.method === "POST").length === 0,
+      "the student was saved without asking, even though the name was already on the roll");
+    let h = byId("root").innerHTML;
+    assert(/Sri is already on the roll/.test(h), "he was not told: " + h.slice(0, 120));
+    assert(/7656787655/.test(h),
+      "the question does not say WHICH Sri — the number is the only thing that tells them apart");
+    assert(/Yes, add anyway/.test(h), "there is no way to say yes");
+
+    /* the second press is the answer */
+    fetchLog.length = 0;
+    onClick({ target: { closest: (q) => (q === "#nsSave" ? byId("nsSave") : null) } });
+    for (let i = 0; i < 10; i++) await tick();
+    assert(calls("/members").filter((c) => c.method === "POST").length === 1,
+      "saying yes did not add the student");
+  });
+
+  /* A check that cannot be made must never stop him working. */
+  await check("a failed duplicate lookup saves the student anyway", async () => {
+    signIn(); fetchLog.length = 0;
+    nextBody = (url, body) => {
+      if (url.includes("name=ilike.")) throw new Error("offline");
+      if (url.includes("/batches") && body) return [{ id: 41, ...body }];
+      if (url.includes("/batches")) return [{ id: 9, days: [1,2,3,4,5], code: "weekday",
+        centre_id: 1, name: "Weekdays", sort: 1, active: true }];
+      if (url.includes("/members") && body) return [{ id: 901, ...body }];
+      return [];
+    };
+    api.S.tab = "add"; api.S.nsDays = [2, 5]; api.S.nsPlan = 1;
+    api.S.nsErr = {}; api.S.nsDupe = null; api.S.nsDupeOk = false;
+    api.S.ref = { batches: [{ id: 9, days: [1,2,3,4,5] }], centres: [{ id: 1 }], instruments: [] };
+    byId("nsName").value = "Nobody"; byId("nsPhone").value = "9000000000";
+    byId("nsIns").value = "Guitar";
+    api.render();
+    onClick({ target: { closest: (q) => (q === "#nsSave" ? byId("nsSave") : null) } });
+    for (let i = 0; i < 12; i++) await tick();
+    assert(calls("/members").filter((c) => c.method === "POST").length === 1,
+      "a lookup that could not be made blocked the save");
   });
 
   console.log(failed ? "\n" + failed + " failed" : "\nall app checks passed");

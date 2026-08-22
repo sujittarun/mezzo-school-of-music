@@ -204,6 +204,19 @@
                "&select=id,name,phone,parent_name,parent_phone,status,joined," +
                "enrollments(id,sport,batch_id,centre_id,status,renewal_on,plan_months)");
   }
+  /* IS THIS CHILD ALREADY ON THE ROLL?
+     ilike with no wildcards is an exact match that ignores case, so
+     "sri" finds "Sri". Discontinued students are excluded: somebody who
+     left and came back is a rejoin, not a duplicate, and stopping that
+     would be worse than the thing this prevents. */
+  function findByName(name) {
+    var n = String(name || "").trim();
+    if (!n) return Promise.resolve([]);
+    return get("/members?" + T + "&status=neq.discontinued&name=ilike." +
+               encodeURIComponent(n) + "&select=id,name,phone," +
+               "enrollments(sport,status)");
+  }
+
   /* One student's own record. attendance_month() does not return a
      phone number — it has no reason to — so the card has to ask for
      it, and until it arrives the app must not write the field back.
@@ -575,6 +588,7 @@
     pauseStudent: pauseStudent,
     mark: mark, register: register,
     feeFor: feeFor, takePayment: takePayment, payments: payments,
+    findByName: findByName,
     expenses: expenses, addExpense: addExpense,
     editExpense: editExpense, removeExpense: removeExpense,
     dues: dues, logReminder: logReminder,

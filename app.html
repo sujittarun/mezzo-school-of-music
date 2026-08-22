@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" />
-<link rel="stylesheet" href="assets/css/app.css?v=20260821u" />
+<link rel="stylesheet" href="assets/css/app.css?v=20260821v" />
 </head>
 <body>
 <!-- ============================================================
@@ -2330,10 +2330,28 @@
         }).join("") +
       "</div>" +
 
-      '<button class="btn" id="payGo">Record ' + (p.amount ? inr(p.amount) : "payment") + "</button>" +
+      '<button class="btn" id="payGo">' + payLabel(p.amount) + "</button>" +
       '<button class="btn ghost" id="payCancel" style="margin-top:8px">Cancel</button>' +
     "</div></div>";
   }
+
+  /* THE BUTTON MAY NOT NAME A NUMBER IT WILL NOT USE.
+
+     It said "Record \u20b92,500" \u2014 the price the database had quoted \u2014
+     while the box above it said 1500, because the label came off
+     S.pay.amount and the write came off the input. It RECORDED 1500,
+     which is the right number and the wrong reassurance: the last thing
+     read before money is written disagreed with what was written.
+
+     Both now come through here. payAmount() is the single read and the
+     label is a function of it, so the two cannot drift apart without one
+     of them being deleted. */
+  function payAmount() {
+    var el = document.getElementById("payAmt");
+    if (el && String(el.value).trim() !== "") return Math.round(+el.value) || 0;
+    return S.pay && S.pay.amount != null ? Math.round(S.pay.amount) : 0;
+  }
+  function payLabel(n) { return n > 0 ? "Record " + inr(n) : "Record payment"; }
 
   /* Ask the database what this costs for that many months, and never
      work it out here. A null answer leaves the field as he typed it. */
@@ -2355,8 +2373,7 @@
   }
 
   function confirmPay() {
-    var el = document.getElementById("payAmt");
-    var amt = el ? Math.round(+el.value) : 0;
+    var amt = payAmount();
     if (!amt || amt <= 0) { S.err = "Enter how much was paid."; return render(); }
     var b = document.getElementById("payGo");
     if (b) { b.disabled = true; b.textContent = "Recording…"; }
@@ -2366,7 +2383,7 @@
         toast("Payment recorded"); S.pay = null; S.err = ""; loadDues();
       })
       .catch(function (e) {
-        if (b) { b.disabled = false; b.textContent = "Record " + inr(amt); }
+        if (b) { b.disabled = false; b.textContent = payLabel(amt); }
         fail(e);
       });
   }
@@ -2626,8 +2643,22 @@
         ? '<div class="askline"><b>Only one day a week?</b>' +
           '<span>' + esc(MZ.dayLabel(S.nsDays)) + " \u2014 most come twice.</span></div>"
         : "") +
+      /* Already on the roll. Says WHO, so he can tell a second child of
+         the same name from the one he just typed twice — the number is
+         the thing that tells them apart. */
+      (S.nsDupe && S.nsDupe.length
+        ? '<div class="askline"><b>' + esc(S.nsDupe[0].name) +
+          " is already on the roll</b><span>" +
+          S.nsDupe.map(function (d) {
+            var sp = (d.enrollments || []).filter(function (e) {
+              return e.status !== "discontinued"; })[0];
+            return (sp && sp.sport ? esc(sp.sport) + " \u00b7 " : "") +
+                   (d.phone ? esc(d.phone) : "no number");
+          }).join("  \u2022  ") + "</span></div>"
+        : "") +
       '<button class="btn bow" id="nsSave">' +
-        (S.nsOneOk === "ask" ? "Yes, save" : "Save student") + "</button>" +
+        (S.nsDupe && S.nsDupe.length ? "Yes, add anyway"
+         : S.nsOneOk === "ask" ? "Yes, save" : "Save student") + "</button>" +
       '<button class="btn plec" id="nsCancel" style="margin-top:10px">Cancel</button></div>';
   }
 
@@ -3005,11 +3036,17 @@
 
     if (t.closest("[data-add]")) {
       S.tab = "add"; S.nsDays = []; S.nsPlan = 1; S.nsErr = {}; S.nsVals = {}; S.nsOneOk = null;
+      S.nsDupe = null; S.nsDupeOk = false;
       MZ.reference().then(function (r) { S.ref = r; render(); }).catch(fail);
       render(); return;
     }
     if (t.closest("#nsCancel")) { S.tab = "register"; render(); return; }
-    if (t.closest("#nsSave")) { saveStudent(); return; }
+    if (t.closest("#nsSave")) {
+      /* The second press is the answer. Clearing it here rather than in
+         saveStudent keeps the question a UI state and the save a save. */
+      if (S.nsDupe && S.nsDupe.length) { S.nsDupe = null; S.nsDupeOk = true; }
+      saveStudent(); return;
+    }
     if (t.closest("#exSave")) { saveExpense(); return; }
     var lg = t.closest("[data-ledger]");
     if (lg) { S.ledger = lg.getAttribute("data-ledger"); render(); return; }
@@ -3135,15 +3172,29 @@
     if (e.target.id === "q") { S.q = e.target.value; var v = S.q;
       var cur = document.getElementById("q"); render();
       var n = document.getElementById("q"); if (n) { n.value = v; n.focus(); } }
+    /* Typing an amount retitles the button, in place. NOT a render: a
+       re-render would take the caret out of the box he is typing in. */
+    if (e.target.id === "payAmt") {
+      var go = document.getElementById("payGo");
+      if (go) go.textContent = payLabel(payAmount());
+    }
   });
 
   /* Ticking a day redraws the form, and a redraw replaces the DOM the
      half-typed name was living in. It goes into state first. */
+  /* Changing the name withdraws the duplicate question — it was asked
+     about a different name. Same rule the day picker follows. */
   function keepAdd() {
     var n = document.getElementById("nsName"), p = document.getElementById("nsPhone"),
         i = document.getElementById("nsIns");
     if (!n) return;
+    var was = String((S.nsVals || {}).name || "").trim().toLowerCase();
     S.nsVals = { name: n.value, phone: (p || {}).value || "", ins: (i || {}).value || "" };
+    /* A different name is a different question. Leaving the answer
+       standing would let "Sri" be approved and "Sriram" saved on it. */
+    if (String(n.value).trim().toLowerCase() !== was) {
+      S.nsDupe = null; S.nsDupeOk = false;
+    }
   }
 
   function saveStudent() {
@@ -3168,8 +3219,31 @@
       S.nsOneOk = "ask"; render(); return;
     }
 
-    var b = document.getElementById("nsSave");
-    b.disabled = true; b.textContent = "Saving…";
+    /* IS HE ALREADY HERE? Asked once, the same way the one-day question
+       is asked, and for the same reason: two children called Sri is a
+       real thing and an app that refuses to save the second is an app
+       he works around. But "Sri" twice within a minute — which is what
+       happened, with two different phone numbers — is a typo being
+       retyped rather than a second child arriving.
+
+       NOT keyed on the phone. The two that got through had DIFFERENT
+       numbers; the name is what repeated, so the name is what is
+       checked. A failed check must never block a save: if the lookup
+       cannot be made, the student is saved. */
+    if (!S.nsDupeOk) {
+      var bq = document.getElementById("nsSave");
+      if (bq) { bq.disabled = true; bq.textContent = "Checking…"; }
+      MZ.findByName(v.name)
+        .then(function (rows) {
+          if (Array.isArray(rows) && rows.length) {
+            S.nsDupe = rows.slice(0, 3); render(); return;
+          }
+          S.nsDupeOk = true; saveStudent();
+        })
+        .catch(function () { S.nsDupeOk = true; saveStudent(); });
+      return;
+    }
+
     var b = document.getElementById("nsSave");
     b.disabled = true; b.textContent = "Saving…";
     MZ.addStudent({

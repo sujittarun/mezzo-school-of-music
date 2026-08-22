@@ -271,9 +271,17 @@ window.fetch = function (url) {
        still showed the first student's phone — and it looked like the
        app reading the wrong row. */
     var one = url.match(/[?&]id=eq\\.(\\d+)/);
+    /* the duplicate-name lookup asks with name=ilike.<name>, and a stub
+       that hands back the whole roll would make every save look like a
+       duplicate — the same lie the id=eq. filter above was fixing */
+    var byName = url.match(/[?&]name=ilike\\.([^&]+)/);
     body = one
       ? FIX.members.filter(function (m) { return String(m.id) === one[1]; })
-      : FIX.members;
+      : byName
+        ? FIX.members.filter(function (m) {
+            return String(m.name).trim().toLowerCase() ===
+                   decodeURIComponent(byName[1]).trim().toLowerCase(); })
+        : FIX.members;
   }
   else if (url.indexOf("/centres") > -1)      body = FIX.centres;
   else if (url.indexOf("/batches") > -1)      body = FIX.batches;
