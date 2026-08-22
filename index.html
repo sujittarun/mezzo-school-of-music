@@ -5,17 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Mezzo School of Music — Coimbatore</title>
 <meta name="description" content="Piano, keyboard, guitar, violin, ukulele, drums and voice, taught by Dr. R. Santhana Krishnan on Thadagam Road, Coimbatore. Monday to Friday 3–8pm, Saturday 10am–8pm." />
-<link rel="canonical" href="https://mezzoschoolofmusic.in/" />
+<!-- The address this page is actually served from. mezzoschoolofmusic.in
+     is a DIFFERENT, live site ("MEZZO - LEARN TO PLAY PLAY TO LEARN"),
+     so pointing canonical and og:url there told search engines and
+     WhatsApp that the real version of this page was a page it is not.
+     Change both to the custom domain on the day this replaces it. -->
+<link rel="canonical" href="https://sujittarun.github.io/mezzo-school-of-music/" />
 <meta property="og:title" content="Mezzo School of Music — Coimbatore" />
 <meta property="og:description" content="Every instrument is a room. Come inside." />
 <meta property="og:type" content="website" />
-<meta property="og:url" content="https://mezzoschoolofmusic.in/" />
+<meta property="og:url" content="https://sujittarun.github.io/mezzo-school-of-music/" />
 <meta name="theme-color" content="#14101F" />
 <link rel="icon" href="assets/img/favicon.png" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+<!-- THE FIRST ROOM, STARTED IMMEDIATELY. It is the largest thing on
+     the first screen and the parser would not otherwise reach it until
+     after the stylesheet and two scripts. -->
+<link rel="preload" as="image" href="assets/img/room-violin-2400.jpg"
+      imagesrcset="assets/img/room-violin-1400.jpg 1400w, assets/img/room-violin-2400.jpg 2400w"
+      imagesizes="100vw" fetchpriority="high" />
 <link rel="stylesheet" href="assets/css/site.css?v=20260821b" />
 
 <!-- THE ROOT IS THE SCHOOL'S PAGE, AND THE APP LIVES BEHIND IT.
@@ -88,7 +99,7 @@
      ============================================================ -->
 <section class="act" id="act-1" data-ar="0.3885" data-ap="0.499,0.638,0.123">
   <div class="stage">
-    <div class="room"><img src="assets/img/room-violin-2400.jpg" srcset="assets/img/room-violin-1400.jpg 1400w, assets/img/room-violin-2400.jpg 2400w" sizes="100vw" alt="" /></div>
+    <div class="room"><img fetchpriority="high" decoding="async" src="assets/img/room-violin-2400.jpg" srcset="assets/img/room-violin-1400.jpg 1400w, assets/img/room-violin-2400.jpg 2400w" sizes="100vw" alt="" /></div>
     <div class="veil"></div>
 
     <div class="dive">
@@ -115,15 +126,15 @@
      ============================================================ -->
 <section class="act" id="act-2" data-ar="0.8192" data-ap="0.516,0.475,0.420,0.165">
   <div class="stage">
-    <div class="room"><img src="assets/img/room-guitar-2400.jpg" srcset="assets/img/room-guitar-1400.jpg 1400w, assets/img/room-guitar-2400.jpg 2400w" sizes="100vw" alt="" /></div>
+    <div class="room"><img src="assets/img/room-guitar-2400.jpg" srcset="assets/img/room-guitar-1400.jpg 1400w, assets/img/room-guitar-2400.jpg 2400w" sizes="100vw" alt="" loading="lazy" decoding="async" /></div>
     <div class="veil"></div>
 
     <div class="dive">
       <!-- The next room, full screen and never scaled. An iris
            opens on it, centred on the aperture of the instrument
            in front. -->
-      <div class="portal"><img src="assets/img/room-piano-2400.jpg" srcset="assets/img/room-piano-1400.jpg 1400w, assets/img/room-piano-2400.jpg 2400w" sizes="100vw" alt="" /></div>
-      <img class="instrument" src="assets/img/inst-piano.webp" alt="A concert grand piano with the lid raised" />
+      <div class="portal"><img src="assets/img/room-piano-2400.jpg" srcset="assets/img/room-piano-1400.jpg 1400w, assets/img/room-piano-2400.jpg 2400w" sizes="100vw" alt="" loading="lazy" decoding="async" /></div>
+      <img class="instrument" src="assets/img/inst-piano.webp" alt="A concert grand piano with the lid raised" loading="lazy" decoding="async" />
     </div>
 
     <div class="copy">
@@ -143,15 +154,15 @@
      ============================================================ -->
 <section class="act" id="act-3" data-ar="1.3662" data-ap="0.587,0.745,0.044">
   <div class="stage">
-    <div class="room"><img src="assets/img/room-piano-2400.jpg" srcset="assets/img/room-piano-1400.jpg 1400w, assets/img/room-piano-2400.jpg 2400w" sizes="100vw" alt="" /></div>
+    <div class="room"><img src="assets/img/room-piano-2400.jpg" srcset="assets/img/room-piano-1400.jpg 1400w, assets/img/room-piano-2400.jpg 2400w" sizes="100vw" alt="" loading="lazy" decoding="async" /></div>
     <div class="veil"></div>
 
     <div class="dive">
       <!-- The next room, full screen and never scaled. An iris
            opens on it, centred on the aperture of the instrument
            in front. -->
-      <div class="portal"><img src="assets/img/room-drum-2400.jpg" srcset="assets/img/room-drum-1400.jpg 1400w, assets/img/room-drum-2400.jpg 2400w" sizes="100vw" alt="" /></div>
-      <img class="instrument" src="assets/img/inst-drum.webp" alt="A drum kit" />
+      <div class="portal"><img src="assets/img/room-drum-2400.jpg" srcset="assets/img/room-drum-1400.jpg 1400w, assets/img/room-drum-2400.jpg 2400w" sizes="100vw" alt="" loading="lazy" decoding="async" /></div>
+      <img class="instrument" src="assets/img/inst-drum.webp" alt="A drum kit" loading="lazy" decoding="async" />
     </div>
 
     <div class="copy">
@@ -172,15 +183,15 @@
      ============================================================ -->
 <section class="act" id="act-4" data-ar="0.3838" data-ap="0.573,0.742,0.048">
   <div class="stage">
-    <div class="room"><img src="assets/img/room-drum-2400.jpg" srcset="assets/img/room-drum-1400.jpg 1400w, assets/img/room-drum-2400.jpg 2400w" sizes="100vw" alt="" /></div>
+    <div class="room"><img src="assets/img/room-drum-2400.jpg" srcset="assets/img/room-drum-1400.jpg 1400w, assets/img/room-drum-2400.jpg 2400w" sizes="100vw" alt="" loading="lazy" decoding="async" /></div>
     <div class="veil"></div>
 
     <div class="dive">
       <!-- The next room, full screen and never scaled. An iris
            opens on it, centred on the aperture of the instrument
            in front. -->
-      <div class="portal"><img src="assets/img/room-violin-2400.jpg" srcset="assets/img/room-violin-1400.jpg 1400w, assets/img/room-violin-2400.jpg 2400w" sizes="100vw" alt="" /></div>
-      <img class="instrument" src="assets/img/inst-violin.webp" alt="A violin and its bow" />
+      <div class="portal"><img src="assets/img/room-violin-2400.jpg" srcset="assets/img/room-violin-1400.jpg 1400w, assets/img/room-violin-2400.jpg 2400w" sizes="100vw" alt="" loading="lazy" decoding="async" /></div>
+      <img class="instrument" src="assets/img/inst-violin.webp" alt="A violin and its bow" loading="lazy" decoding="async" />
     </div>
 
     <div class="copy">
@@ -197,7 +208,7 @@
      ============================================================ -->
 <section class="act" id="act-5">
   <div class="stage">
-    <div class="room"><img src="assets/img/room-violin-2400.jpg" srcset="assets/img/room-violin-1400.jpg 1400w, assets/img/room-violin-2400.jpg 2400w" sizes="100vw" alt="Inside a violin, by the sound post" /></div>
+    <div class="room"><img src="assets/img/room-violin-2400.jpg" srcset="assets/img/room-violin-1400.jpg 1400w, assets/img/room-violin-2400.jpg 2400w" sizes="100vw" alt="Inside a violin, by the sound post" loading="lazy" decoding="async" /></div>
     <div class="veil"></div>
 
     <div class="copy finale">
@@ -205,11 +216,15 @@
       <h2 class="display" data-split>Come and <em>learn</em>.</h2>
       <p class="lede">A trial class costs nothing and takes half an hour. Bring the child; the instrument is here.</p>
 
-      <!-- FILL BEFORE DEPLOY: the real number, in both places.
+      <!-- The school's number, taken from tenants.config.phone rather
+           than typed from memory. It is in TWO places and they must
+           agree: a parent who taps Call and a parent who taps WhatsApp
+           are the same parent. -->
+      <!--
            Nothing here is invented — these are placeholders on purpose. -->
       <div class="contact">
-        <a class="btn primary" href="tel:+910000000000" data-note="note">Call the school</a>
-        <a class="btn ghost" href="https://wa.me/910000000000?text=I%20would%20like%20to%20ask%20about%20music%20classes" target="_blank" rel="noopener" data-note="note">WhatsApp</a>
+        <a class="btn primary" href="tel:+919843330665" data-note="note">Call the school</a>
+        <a class="btn ghost" href="https://wa.me/919843330665?text=I%20would%20like%20to%20ask%20about%20music%20classes" target="_blank" rel="noopener" data-note="note">WhatsApp</a>
         <a class="btn ghost" href="https://maps.google.com/?q=Thadagam+Road+Coimbatore" target="_blank" rel="noopener" data-note="note">Find us</a>
       </div>
 
