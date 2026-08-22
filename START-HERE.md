@@ -113,6 +113,20 @@ is keyed on filename + sha256; never rename an applied file.
 - **Say only what you have checked.** "I checked X and saw Y", or "I
   think" — never an unchecked inference in the voice of a measurement.
 
+## Two test suites, and what each can see
+
+| | |
+|---|---|
+| `node scripts/check-app.js` | **integration.** Real app code, fake DOM, network stubbed. ~50 checks, runs in a second, gates every commit. Cannot see a browser: no layout, no focus, no rendered text. |
+| `scripts/ui-scenarios.js` | **end-to-end.** Drives the real app in a real browser the way he does — tap, type, press — and asserts on what the SCREEN says. Run it against the preview: `node scripts/dev-preview.js`, open `_dev-preview.html`, paste the file into the console, `MZScenarios.run()`. It refuses to run anywhere but the preview, because every scenario adds students and records payments. |
+
+Both of 2026-08-22's bugs were found by the owner using the app, not by
+either suite — a button that offered "Record ₹2,500" while recording
+₹1,500, and the same student added twice. The first sailed through the
+integration suite because in a fake DOM nobody reads a button. **When a
+bug is found by use, the fix includes a scenario**, so it is found by
+machine next time.
+
 ## Where things stand
 
 - Live and paying: ₹899/month from 2026-08-19, first invoice 19 Sep.
